@@ -1,7 +1,10 @@
-# Claude Code — instruções e planos internos (não versionar)
+# Claude Code / AI / Planning — não versionar em repo público
 CLAUDE.md
 AGENTS.md
-docs/plans/
+GEMINI.md
+.claude/
+.planning/
+docs/
 
 # Tauri
 src-tauri/target/
