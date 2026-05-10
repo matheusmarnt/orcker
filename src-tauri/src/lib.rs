@@ -42,18 +42,10 @@ pub fn run() {
         .try_init();
 
     // STEP 3: Build Tauri app
+    // Note: tauri_plugin_log conflicts with tracing_log::LogTracer (both own log global)
+    // tracing_subscriber handles stdout — tauri_plugin_log not needed
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .plugin(
-            tauri_plugin_log::Builder::new()
-                .target(tauri_plugin_log::Target::new(
-                    tauri_plugin_log::TargetKind::Stdout,
-                ))
-                .target(tauri_plugin_log::Target::new(
-                    tauri_plugin_log::TargetKind::LogDir { file_name: None },
-                ))
-                .build(),
-        )
         .setup(|app| {
             // Register disconnected state IMMEDIATELY — window opens before Docker probe
             app.manage(AppState::disconnected());
