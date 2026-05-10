@@ -5,6 +5,7 @@
     ".": {
       "changelog-path": "CHANGELOG.md",
       "release-type": "node",
+      "initial-version": "0.1.0",
       "bump-minor-pre-major": true,
       "draft": false,
       "prerelease": false,
