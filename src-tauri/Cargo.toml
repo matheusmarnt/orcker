@@ -24,14 +24,14 @@ tauri-plugin-log = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 bollard = "0.19"
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "fs"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "fs", "time"] }
 futures-util = "0.3"
 thiserror = "2"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tracing-log = "0.2"
 specta = "=2.0.0-rc.25"
-tauri-specta = "=2.0.0-rc.25"
+tauri-specta = { version = "=2.0.0-rc.25", features = ["derive", "typescript"] }
 specta-typescript = "=0.0.12"
 directories = "5"
 

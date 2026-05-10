@@ -1,5 +1,15 @@
 use crate::core::{error::AppError, state::AppState};
 
+/// Typed summary of a container — specta-exportable (no serde_json::Value)
+#[derive(Debug, serde::Serialize, specta::Type)]
+pub struct ContainerSummary {
+    pub id: String,
+    pub names: Vec<String>,
+    pub image: String,
+    pub status: String,
+    pub state: String,
+}
+
 #[tauri::command]
 #[specta::specta]
 pub async fn get_docker_version(
@@ -19,7 +29,7 @@ pub async fn get_docker_version(
 #[specta::specta]
 pub async fn list_containers(
     state: tauri::State<'_, AppState>,
-) -> Result<Vec<serde_json::Value>, AppError> {
+) -> Result<Vec<ContainerSummary>, AppError> {
     let guard = state.docker.read().await;
     match guard.as_ref() {
         None => Err(AppError::DockerUnavailable("Not connected".to_string())),
@@ -33,8 +43,14 @@ pub async fn list_containers(
                 .await
                 .map_err(AppError::from)?;
             Ok(containers
-                .iter()
-                .map(|c| serde_json::to_value(c).unwrap_or_default())
+                .into_iter()
+                .map(|c| ContainerSummary {
+                    id: c.id.unwrap_or_default(),
+                    names: c.names.unwrap_or_default(),
+                    image: c.image.unwrap_or_default(),
+                    status: c.status.unwrap_or_default(),
+                    state: c.state.map(|s| s.to_string()).unwrap_or_default(),
+                })
                 .collect())
         }
     }
