@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.2.0](https://github.com/matheusmarnt/orcker/compare/orcker-v0.1.0...orcker-v0.2.0) (2026-05-10)
+
+
+### Features
+
+* **ui:** scaffold Tauri 2 + Vue 3 + TypeScript base app ([bf9e5cc](https://github.com/matheusmarnt/orcker/commit/bf9e5ccf4307150a604c92af2612e8858447243a))
+
+
+### Bug Fixes
+
+* **ci:** correct release-please version strategy to stay pre-1.0.0 ([114e4dc](https://github.com/matheusmarnt/orcker/commit/114e4dc6f3a98ba57250639269721524d4a45f16))
+* **ci:** pass vitest when no test files exist yet ([4259675](https://github.com/matheusmarnt/orcker/commit/4259675049c31289ea347386071f8e5800ee0acb))
+* **ci:** resolve eslint errors in vite-env.d.ts and approve esbuild build scripts ([4255737](https://github.com/matheusmarnt/orcker/commit/4255737e857387968cf1cc14ffba7819c9ddea94))
+* **ci:** set initial-version 0.1.0 to prevent release-please proposing 1.0.0 ([28cc5e4](https://github.com/matheusmarnt/orcker/commit/28cc5e454e3357adb43462ecdb63667b42e108c9))
+
 ## 0.1.0 (2026-05-10)
 
 
