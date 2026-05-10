@@ -1,0 +1,48 @@
+# Claude Code — instruções e planos internos (não versionar)
+CLAUDE.md
+AGENTS.md
+docs/plans/
+
+# Tauri
+src-tauri/target/
+
+# Node
+node_modules/
+dist/
+.output/
+
+# Rust
+target/
+**/*.rs.bk
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/settings.json
+.vscode/*.code-workspace
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# pnpm
+.pnpm-store/
+
+# Tauri build artifacts
+src-tauri/WixTools/
