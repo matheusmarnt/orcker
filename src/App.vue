@@ -1,3 +1,7 @@
+<script setup lang="ts">
+import DockerStatusBadge from './components/DockerStatusBadge.vue'
+</script>
+
 <template>
   <div class="flex h-screen w-screen overflow-hidden bg-background text-foreground">
     <!-- Left sidebar — 240px fixed -->
@@ -15,12 +19,9 @@
         </nav>
       </div>
 
-      <!-- Docker status badge (bottom) — implemented in Plan 05 -->
+      <!-- Docker status badge (bottom) -->
       <div class="border-t border-border p-3">
-        <div class="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-muted-foreground">
-          <span class="h-2 w-2 rounded-full bg-muted-foreground" />
-          <span>Docker status</span>
-        </div>
+        <DockerStatusBadge />
       </div>
     </aside>
 
