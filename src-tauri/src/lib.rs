@@ -31,14 +31,15 @@ pub fn run() {
     // MUST be initialized before tracing_subscriber::fmt().init()
     tracing_log::LogTracer::init().ok();
 
-    tracing_subscriber::fmt()
+    // try_init: tauri_plugin_log may already set a log subscriber — ignore conflict
+    let _ = tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::from_default_env()
                 .add_directive("orcker=debug".parse().unwrap())
                 .add_directive("bollard=warn".parse().unwrap())
                 .add_directive("tauri=info".parse().unwrap()),
         )
-        .init();
+        .try_init();
 
     // STEP 3: Build Tauri app
     tauri::Builder::default()
