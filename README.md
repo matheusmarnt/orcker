@@ -2,8 +2,8 @@
 
 **Your Laravel Dev Infrastructure, Under Control.**
 
-[![CI](https://github.com/matheusmariano/orcker/actions/workflows/ci.yml/badge.svg)](https://github.com/matheusmariano/orcker/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/matheusmariano/orcker)](https://github.com/matheusmariano/orcker/releases)
+[![CI](https://github.com/matheusmarnt/orcker/actions/workflows/ci.yml/badge.svg)](https://github.com/matheusmarnt/orcker/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/matheusmarnt/orcker)](https://github.com/matheusmarnt/orcker/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 > **Status:** Pre-MVP — active development. Not production-ready.
