@@ -22,6 +22,13 @@ docker.initEventListener()
           >
             Dashboard
           </router-link>
+          <router-link
+            to="/global"
+            class="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+            active-class="bg-accent text-accent-foreground"
+          >
+            Global Stack
+          </router-link>
         </nav>
       </div>
 
