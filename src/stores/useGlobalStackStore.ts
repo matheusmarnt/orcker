@@ -45,6 +45,7 @@ export const useGlobalStackStore = defineStore('globalStack', () => {
         const { service, status } = event.payload
         statuses.value[service] = status
         if (status.kind === 'error') {
+          console.error(`[orcker] ${service} error:`, status.message)
           toast.error(`${service}: ${status.message}`)
         }
       },
