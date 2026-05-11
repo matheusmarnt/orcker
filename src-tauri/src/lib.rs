@@ -16,6 +16,11 @@ pub fn run() {
         .commands(collect_commands![
             commands::docker::get_docker_version,
             commands::docker::list_containers,
+            commands::global_stack::toggle_service,
+            commands::global_stack::get_services_status,
+            commands::global_stack::set_service_config,
+            commands::global_stack::global_on,
+            commands::global_stack::global_off,
         ]);
 
     // Export TypeScript bindings in debug builds only

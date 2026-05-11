@@ -1,10 +1,12 @@
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use crate::adapters::docker::client::DockerAdapter;
+use crate::core::global_stack::GlobalStackState;
 
 pub struct AppState {
     pub docker: Arc<RwLock<Option<DockerAdapter>>>,
     pub docker_socket: Arc<RwLock<Option<String>>>,
+    pub global_stack: GlobalStackState,
 }
 
 impl AppState {
@@ -12,6 +14,7 @@ impl AppState {
         Self {
             docker: Arc::new(RwLock::new(None)),
             docker_socket: Arc::new(RwLock::new(None)),
+            global_stack: GlobalStackState::new(),
         }
     }
 }
