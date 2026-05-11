@@ -1,3 +1,4 @@
+#![allow(deprecated)]
 use bollard::network::{CreateNetworkOptions, InspectNetworkOptions};
 use bollard::Docker;
 use crate::core::error::AppError;

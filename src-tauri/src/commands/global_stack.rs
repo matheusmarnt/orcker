@@ -1,3 +1,4 @@
+#![allow(deprecated)]
 use std::collections::HashMap;
 use tauri::{AppHandle, Emitter, State};
 use tauri_plugin_store::StoreExt;
