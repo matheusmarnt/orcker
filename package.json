@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
-    "tauri": "GTK_MODULES='' tauri",
+    "tauri": "tauri",
     "type-check": "vue-tsc --noEmit",
     "lint": "eslint . --ext .vue,.ts,.tsx --max-warnings 0",
     "lint:fix": "eslint . --ext .vue,.ts,.tsx --fix",
