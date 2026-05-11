@@ -100,6 +100,17 @@ export const useDockerStore = defineStore('docker', () => {
         await refreshContainers()
       }
     })
+
+    // Fallback: if docker://connected already fired before listeners registered, recover here
+    if (connectionStatus.value !== 'connected') {
+      try {
+        const version = await getDockerVersion()
+        setConnected(version, socketPath.value ?? 'unix socket')
+        await refreshContainers()
+      } catch {
+        // Not connected yet — events will arrive normally
+      }
+    }
   }
 
   return {

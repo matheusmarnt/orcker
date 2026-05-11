@@ -1,15 +1,10 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
 import { Skeleton } from '../components/ui/skeleton'
 import ContainerTable from '../components/ContainerTable.vue'
 import ErrorScreen from '../components/ErrorScreen.vue'
 import { useDockerStore } from '../stores/docker'
 
 const docker = useDockerStore()
-
-onMounted(() => {
-  docker.initEventListener()
-})
 </script>
 
 <template>

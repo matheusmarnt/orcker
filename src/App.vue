@@ -1,5 +1,11 @@
 <script setup lang="ts">
 import DockerStatusBadge from './components/DockerStatusBadge.vue'
+import { useDockerStore } from './stores/docker'
+
+// Register Tauri event listeners at earliest possible point — before any child mounts.
+// DashboardView.vue must NOT call initEventListener() again.
+const docker = useDockerStore()
+docker.initEventListener()
 </script>
 
 <template>
