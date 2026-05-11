@@ -63,9 +63,9 @@ const activePort = computed(
       <div class="flex items-center justify-between">
         <span class="text-sm font-semibold">{{ label }}</span>
         <Switch
-          :checked="store.isRunning(serviceId)"
+          :model-value="store.isRunning(serviceId)"
           :disabled="store.isTransitioning(serviceId)"
-          @update:checked="store.toggleService(serviceId)"
+          @update:model-value="store.toggleService(serviceId)"
         />
       </div>
 
