@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Toaster } from 'vue-sonner'
 import DockerStatusBadge from './components/DockerStatusBadge.vue'
 import { useDockerStore } from './stores/docker'
 
@@ -43,4 +44,6 @@ docker.initEventListener()
       <router-view />
     </main>
   </div>
+
+  <Toaster rich-colors position="bottom-right" />
 </template>
