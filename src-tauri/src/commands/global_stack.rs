@@ -142,6 +142,34 @@ async fn start_service(app: AppHandle, state: &AppState, service: ServiceId) -> 
                 use bollard::models::{HostConfig, PortBinding, RestartPolicy, RestartPolicyNameEnum};
 
                 let image = config.image_tag.clone();
+
+                // Pull image before creating container (no-op if already local)
+                {
+                    use bollard::image::CreateImageOptions;
+                    use futures_util::StreamExt;
+                    let mut pull = docker.create_image(
+                        Some(CreateImageOptions {
+                            from_image: image.clone(),
+                            ..Default::default()
+                        }),
+                        None,
+                        None,
+                    );
+                    while let Some(msg) = pull.next().await {
+                        if let Err(e) = msg {
+                            let err_status = ServiceStatus::Error(
+                                format!("Pull '{}' failed: {}", image, e),
+                            );
+                            let mut map = statuses_arc.write().await;
+                            map.insert(service, err_status.clone());
+                            app_clone
+                                .emit("global://service-status", ServiceStatusEvent { service, status: err_status })
+                                .ok();
+                            return;
+                        }
+                    }
+                }
+
                 let internal_port = service.internal_port();
                 let host_port = config.port.to_string();
 
