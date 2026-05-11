@@ -27,6 +27,7 @@ pub async fn get_docker_version(
 
 #[tauri::command]
 #[specta::specta]
+#[allow(deprecated)]
 pub async fn list_containers(
     state: tauri::State<'_, AppState>,
 ) -> Result<Vec<ContainerSummary>, AppError> {

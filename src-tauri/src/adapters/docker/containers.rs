@@ -1,7 +1,9 @@
+#[allow(deprecated)]
 use bollard::system::EventsOptions;
 use futures_util::StreamExt;
 use tauri::Emitter;
 
+#[allow(deprecated)]
 pub async fn subscribe_events(
     docker: bollard::Docker,
     app_handle: tauri::AppHandle,
