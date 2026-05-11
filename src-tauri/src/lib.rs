@@ -67,6 +67,8 @@ pub fn run() {
 /// Probe Docker socket in background, update AppState on success or emit error event.
 /// Auto-retries every 4 seconds if Docker is not initially reachable.
 async fn probe_docker_and_update(handle: tauri::AppHandle) {
+    // Wait for Vue to mount and register event listeners before first emit
+    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
     loop {
         tracing::debug!("Probing Docker socket...");
         match DockerAdapter::connect().await {
