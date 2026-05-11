@@ -4,6 +4,7 @@ pub mod core;
 
 use tauri::{Emitter, Manager};
 use tauri_specta::{collect_commands, Builder as SpectaBuilder};
+use tauri_plugin_global_shortcut::ShortcutState;
 use crate::core::state::AppState;
 use crate::adapters::docker::client::DockerAdapter;
 
@@ -46,6 +47,18 @@ pub fn run() {
     // tracing_subscriber handles stdout — tauri_plugin_log not needed
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_store::Builder::new().build())
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_shortcuts(["CmdOrCtrl+Shift+G"])
+                .expect("failed to build shortcut")
+                .with_handler(|app, _shortcut, event| {
+                    if event.state == ShortcutState::Pressed {
+                        app.emit("global://shortcut-toggle", ()).ok();
+                    }
+                })
+                .build(),
+        )
         .setup(|app| {
             // Register disconnected state IMMEDIATELY — window opens before Docker probe
             app.manage(AppState::disconnected());
