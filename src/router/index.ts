@@ -11,5 +11,10 @@ export const router = createRouter({
       path: '/dashboard',
       component: () => import('../views/DashboardView.vue'),
     },
+    {
+      path: '/global',
+      name: 'global',
+      component: () => import('../views/GlobalStackView.vue'),
+    },
   ],
 })
