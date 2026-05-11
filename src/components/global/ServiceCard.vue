@@ -95,7 +95,7 @@ const activePort = computed(
       </button>
 
       <!-- Config panel (expand in-place) -->
-      <div v-show="configOpen">
+      <div v-if="configOpen">
         <ServiceConfigPanel :service-id="serviceId" />
       </div>
     </CardContent>
