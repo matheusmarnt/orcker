@@ -40,7 +40,7 @@ onUnmounted(() => {
     </div>
 
     <!-- Service cards -->
-    <div v-else class="flex gap-4">
+    <div v-else class="flex items-start gap-4">
       <ServiceCard
         service-id="redis"
         label="Redis"
