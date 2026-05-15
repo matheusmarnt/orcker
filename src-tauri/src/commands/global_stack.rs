@@ -430,25 +430,23 @@ async fn stop_service(
             )
             .await;
 
-        if let Err(e) = &stop_result {
-            if let bollard::errors::Error::DockerResponseServerError {
-                status_code: 404, ..
-            } = e
-            {
-                // Already gone — mark stopped
-                let mut map = statuses_arc.write().await;
-                map.insert(service, ServiceStatus::Stopped);
-                app_clone
-                    .emit(
-                        "global://service-status",
-                        ServiceStatusEvent {
-                            service,
-                            status: ServiceStatus::Stopped,
-                        },
-                    )
-                    .ok();
-                return;
-            }
+        if let Err(bollard::errors::Error::DockerResponseServerError {
+            status_code: 404, ..
+        }) = &stop_result
+        {
+            // Already gone — mark stopped
+            let mut map = statuses_arc.write().await;
+            map.insert(service, ServiceStatus::Stopped);
+            app_clone
+                .emit(
+                    "global://service-status",
+                    ServiceStatusEvent {
+                        service,
+                        status: ServiceStatus::Stopped,
+                    },
+                )
+                .ok();
+            return;
         }
 
         // Remove container (force=true, ignore 404)
