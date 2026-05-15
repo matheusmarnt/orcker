@@ -151,7 +151,10 @@ pub async fn scaffold_project(
                 }
             }
 
-            let status = child.wait().await.map_err(|e| AppError::Internal(e.to_string()))?;
+            let status = child
+                .wait()
+                .await
+                .map_err(|e| AppError::Internal(e.to_string()))?;
             if !status.success() {
                 let _ = on_chunk.send(ScaffoldChunk {
                     text: format!("{} step failed", $program),
@@ -177,7 +180,12 @@ pub async fn scaffold_project(
     });
     run_step!(
         "composer",
-        ["create-project", "laravel/laravel", &project_name, "--prefer-dist"],
+        [
+            "create-project",
+            "laravel/laravel",
+            &project_name,
+            "--prefer-dist"
+        ],
         &parent_dir
     );
 
@@ -197,7 +205,13 @@ pub async fn scaffold_project(
             });
             run_step!(
                 "npm",
-                ["install", "-D", "tailwindcss", "alpinejs", "@alpinejs/collapse"],
+                [
+                    "install",
+                    "-D",
+                    "tailwindcss",
+                    "alpinejs",
+                    "@alpinejs/collapse"
+                ],
                 &project_dir
             );
         }
@@ -311,8 +325,7 @@ pub async fn read_env_file(
         .find(|p| p.id == project_id)
         .ok_or_else(|| AppError::Internal(format!("Project {} not found", project_id)))?;
 
-    let env_content =
-        std::fs::read_to_string(format!("{}/.env", project.path)).unwrap_or_default();
+    let env_content = std::fs::read_to_string(format!("{}/.env", project.path)).unwrap_or_default();
     let example_content =
         std::fs::read_to_string(format!("{}/.env.example", project.path)).unwrap_or_default();
 

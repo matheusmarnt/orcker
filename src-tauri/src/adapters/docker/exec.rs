@@ -27,7 +27,10 @@ pub async fn docker_exec_stream(
 ) -> Result<(), AppError> {
     // Guard: container must be running
     let inspect = docker
-        .inspect_container(container_id, None::<bollard::query_parameters::InspectContainerOptions>)
+        .inspect_container(
+            container_id,
+            None::<bollard::query_parameters::InspectContainerOptions>,
+        )
         .await
         .map_err(|e| AppError::DockerApi(e.to_string()))?;
 
@@ -61,12 +64,11 @@ pub async fn docker_exec_stream(
         .await
         .map_err(|e| AppError::DockerApi(e.to_string()))?;
 
-    if let StartExecResults::Attached {
-        mut output, ..
-    } = docker
-        .start_exec(&exec.id, None)
-        .await
-        .map_err(|e| AppError::DockerApi(e.to_string()))?
+    if let StartExecResults::Attached { mut output, .. } =
+        docker
+            .start_exec(&exec.id, None)
+            .await
+            .map_err(|e| AppError::DockerApi(e.to_string()))?
     {
         loop {
             tokio::select! {
@@ -109,7 +111,10 @@ mod tests {
         // when cancellation is requested before streaming begins.
         let token = CancellationToken::new();
         token.cancel();
-        assert!(token.is_cancelled(), "token.cancel() must make is_cancelled() return true");
+        assert!(
+            token.is_cancelled(),
+            "token.cancel() must make is_cancelled() return true"
+        );
     }
 
     #[test]
@@ -123,7 +128,10 @@ mod tests {
         let parent = CancellationToken::new();
         let child = parent.child_token();
         parent.cancel();
-        assert!(child.is_cancelled(), "child token must be cancelled when parent cancels");
+        assert!(
+            child.is_cancelled(),
+            "child token must be cancelled when parent cancels"
+        );
     }
 
     #[test]

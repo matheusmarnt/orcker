@@ -10,6 +10,7 @@ vi.mock('@/ipc/bindings', () => {
       registerProject: vi.fn().mockResolvedValue({ status: 'ok', data: proj }),
       importProject: vi.fn().mockResolvedValue({ status: 'ok', data: { path: '/home', detected_files: ['artisan'] } }),
       pickProjectFolder: vi.fn().mockResolvedValue({ status: 'ok', data: '/home/user/new-app' }),
+      getProjectStatus: vi.fn().mockResolvedValue({ status: 'ok', data: 'running' }),
     },
   }
 })

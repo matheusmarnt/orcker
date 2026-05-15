@@ -147,6 +147,8 @@ export type ProjectConfig = {
 
 export type ProjectStatus = { kind: "running" } | { kind: "partially_running" } | { kind: "unhealthy" } | { kind: "stopped" };
 
+export type ProjectStatusEvent = { project_id: string; status: ProjectStatus };
+
 export type ScaffoldChunk = {
 	text: string,
 	done: boolean,

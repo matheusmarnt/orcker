@@ -48,6 +48,9 @@ mod tests {
         // Should return Plugin, Legacy, or None — never panic
         let driver = detect_compose_driver();
         // On dev machine with Docker Desktop, expects Plugin
-        matches!(driver, ComposeDriver::Plugin | ComposeDriver::Legacy | ComposeDriver::None);
+        matches!(
+            driver,
+            ComposeDriver::Plugin | ComposeDriver::Legacy | ComposeDriver::None
+        );
     }
 }

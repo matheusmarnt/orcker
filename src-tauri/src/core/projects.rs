@@ -11,7 +11,7 @@ pub struct ProjectConfig {
     pub vite_auto: bool,
 }
 
-#[derive(Clone, Debug, PartialEq, serde::Serialize, specta::Type)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize, specta::Type)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum ProjectStatus {
     Running,
@@ -20,7 +20,7 @@ pub enum ProjectStatus {
     Stopped,
 }
 
-#[derive(Clone, serde::Serialize, specta::Type)]
+#[derive(Clone, serde::Serialize, serde::Deserialize, specta::Type, tauri_specta::Event)]
 pub struct ProjectStatusEvent {
     pub project_id: String,
     pub status: ProjectStatus,

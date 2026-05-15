@@ -9,45 +9,47 @@ use crate::core::state::AppState;
 use tauri::{Emitter, Manager};
 use tauri_plugin_global_shortcut::ShortcutState;
 use tauri_plugin_store::StoreExt;
-use tauri_specta::{collect_commands, Builder as SpectaBuilder};
+use tauri_specta::{collect_commands, collect_events, Builder as SpectaBuilder};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // STEP 1: Build tauri-specta collection BEFORE tauri::Builder
     // This must happen at startup — not in build.rs
-    let specta_builder = SpectaBuilder::<tauri::Wry>::new().commands(collect_commands![
-        commands::docker::get_docker_version,
-        commands::docker::list_containers,
-        commands::global_stack::toggle_service,
-        commands::global_stack::get_services_status,
-        commands::global_stack::get_service_configs,
-        commands::global_stack::set_service_config,
-        commands::global_stack::global_on,
-        commands::global_stack::global_off,
-        commands::projects::pick_project_folder,
-        commands::projects::register_project,
-        commands::projects::import_project,
-        commands::projects::list_projects,
-        commands::projects::get_compose_driver,
-        commands::artisan::list_artisan_commands,
-        commands::artisan::run_artisan_command,
-        commands::artisan::cancel_artisan_command,
-        commands::projects::scaffold_project,
-        commands::logs::start_log_stream,
-        commands::logs::stop_log_stream,
-        commands::projects::read_env_file,
-        commands::projects::save_env_file,
-        commands::projects::toggle_vite_auto,
-        commands::projects::generate_xdebug_config,
-        commands::projects::read_php_ini,
-        commands::projects::save_php_ini,
-        commands::projects::list_supervisor_workers,
-        commands::projects::restart_supervisor_worker,
-        commands::projects::open_project_folder,
-        commands::projects::start_project,
-        commands::projects::stop_project,
-        commands::projects::get_project_status,
-    ]);
+    let specta_builder = SpectaBuilder::<tauri::Wry>::new()
+        .commands(collect_commands![
+            commands::docker::get_docker_version,
+            commands::docker::list_containers,
+            commands::global_stack::toggle_service,
+            commands::global_stack::get_services_status,
+            commands::global_stack::get_service_configs,
+            commands::global_stack::set_service_config,
+            commands::global_stack::global_on,
+            commands::global_stack::global_off,
+            commands::projects::pick_project_folder,
+            commands::projects::register_project,
+            commands::projects::import_project,
+            commands::projects::list_projects,
+            commands::projects::get_compose_driver,
+            commands::artisan::list_artisan_commands,
+            commands::artisan::run_artisan_command,
+            commands::artisan::cancel_artisan_command,
+            commands::projects::scaffold_project,
+            commands::logs::start_log_stream,
+            commands::logs::stop_log_stream,
+            commands::projects::read_env_file,
+            commands::projects::save_env_file,
+            commands::projects::toggle_vite_auto,
+            commands::projects::generate_xdebug_config,
+            commands::projects::read_php_ini,
+            commands::projects::save_php_ini,
+            commands::projects::list_supervisor_workers,
+            commands::projects::restart_supervisor_worker,
+            commands::projects::open_project_folder,
+            commands::projects::start_project,
+            commands::projects::stop_project,
+            commands::projects::get_project_status,
+        ])
+        .events(collect_events![crate::core::projects::ProjectStatusEvent]);
 
     // Export TypeScript bindings in debug builds only
     #[cfg(debug_assertions)]

@@ -2,7 +2,9 @@ use tauri::ipc::Channel;
 use tauri::State;
 use tokio_util::sync::CancellationToken;
 
-use crate::adapters::docker::log_stream::{docker_log_stream, file_tail_stream, LogLine, LogSource};
+use crate::adapters::docker::log_stream::{
+    docker_log_stream, file_tail_stream, LogLine, LogSource,
+};
 use crate::core::error::AppError;
 use crate::core::projects::ProjectsState;
 use crate::core::state::AppState;
