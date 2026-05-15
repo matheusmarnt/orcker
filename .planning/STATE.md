@@ -8,7 +8,7 @@
 **Phase 1 — COMPLETE.** All 5 plans executed.
 **Phase 2 — COMPLETE.** All 4 plans executed.
 **Phase 3 — COMPLETE.** All 12 plans executed.
-**Phase 4 — IN PROGRESS.** Plans 04-01 through 04-05 complete.
+**Phase 4 — IN PROGRESS.** Plans 04-01 through 04-07 complete.
 
 ## Completed
 
@@ -53,6 +53,7 @@
 - [x] Phase 4 Plan 03: Compose editor — read_compose_file + save_compose_file + ComposeEditor.vue Monaco drawer + ComposeErrorPanel.vue — complete (2026-05-15)
 - [x] Phase 4 Plan 04: M6 database commands (create/dump/restore/open-psql) + DatabaseTab Vue component — complete (2026-05-15)
 - [x] Phase 4 Plan 05: Catalog expansion — MinIO/Soketi/Meilisearch global stack + Filament/ApiOnly/Jetstream scaffold templates — complete (2026-05-15)
+- [x] Phase 4 Plan 07: Volume and image management — bollard adapters + VolumeList + ImageList + /infra route — complete (2026-05-15)
 
 ## Phase Map
 
@@ -138,6 +139,11 @@
 - `create_testing_db_inner` fire-and-forget — testing DB creation failure must not block project registration
 - `find_global_postgres` by Docker Compose labels — resilient to container name changes
 - `open_db_cli` delegates to `docker_exec_stream` adapter — reuses existing streaming infrastructure
+- bollard 0.19 `ImageSummary` has non-Option `id`/`repo_tags`/`size` fields — plan assumed Option; access directly
+- `space_reclaimed` is `i64` (not `u64`) in bollard 0.19 prune responses — cast via `.max(0) as u64`
+- `#![allow(deprecated)]` per module for `CreateImageOptions` — consistent with project bollard 0.19 pattern
+- `chrono` feature `local-offset` does not exist in 0.4; correct name is `clock`
+- `useInfraStore` calls `commands.listVolumes/listImages` (typed commands object, not raw typedError) — cleaner API
 
 ## Risks
 

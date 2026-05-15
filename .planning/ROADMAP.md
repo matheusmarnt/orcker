@@ -171,7 +171,7 @@ Plans:
 | 1. Foundation | 1/5 | In Progress|  |
 | 2. Global Stack | 4/5 | In Progress|  |
 | 3. Daily Driver | 12/13 | In Progress|  |
-| 4. Power Tools | 5/11 | In Progress|  |
+| 4. Power Tools | 6/11 | In Progress|  |
 | 5. Sandbox | 0/TBD | Not started | - |
 
 ---
