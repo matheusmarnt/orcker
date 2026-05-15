@@ -51,9 +51,10 @@ mod tests {
     /// See: test_ensure_global_network_compiles
     #[test]
     fn test_ensure_global_network_compiles() {
-        // Verifies the function signatures and types compile correctly.
+        // Verifies functions exist and compile. async fn returns impl Future,
+        // not a fn pointer — type inference verifies the signature implicitly.
         // Integration tests require a running Docker daemon.
-        let _: fn(&bollard::Docker) -> _ = super::ensure_global_network;
-        let _: fn(&bollard::Docker) -> _ = super::remove_global_network;
+        let _ = super::ensure_global_network;
+        let _ = super::remove_global_network;
     }
 }
