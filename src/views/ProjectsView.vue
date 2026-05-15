@@ -105,6 +105,7 @@ async function stopProject(projectId: string) {
         v-for="project in store.projects"
         :key="project.id"
         :project="project"
+        :status="store.statuses.get(project.id)"
         :opening="openingProjectId === project.id"
         :starting="startingProjectId === project.id"
         :stopping="stoppingProjectId === project.id"

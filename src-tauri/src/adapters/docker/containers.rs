@@ -10,24 +10,21 @@ use tauri::Emitter;
 const APP_SERVICES: &[&str] = &["laravel.test", "app", "web", "php", "application"];
 
 /// Find the running app container for a project by querying Docker Compose labels.
-/// Uses the project folder name as the compose project name (default Compose v2 behavior).
+/// Uses project.working_dir label — immune to compose `name:` overrides.
 /// Returns `None` if no container found or Docker query fails.
 #[allow(deprecated)]
 pub async fn find_app_container(docker: &bollard::Docker, project_path: &str) -> Option<String> {
-    let project_name = std::path::Path::new(project_path)
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("")
-        .to_lowercase();
-
-    if project_name.is_empty() {
+    if project_path.is_empty() {
         return None;
     }
 
     let mut filters: HashMap<String, Vec<String>> = HashMap::new();
     filters.insert(
         "label".to_string(),
-        vec![format!("com.docker.compose.project={}", project_name)],
+        vec![format!(
+            "com.docker.compose.project.working_dir={}",
+            project_path
+        )],
     );
 
     let containers = docker

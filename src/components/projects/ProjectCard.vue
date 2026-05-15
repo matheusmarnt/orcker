@@ -4,11 +4,9 @@ import { useRouter } from 'vue-router'
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import type { ProjectConfig } from '@/ipc/bindings'
+import type { ProjectConfig, ProjectStatus } from '@/ipc/bindings'
 
 const router = useRouter()
-
-export type ProjectStatus = { kind: 'running' } | { kind: 'stopped' } | { kind: 'error'; message: string }
 
 const props = defineProps<{
   project: ProjectConfig
@@ -28,14 +26,15 @@ const emit = defineEmits<{
 const badgeVariant = computed(() => {
   if (!props.status) return 'secondary' as const
   if (props.status.kind === 'running') return 'default' as const
-  if (props.status.kind === 'error') return 'destructive' as const
+  if (props.status.kind === 'unhealthy') return 'destructive' as const
   return 'secondary' as const
 })
 
 const statusLabel = computed(() => {
   if (!props.status) return 'Stopped'
   if (props.status.kind === 'running') return 'Running'
-  if (props.status.kind === 'error') return 'Error'
+  if (props.status.kind === 'partially_running') return 'Partial'
+  if (props.status.kind === 'unhealthy') return 'Unhealthy'
   return 'Stopped'
 })
 </script>

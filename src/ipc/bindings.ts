@@ -50,14 +50,21 @@ export const commands = {
 	restartSupervisorWorker: (supervisorContainer: string, workerName: string) => typedError<null, AppError>(__TAURI_INVOKE("restart_supervisor_worker", { supervisorContainer, workerName })),
 	openProjectFolder: (projectId: string) => typedError<null, AppError>(__TAURI_INVOKE("open_project_folder", { projectId })),
 	/**
-	 *  Start project containers. Auto-detects Sail, Compose Plugin, or Legacy.
-	 *  If `up -d` fails due to a healthcheck dependency (e.g. meilisearch exits before
-	 *  laravel.test starts), retries with `--no-deps` on the app service so the Laravel
-	 *  container comes up even when optional services are unhealthy.
+	 *  Start project containers — strict 2-stage recovery.
+	 * 
+	 *  Stage 1 — full `up -d` + readiness poll (30 s): waits until ALL containers
+	 *             are running+healthy. Returns Ok only when all pass.
+	 *  Stage 2 — Docker restart loop: restarts exited/unhealthy containers, re-runs
+	 *             `up -d`, polls again (25 s). Returns Ok only when all pass.
+	 * 
+	 *  On success, spawns a 5 s health monitor that emits `project://status` events.
+	 *  On failure, returns the names of the services that did not reach healthy state.
 	 */
 	startProject: (projectId: string) => typedError<string, AppError>(__TAURI_INVOKE("start_project", { projectId })),
-	/**  Stop project containers. Auto-detects Sail, Compose Plugin, or Legacy. */
+	/**  Stop project containers. Aborts health monitor, runs compose down, emits final Stopped event. */
 	stopProject: (projectId: string) => typedError<string, AppError>(__TAURI_INVOKE("stop_project", { projectId })),
+	/**  Return current `ProjectStatus` for a project by querying Docker. */
+	getProjectStatus: (projectId: string) => typedError<ProjectStatus, AppError>(__TAURI_INVOKE("get_project_status", { projectId })),
 };
 
 /* Types */
@@ -137,6 +144,8 @@ export type ProjectConfig = {
 	path: string,
 	vite_auto: boolean,
 };
+
+export type ProjectStatus = { kind: "running" } | { kind: "partially_running" } | { kind: "unhealthy" } | { kind: "stopped" };
 
 export type ScaffoldChunk = {
 	text: string,

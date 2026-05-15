@@ -1,8 +1,8 @@
 use crate::core::compose::ComposeDriver;
 use crate::core::error::AppError;
-use crate::core::projects::{ProjectConfig, ProjectsState};
+use crate::core::projects::{ProjectConfig, ProjectStatus, ProjectStatusEvent, ProjectsState};
 use crate::core::state::AppState;
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Emitter, State};
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_opener::OpenerExt;
 
@@ -736,16 +736,15 @@ async fn run_compose_command(
     Ok(combined)
 }
 
-/// Start project containers — 3-stage recovery for partial compose failures.
+/// Start project containers — strict 2-stage recovery.
 ///
-/// Stage 1 — full `up -d` + readiness poll (30 s): waits until all containers
-///            reach running+healthy state, not just compose exit 0. compose exits
-///            as soon as containers are *started* (detached); meilisearch and
-///            other services with healthchecks may crash seconds after that.
-/// Stage 2 — Docker restart loop: restarts any exited/unhealthy containers, then
-///            re-runs `up -d` and polls again (25 s).
-/// Stage 3 — `--no-deps` fallback: force-starts the app service bypassing
-///            service_healthy dependency gates (Sail projects only).
+/// Stage 1 — full `up -d` + readiness poll (30 s): waits until ALL containers
+///            are running+healthy. Returns Ok only when all pass.
+/// Stage 2 — Docker restart loop: restarts exited/unhealthy containers, re-runs
+///            `up -d`, polls again (25 s). Returns Ok only when all pass.
+///
+/// On success, spawns a 5 s health monitor that emits `project://status` events.
+/// On failure, returns the names of the services that did not reach healthy state.
 #[tauri::command]
 #[specta::specta]
 #[allow(deprecated)]
@@ -753,6 +752,7 @@ pub async fn start_project(
     project_id: String,
     state: State<'_, ProjectsState>,
     app_state: State<'_, AppState>,
+    app: AppHandle,
 ) -> Result<String, AppError> {
     let (path, driver) = {
         let projects = state.projects.read().await;
@@ -763,38 +763,29 @@ pub async fn start_project(
         (p.path.clone(), state.compose_driver.clone())
     };
 
-    let project_name = std::path::Path::new(&path)
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("")
-        .to_lowercase();
-
     // Stage 1: full compose up (all services, dependency ordering intact)
-    let (first_output, _) = exec_compose_output(&path, &driver, &["up", "-d"]).await?;
+    exec_compose_output(&path, &driver, &["up", "-d"]).await?;
 
-    // Acquire Docker client for readiness polling and container management.
     let docker_opt = {
         let g = app_state.docker.read().await;
         g.as_ref().map(|a| a.client.clone())
     };
 
     let Some(ref docker) = docker_opt else {
-        // No Docker client available — cannot poll; trust compose exit code.
         return Ok("started".into());
     };
 
-    // Poll actual container states after compose exits. compose up -d exits 0
-    // as soon as containers are *started*, before healthchecks run or pass.
-    let stage1 = poll_containers_ready(docker, &project_name, 30).await;
+    let stage1 = poll_containers_ready(docker, &path, 30).await;
 
     if matches!(stage1, ReadinessResult::AllRunning) {
+        spawn_project_monitor(app, docker.clone(), project_id, path, &state).await;
         return Ok("started".into());
     }
 
-    // Stage 2: collect IDs of failed/unhealthy containers and restart them.
+    // Stage 2: restart exited/unhealthy containers, re-run compose.
     let to_restart = match stage1 {
         ReadinessResult::SomeExited(ids) => ids,
-        _ => list_exited_project_containers(docker, &project_name).await,
+        _ => list_exited_project_containers(docker, &path).await,
     };
 
     for id in &to_restart {
@@ -806,49 +797,24 @@ pub async fn start_project(
         tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
     }
 
-    // Re-run compose so healthcheck dependencies are re-evaluated.
     exec_compose_output(&path, &driver, &["up", "-d"]).await?;
 
-    match poll_containers_ready(docker, &project_name, 25).await {
-        ReadinessResult::AllRunning => return Ok("started".into()),
+    match poll_containers_ready(docker, &path, 25).await {
+        ReadinessResult::AllRunning => {
+            spawn_project_monitor(app, docker.clone(), project_id, path, &state).await;
+            return Ok("started".into());
+        }
         _ => {}
     }
 
-    // Stage 3: if the app container is up, that is a partial win.
-    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-    if crate::adapters::docker::containers::find_app_container(docker, &path)
-        .await
-        .is_some()
-    {
-        return Ok("started".into());
-    }
-
-    // Force-start just the app service, bypassing service_healthy dep gates.
-    // mysql/redis/mailpit are already running from earlier stages.
-    if is_sail(&path) {
-        let _ = exec_compose_output(
-            &path,
-            &driver,
-            &["up", "laravel.test", "--no-deps", "-d"],
-        )
-        .await;
-        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-        if crate::adapters::docker::containers::find_app_container(docker, &path)
-            .await
-            .is_some()
-        {
-            return Ok("started".into());
-        }
-    }
-
-    // All stages exhausted — surface original compose error.
-    let error_line = first_output
-        .lines()
-        .rev()
-        .find(|l| !l.trim().is_empty())
-        .map(|l| l.trim().to_string())
-        .unwrap_or_else(|| "Compose command failed".to_string());
-    Err(AppError::Internal(error_line))
+    // All stages exhausted — report which services failed.
+    let failed = list_failed_service_names(docker, &path).await;
+    let detail = if failed.is_empty() {
+        "one or more services failed to reach healthy state".to_string()
+    } else {
+        format!("services failed to start: {}", failed.join(", "))
+    };
+    Err(AppError::Internal(detail))
 }
 
 /// Outcome of a container readiness poll.
@@ -865,13 +831,16 @@ enum ReadinessResult {
 #[allow(deprecated)]
 async fn list_all_project_containers(
     docker: &bollard::Docker,
-    project_name: &str,
+    project_path: &str,
 ) -> Vec<(String, String, String)> {
     use bollard::container::ListContainersOptions;
     let mut filters = std::collections::HashMap::new();
     filters.insert(
         "label".to_string(),
-        vec![format!("com.docker.compose.project={}", project_name)],
+        vec![format!(
+            "com.docker.compose.project.working_dir={}",
+            project_path
+        )],
     );
     docker
         .list_containers(Some(ListContainersOptions::<String> {
@@ -904,12 +873,12 @@ async fn list_all_project_containers(
 ///   "Exited (1) 5 seconds ago"      — state == "exited"             → failure
 async fn poll_containers_ready(
     docker: &bollard::Docker,
-    project_name: &str,
+    project_path: &str,
     timeout_secs: u64,
 ) -> ReadinessResult {
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(timeout_secs);
     loop {
-        let containers = list_all_project_containers(docker, project_name).await;
+        let containers = list_all_project_containers(docker, project_path).await;
 
         if !containers.is_empty() {
             let bad_ids: Vec<String> = containers
@@ -945,13 +914,16 @@ async fn poll_containers_ready(
 #[allow(deprecated)]
 async fn list_exited_project_containers(
     docker: &bollard::Docker,
-    project_name: &str,
+    project_path: &str,
 ) -> Vec<String> {
     use bollard::container::ListContainersOptions;
     let mut filters = std::collections::HashMap::new();
     filters.insert(
         "label".to_string(),
-        vec![format!("com.docker.compose.project={}", project_name)],
+        vec![format!(
+            "com.docker.compose.project.working_dir={}",
+            project_path
+        )],
     );
     filters.insert("status".to_string(), vec!["exited".to_string()]);
     docker
@@ -967,12 +939,13 @@ async fn list_exited_project_containers(
         .collect()
 }
 
-/// Stop project containers. Auto-detects Sail, Compose Plugin, or Legacy.
+/// Stop project containers. Aborts health monitor, runs compose down, emits final Stopped event.
 #[tauri::command]
 #[specta::specta]
 pub async fn stop_project(
     project_id: String,
     state: State<'_, ProjectsState>,
+    app: AppHandle,
 ) -> Result<String, AppError> {
     let (path, driver) = {
         let projects = state.projects.read().await;
@@ -982,7 +955,152 @@ pub async fn stop_project(
             .ok_or_else(|| AppError::NotFound("Project not found".into()))?;
         (p.path.clone(), state.compose_driver.clone())
     };
-    run_compose_command(&path, &driver, &["down"]).await
+
+    {
+        let mut monitors = state.monitors.write().await;
+        if let Some(handle) = monitors.remove(&project_id) {
+            handle.abort();
+        }
+    }
+
+    let result = run_compose_command(&path, &driver, &["down"]).await;
+
+    let _ = app.emit(
+        "project://status",
+        ProjectStatusEvent {
+            project_id,
+            status: ProjectStatus::Stopped,
+        },
+    );
+
+    result
+}
+
+/// Service names of containers that are exited, dead, or (unhealthy).
+#[allow(deprecated)]
+async fn list_failed_service_names(docker: &bollard::Docker, project_path: &str) -> Vec<String> {
+    use bollard::container::ListContainersOptions;
+    let mut filters = std::collections::HashMap::new();
+    filters.insert(
+        "label".to_string(),
+        vec![format!(
+            "com.docker.compose.project.working_dir={}",
+            project_path
+        )],
+    );
+    let mut names: Vec<String> = docker
+        .list_containers(Some(ListContainersOptions::<String> {
+            all: true,
+            filters,
+            ..Default::default()
+        }))
+        .await
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|c| {
+            let state = c
+                .state
+                .as_ref()
+                .map(|s| format!("{:?}", s).to_lowercase())
+                .unwrap_or_default();
+            let status = c.status.as_deref().unwrap_or("");
+            state == "exited" || state == "dead" || status.contains("(unhealthy)")
+        })
+        .filter_map(|c| {
+            c.labels
+                .as_ref()
+                .and_then(|l| l.get("com.docker.compose.service"))
+                .cloned()
+        })
+        .collect();
+    names.sort();
+    names.dedup();
+    names
+}
+
+/// Derive `ProjectStatus` from live Docker state for a project.
+async fn compute_project_status(docker: &bollard::Docker, project_path: &str) -> ProjectStatus {
+    let containers = list_all_project_containers(docker, project_path).await;
+    if containers.is_empty() {
+        return ProjectStatus::Stopped;
+    }
+    if containers
+        .iter()
+        .any(|(_, _, status)| status.contains("(unhealthy)"))
+    {
+        return ProjectStatus::Unhealthy;
+    }
+    let running = containers
+        .iter()
+        .filter(|(_, state, _)| state == "running")
+        .count();
+    match (running, containers.len()) {
+        (r, t) if r == t => ProjectStatus::Running,
+        (r, _) if r > 0 => ProjectStatus::PartiallyRunning,
+        _ => ProjectStatus::Stopped,
+    }
+}
+
+/// Spawn a 5 s health monitor that emits `project://status` events until stopped.
+async fn spawn_project_monitor(
+    app: AppHandle,
+    docker: bollard::Docker,
+    project_id: String,
+    project_path: String,
+    state: &ProjectsState,
+) {
+    let handle = tauri::async_runtime::spawn({
+        let app = app.clone();
+        let pid = project_id.clone();
+        async move {
+            let mut last: Option<ProjectStatus> = None;
+            loop {
+                let s = compute_project_status(&docker, &project_path).await;
+                if last.as_ref() != Some(&s) {
+                    let _ = app.emit(
+                        "project://status",
+                        ProjectStatusEvent {
+                            project_id: pid.clone(),
+                            status: s.clone(),
+                        },
+                    );
+                    last = Some(s.clone());
+                }
+                tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+            }
+        }
+    });
+
+    let mut monitors = state.monitors.write().await;
+    if let Some(old) = monitors.insert(project_id, handle) {
+        old.abort();
+    }
+}
+
+/// Return current `ProjectStatus` for a project by querying Docker.
+#[tauri::command]
+#[specta::specta]
+pub async fn get_project_status(
+    project_id: String,
+    state: State<'_, ProjectsState>,
+    app_state: State<'_, AppState>,
+) -> Result<ProjectStatus, AppError> {
+    let path = {
+        let projects = state.projects.read().await;
+        projects
+            .iter()
+            .find(|p| p.id == project_id)
+            .map(|p| p.path.clone())
+            .ok_or_else(|| AppError::NotFound("Project not found".into()))?
+    };
+    let docker_opt = {
+        let g = app_state.docker.read().await;
+        g.as_ref().map(|a| a.client.clone())
+    };
+    let Some(docker) = docker_opt else {
+        return Ok(ProjectStatus::Stopped);
+    };
+    Ok(compute_project_status(&docker, &path).await)
 }
 
 #[cfg(test)]

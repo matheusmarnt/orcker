@@ -3,11 +3,21 @@ import { ref } from 'vue'
 import { listen } from '@tauri-apps/api/event'
 import { toast } from 'vue-sonner'
 import { commands } from '@/ipc/bindings'
-import type { ProjectConfig, ImportResult } from '@/ipc/bindings'
+import type { ProjectConfig, ImportResult, ProjectStatus, ProjectStatusEvent } from '@/ipc/bindings'
 
 export const useProjectsStore = defineStore('projects', () => {
   const projects = ref<ProjectConfig[]>([])
   const loading = ref(false)
+  const statuses = ref<Map<string, ProjectStatus>>(new Map())
+
+  async function refreshStatuses() {
+    await Promise.all(
+      projects.value.map(async (p) => {
+        const res = await commands.getProjectStatus(p.id)
+        if (res.status === 'ok') statuses.value.set(p.id, res.data)
+      }),
+    )
+  }
 
   async function init(): Promise<void> {
     loading.value = true
@@ -19,6 +29,12 @@ export const useProjectsStore = defineStore('projects', () => {
     } finally {
       loading.value = false
     }
+
+    await refreshStatuses()
+
+    await listen<ProjectStatusEvent>('project://status', (event) => {
+      statuses.value.set(event.payload.project_id, event.payload.status)
+    })
 
     await listen<ProjectConfig>('projects://registered', (event) => {
       if (!projects.value.find(p => p.id === event.payload.id)) {
@@ -54,5 +70,5 @@ export const useProjectsStore = defineStore('projects', () => {
     return null
   }
 
-  return { projects, loading, init, registerProject, importProject, pickFolder }
+  return { projects, loading, statuses, init, refreshStatuses, registerProject, importProject, pickFolder }
 })

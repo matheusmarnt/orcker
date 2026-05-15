@@ -46,6 +46,7 @@ pub fn run() {
         commands::projects::open_project_folder,
         commands::projects::start_project,
         commands::projects::stop_project,
+        commands::projects::get_project_status,
     ]);
 
     // Export TypeScript bindings in debug builds only

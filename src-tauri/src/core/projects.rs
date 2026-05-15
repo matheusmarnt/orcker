@@ -11,18 +11,26 @@ pub struct ProjectConfig {
     pub vite_auto: bool,
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
-#[serde(tag = "kind", content = "message")]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, specta::Type)]
+#[serde(tag = "kind", rename_all = "snake_case")]
 pub enum ProjectStatus {
     Running,
+    PartiallyRunning,
+    Unhealthy,
     Stopped,
-    Error(String),
+}
+
+#[derive(Clone, serde::Serialize, specta::Type)]
+pub struct ProjectStatusEvent {
+    pub project_id: String,
+    pub status: ProjectStatus,
 }
 
 pub struct ProjectsState {
     pub projects: tokio::sync::RwLock<Vec<ProjectConfig>>,
     pub compose_driver: crate::core::compose::ComposeDriver,
     pub cancel_tokens: tokio::sync::RwLock<HashMap<ProjectId, CancellationToken>>,
+    pub monitors: tokio::sync::RwLock<HashMap<ProjectId, tauri::async_runtime::JoinHandle<()>>>,
 }
 
 impl ProjectsState {
@@ -31,6 +39,7 @@ impl ProjectsState {
             projects: tokio::sync::RwLock::new(Vec::new()),
             compose_driver,
             cancel_tokens: tokio::sync::RwLock::new(HashMap::new()),
+            monitors: tokio::sync::RwLock::new(HashMap::new()),
         }
     }
 }
@@ -53,10 +62,16 @@ mod tests {
     }
 
     #[test]
-    fn test_project_status_error_serializes_with_tag() {
-        let status = ProjectStatus::Error("container crashed".into());
+    fn test_project_status_running_serializes() {
+        let status = ProjectStatus::Running;
         let json = serde_json::to_value(&status).unwrap();
-        assert_eq!(json["kind"], "Error");
-        assert_eq!(json["message"], "container crashed");
+        assert_eq!(json["kind"], "running");
+    }
+
+    #[test]
+    fn test_project_status_partially_running_serializes() {
+        let status = ProjectStatus::PartiallyRunning;
+        let json = serde_json::to_value(&status).unwrap();
+        assert_eq!(json["kind"], "partially_running");
     }
 }
