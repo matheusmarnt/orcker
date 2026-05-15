@@ -1,3 +1,4 @@
+#![allow(deprecated)]
 use bollard::container::LogsOptions;
 use bollard::Docker;
 use futures_util::StreamExt;
