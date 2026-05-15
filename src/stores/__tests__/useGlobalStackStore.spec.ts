@@ -21,6 +21,7 @@ vi.mock('@/ipc/bindings', () => ({
     getServicesStatus: vi.fn(() =>
       Promise.resolve({ status: 'ok', data: { redis: { kind: 'stopped' } } }),
     ),
+    getServiceConfigs: vi.fn(() => Promise.resolve({ status: 'ok', data: {} })),
     toggleService: vi.fn(() => Promise.resolve({ status: 'ok', data: null })),
     setServiceConfig: vi.fn(() => Promise.resolve({ status: 'ok', data: false })),
     globalOn: vi.fn(() => Promise.resolve({ status: 'ok', data: null })),
