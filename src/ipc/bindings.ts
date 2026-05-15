@@ -66,6 +66,22 @@ export const commands = {
 	stopProject: (projectId: string) => typedError<string, AppError>(__TAURI_INVOKE("stop_project", { projectId })),
 	/**  Return current `ProjectStatus` for a project by querying Docker. */
 	getProjectStatus: (projectId: string) => typedError<ProjectStatus, AppError>(__TAURI_INVOKE("get_project_status", { projectId })),
+	readComposeFile: (projectId: string) => typedError<string, AppError>(__TAURI_INVOKE("read_compose_file", { projectId })),
+	saveComposeFile: (projectId: string, content: string) => typedError<null, AppError>(__TAURI_INVOKE("save_compose_file", { projectId, content })),
+	getSettings: () => typedError<AppSettingsData, AppError>(__TAURI_INVOKE("get_settings")),
+	saveSettings: (newData: AppSettingsData) => typedError<null, AppError>(__TAURI_INVOKE("save_settings", { newData })),
+	/**  Tauri command wrapper for create_testing_db_inner. */
+	createTestingDb: (projectName: string) => typedError<null, AppError>(__TAURI_INVOKE("create_testing_db", { projectName })),
+	/**  Dump project database via pg_dump to a user-chosen file path via native save dialog. */
+	dumpDb: (projectName: string) => typedError<null, AppError>(__TAURI_INVOKE("dump_db", { projectName })),
+	/**  Restore project database from a user-chosen file path via native open dialog. */
+	restoreDb: (projectName: string) => typedError<null, AppError>(__TAURI_INVOKE("restore_db", { projectName })),
+	/**
+	 *  Open an interactive psql CLI session in the global postgres container.
+	 * 
+	 *  Streams output via the existing docker_exec_stream adapter.
+	 */
+	openDbCli: (projectName: string, onChunk: Channel<CommandChunk>) => typedError<null, AppError>(__TAURI_INVOKE("open_db_cli", { projectName, onChunk })),
 };
 
 /** Events */
@@ -75,6 +91,15 @@ export const events = {
 
 /* Types */
 export type AppError = { kind: "DockerUnavailable"; message: string } | { kind: "DockerApi"; message: string } | { kind: "DockerPermission"; message: string } | { kind: "ContainerNotFound"; message: string } | { kind: "Internal"; message: string } | { kind: "NotFound"; message: string };
+
+/**  Application settings — persisted via tauri-plugin-store. */
+export type AppSettingsData = {
+	theme: string,
+	locale: string,
+	tray_enabled: boolean,
+	autostart_enabled: boolean,
+	docker_socket: string | null,
+};
 
 export type ArtisanCommand = {
 	id: string,
@@ -164,7 +189,7 @@ export type ScaffoldChunk = {
 	error: boolean,
 };
 
-export type ScaffoldTemplate = "Tall" | "InertiaVue3" | "InertiaReact" | "Filament" | "ApiOnly" | "Jetstream";
+export type ScaffoldTemplate = "Tall" | "InertiaVue3" | "InertiaReact";
 
 export type ServiceConfig = {
 	image_tag: string,
