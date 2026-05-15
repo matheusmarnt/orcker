@@ -78,10 +78,22 @@ export const commands = {
 	restoreDb: (projectName: string) => typedError<null, AppError>(__TAURI_INVOKE("restore_db", { projectName })),
 	/**
 	 *  Open an interactive psql CLI session in the global postgres container.
-	 * 
+	 *
 	 *  Streams output via the existing docker_exec_stream adapter.
 	 */
 	openDbCli: (projectName: string, onChunk: Channel<CommandChunk>) => typedError<null, AppError>(__TAURI_INVOKE("open_db_cli", { projectName, onChunk })),
+	/** List all Docker volumes with name, driver, mountpoint, and size in MB. */
+	listVolumes: () => typedError<VolumeInfo[], AppError>(__TAURI_INVOKE("list_volumes")),
+	/** Prune dangling (unused) volumes. Returns reclaimed space in bytes. */
+	pruneVolumes: () => typedError<number, AppError>(__TAURI_INVOKE("prune_volumes")),
+	/** List all local Docker images with tags and size. */
+	listImages: () => typedError<ImageInfo[], AppError>(__TAURI_INVOKE("list_images")),
+	/** Pull a Docker image by name and tag. Drains the stream fully before returning. */
+	pullImage: (image: string, tag: string) => typedError<null, AppError>(__TAURI_INVOKE("pull_image", { image, tag })),
+	/** Remove a Docker image by ID. */
+	removeImage: (imageId: string) => typedError<null, AppError>(__TAURI_INVOKE("remove_image", { imageId })),
+	/** Prune dangling (unused) images. Returns reclaimed space in bytes. */
+	pruneImages: () => typedError<number, AppError>(__TAURI_INVOKE("prune_images")),
 };
 
 /** Events */
@@ -145,6 +157,12 @@ export type EnvReadResult = {
 	example: EnvFile,
 };
 
+export type ImageInfo = {
+	id: string,
+	tags: string[],
+	size: number,
+};
+
 export type ImportResult = {
 	path: string,
 	detected_files: string[],
@@ -203,6 +221,14 @@ export type ServiceStatus = { kind: "stopped" } | { kind: "starting" } | { kind:
 export type SupervisorWorker = {
 	name: string,
 	status: string,
+};
+
+export type VolumeInfo = {
+	name: string,
+	driver: string,
+	mountpoint: string,
+	/** Size in MB; null if Docker daemon has not computed usage data. */
+	size_mb: number | null,
 };
 
 /* Tauri Specta runtime */
