@@ -11,6 +11,8 @@ pub enum AppError {
     ContainerNotFound(String),
     #[error("Internal error: {0}")]
     Internal(String),
+    #[error("Not found: {0}")]
+    NotFound(String),
 }
 
 impl From<bollard::errors::Error> for AppError {

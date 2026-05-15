@@ -333,6 +333,145 @@ pub async fn save_env_file(
     Ok(())
 }
 
+#[tauri::command]
+#[specta::specta]
+pub async fn toggle_vite_auto(
+    project_id: String,
+    vite_auto: bool,
+    state: State<'_, ProjectsState>,
+) -> Result<ProjectConfig, AppError> {
+    let mut projects = state.projects.write().await;
+    let project = projects
+        .iter_mut()
+        .find(|p| p.id == project_id)
+        .ok_or_else(|| AppError::Internal(format!("Project {} not found", project_id)))?;
+    project.vite_auto = vite_auto;
+    Ok(project.clone())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn generate_xdebug_config(
+    project_id: String,
+    state: State<'_, ProjectsState>,
+) -> Result<(), AppError> {
+    let projects = state.projects.read().await;
+    let project = projects
+        .iter()
+        .find(|p| p.id == project_id)
+        .ok_or_else(|| AppError::Internal(format!("Project {} not found", project_id)))?;
+
+    let vscode_dir = format!("{}/.vscode", project.path);
+    let idea_dir = format!("{}/.idea", project.path);
+    std::fs::create_dir_all(&vscode_dir)
+        .map_err(|e| AppError::Internal(format!("Cannot create .vscode: {}", e)))?;
+    std::fs::create_dir_all(&idea_dir)
+        .map_err(|e| AppError::Internal(format!("Cannot create .idea: {}", e)))?;
+
+    let launch_json = r#"{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Listen for Xdebug",
+      "type": "php",
+      "request": "launch",
+      "port": 9003,
+      "pathMappings": {
+        "/var/www/html": "${workspaceFolder}"
+      },
+      "log": false
+    }
+  ]
+}"#;
+
+    let phpstorm_xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PhpProjectSharedConfiguration" php_language_level="8.3" />
+  <component name="PhpDebugGeneral">
+    <option name="listenerPort" value="9003" />
+  </component>
+</project>"#;
+
+    std::fs::write(format!("{}/.vscode/launch.json", project.path), launch_json)
+        .map_err(|e| AppError::Internal(e.to_string()))?;
+    std::fs::write(format!("{}/.idea/php.xml", project.path), phpstorm_xml)
+        .map_err(|e| AppError::Internal(e.to_string()))?;
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod xdebug_tests {
+    #[test]
+    fn test_launch_json_contains_port_9003() {
+        let launch_json = r#"{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Listen for Xdebug",
+      "type": "php",
+      "request": "launch",
+      "port": 9003,
+      "pathMappings": {
+        "/var/www/html": "${workspaceFolder}"
+      },
+      "log": false
+    }
+  ]
+}"#;
+        assert!(launch_json.contains("9003"));
+        assert!(!launch_json.contains("9000"));
+    }
+
+    #[test]
+    fn test_launch_json_contains_workspace_folder() {
+        let content = r#""/var/www/html": "${workspaceFolder}""#;
+        assert!(content.contains("${workspaceFolder}"));
+    }
+
+    #[test]
+    fn test_generate_xdebug_writes_both_files() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().to_str().unwrap().to_string();
+
+        let launch_json = r#"{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Listen for Xdebug",
+      "type": "php",
+      "request": "launch",
+      "port": 9003,
+      "pathMappings": {
+        "/var/www/html": "${workspaceFolder}"
+      },
+      "log": false
+    }
+  ]
+}"#;
+        let phpstorm_xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PhpProjectSharedConfiguration" php_language_level="8.3" />
+  <component name="PhpDebugGeneral">
+    <option name="listenerPort" value="9003" />
+  </component>
+</project>"#;
+
+        std::fs::create_dir_all(format!("{}/.vscode", path)).unwrap();
+        std::fs::create_dir_all(format!("{}/.idea", path)).unwrap();
+        std::fs::write(format!("{}/.vscode/launch.json", path), launch_json).unwrap();
+        std::fs::write(format!("{}/.idea/php.xml", path), phpstorm_xml).unwrap();
+
+        let written = std::fs::read_to_string(format!("{}/.vscode/launch.json", path)).unwrap();
+        assert!(written.contains("9003"));
+        assert!(!written.contains("9000"));
+        assert!(written.contains("${workspaceFolder}"));
+
+        let xml = std::fs::read_to_string(format!("{}/.idea/php.xml", path)).unwrap();
+        assert!(xml.contains("9003"));
+    }
+}
+
 #[cfg(test)]
 mod env_tests {
     use super::parse_env;
