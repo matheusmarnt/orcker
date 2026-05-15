@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import type { ProjectConfig } from '@/ipc/bindings'
+
+const router = useRouter()
 
 export type ProjectStatus = { kind: 'running' } | { kind: 'stopped' } | { kind: 'error'; message: string }
 
@@ -53,7 +56,7 @@ const statusLabel = computed(() => {
       <Button size="sm" variant="outline" @click="emit('open')">Open</Button>
       <Button size="sm" variant="outline" @click="emit('start')">Start</Button>
       <Button size="sm" variant="outline" @click="emit('stop')">Stop</Button>
-      <Button size="sm" variant="outline" @click="emit('terminal')">Terminal</Button>
+      <Button size="sm" variant="outline" @click="router.push({ name: 'project-detail', params: { id: project.id } })">Terminal</Button>
     </CardFooter>
   </Card>
 </template>

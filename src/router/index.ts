@@ -27,5 +27,10 @@ export const router = createRouter({
       name: 'logs',
       component: () => import('../views/LogsView.vue'),
     },
+    {
+      path: '/projects/:id',
+      name: 'project-detail',
+      component: () => import('../views/ProjectDetailView.vue'),
+    },
   ],
 })
