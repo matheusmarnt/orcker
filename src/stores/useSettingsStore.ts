@@ -5,6 +5,9 @@ import { commands } from '@/ipc/bindings'
 
 export const useSettingsStore = defineStore('settings', () => {
   const colorMode = useColorMode({ storageKey: 'orcker-theme' })
+  // Tracks the explicit user preference ('light'|'dark'|'auto').
+  // colorMode.value resolves 'auto' to the OS value, so we track preference separately.
+  const theme = ref<'light' | 'dark' | 'auto'>('auto')
   const locale = ref<string>('en')
   const trayEnabled = ref<boolean>(false)
   const autostartEnabled = ref<boolean>(false)
@@ -14,7 +17,8 @@ export const useSettingsStore = defineStore('settings', () => {
     const result = await commands.getSettings()
     if (result.status === 'ok') {
       const d = result.data
-      colorMode.value = d.theme as 'dark' | 'light' | 'auto'
+      theme.value = (d.theme as 'dark' | 'light' | 'auto') ?? 'auto'
+      colorMode.value = theme.value
       locale.value = d.locale
       trayEnabled.value = d.tray_enabled
       autostartEnabled.value = d.autostart_enabled
@@ -24,7 +28,7 @@ export const useSettingsStore = defineStore('settings', () => {
 
   async function save() {
     await commands.saveSettings({
-      theme: colorMode.value,
+      theme: theme.value,
       locale: locale.value,
       tray_enabled: trayEnabled.value,
       autostart_enabled: autostartEnabled.value,
@@ -33,11 +37,13 @@ export const useSettingsStore = defineStore('settings', () => {
   }
 
   function setTheme(t: 'dark' | 'light' | 'auto') {
+    theme.value = t
     colorMode.value = t
   }
 
   return {
     colorMode,
+    theme,
     locale,
     trayEnabled,
     autostartEnabled,

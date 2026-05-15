@@ -3,18 +3,20 @@ import { ref } from 'vue'
 import { X } from 'lucide-vue-next'
 import AppearanceSection from './AppearanceSection.vue'
 import DockerSection from './DockerSection.vue'
+import PreferencesSection from './PreferencesSection.vue'
 import UpdatesSection from './UpdatesSection.vue'
 import DataSection from './DataSection.vue'
 
 defineProps<{ open: boolean }>()
 const emit = defineEmits<{ close: [] }>()
 
-type Section = 'appearance' | 'docker' | 'updates' | 'data'
+type Section = 'appearance' | 'preferences' | 'docker' | 'updates' | 'data'
 
 const activeSection = ref<Section>('appearance')
 
 const sections: { key: Section; label: string }[] = [
   { key: 'appearance', label: 'Appearance' },
+  { key: 'preferences', label: 'Preferences' },
   { key: 'docker', label: 'Docker' },
   { key: 'updates', label: 'Updates' },
   { key: 'data', label: 'Data' },
@@ -22,6 +24,7 @@ const sections: { key: Section; label: string }[] = [
 
 const sectionComponents = {
   appearance: AppearanceSection,
+  preferences: PreferencesSection,
   docker: DockerSection,
   updates: UpdatesSection,
   data: DataSection,

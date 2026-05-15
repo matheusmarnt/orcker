@@ -3,7 +3,20 @@ import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useI18n } from 'vue-i18n'
 
 const store = useSettingsStore()
-const { locale: i18nLocale } = useI18n()
+// useScope: 'global' ensures locale change propagates to all components
+const { locale: i18nLocale } = useI18n({ useScope: 'global' })
+
+const themeOptions = [
+  { value: 'light' as const, label: 'Light' },
+  { value: 'dark' as const, label: 'Dark' },
+  { value: 'auto' as const, label: 'System' },
+]
+
+const localeOptions = [
+  { value: 'en', label: 'EN' },
+  { value: 'pt-BR', label: 'PT-BR' },
+  { value: 'es', label: 'ES' },
+]
 
 function setTheme(t: 'light' | 'dark' | 'auto') {
   store.setTheme(t)
@@ -24,15 +37,15 @@ function setLocale(l: string) {
       <p class="mb-3 text-xs text-muted-foreground">Select the color theme for the application.</p>
       <div class="flex gap-2">
         <button
-          v-for="option in [{ value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }, { value: 'auto', label: 'System' }]"
+          v-for="option in themeOptions"
           :key="option.value"
           :class="[
             'rounded-md border px-4 py-2 text-sm font-medium transition-colors',
-            store.colorMode === option.value
+            store.theme === option.value
               ? 'border-primary bg-primary text-primary-foreground'
               : 'border-border bg-background hover:bg-accent hover:text-accent-foreground',
           ]"
-          @click="setTheme(option.value as 'light' | 'dark' | 'auto')"
+          @click="setTheme(option.value)"
         >
           {{ option.label }}
         </button>
@@ -44,7 +57,7 @@ function setLocale(l: string) {
       <p class="mb-3 text-xs text-muted-foreground">Choose the display language.</p>
       <div class="flex gap-2">
         <button
-          v-for="option in [{ value: 'en', label: 'EN' }, { value: 'pt-BR', label: 'PT-BR' }]"
+          v-for="option in localeOptions"
           :key="option.value"
           :class="[
             'rounded-md border px-4 py-2 text-sm font-medium transition-colors',
