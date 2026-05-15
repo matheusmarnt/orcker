@@ -38,7 +38,9 @@ specta-typescript = "=0.0.12"
 directories = "5"
 tauri-plugin-dialog = "2"
 tokio-util = { version = "0.7", features = ["rt"] }
+uuid = { version = "1", features = ["v4"] }
 
 [dev-dependencies]
 tokio-test = "0.4"
+tempfile = "3"
 
