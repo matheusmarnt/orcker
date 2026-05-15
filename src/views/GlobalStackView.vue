@@ -1,13 +1,52 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { listen } from '@tauri-apps/api/event'
+import { toast } from 'vue-sonner'
 import { Skeleton } from '@/components/ui/skeleton'
 import ServiceCard from '@/components/global/ServiceCard.vue'
 import { useGlobalStackStore } from '@/stores/useGlobalStackStore'
+import type { ServiceStatus } from '@/ipc/bindings'
 
 const store = useGlobalStackStore()
 const loading = ref(true)
 let unlistenShortcut: (() => void) | null = null
+
+const labels: Record<string, string> = {
+  redis: 'Redis',
+  postgres: 'PostgreSQL',
+  mailpit: 'Mailpit',
+}
+
+// Track previous statuses manually — deep watch gives same ref for old/new
+const prevStatuses = ref<Record<string, ServiceStatus>>({})
+
+watch(
+  () => store.statuses,
+  (current) => {
+    for (const [id, status] of Object.entries(current)) {
+      const prev = prevStatuses.value[id]
+      const label = labels[id] ?? id
+
+      if (!prev) {
+        // Initial load — seed baseline without toasting
+        prevStatuses.value[id] = { ...status }
+        continue
+      }
+
+      if (status.kind === 'running' && prev.kind !== 'running') {
+        toast.success(`${label} started`)
+      } else if (status.kind === 'stopped' && prev.kind !== 'stopped') {
+        toast.info(`${label} stopped`)
+      } else if (status.kind === 'error' && prev.kind !== 'error') {
+        const msg = 'message' in status ? String(status.message) : 'error'
+        toast.error(`${label}: ${msg}`)
+      }
+
+      prevStatuses.value[id] = { ...status }
+    }
+  },
+  { deep: true },
+)
 
 onMounted(async () => {
   await store.init()
