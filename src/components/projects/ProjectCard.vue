@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import type { ProjectConfig, ProjectStatus } from '@/ipc/bindings'
+import DatabaseTab from '@/components/database/DatabaseTab.vue'
 
 const router = useRouter()
 
@@ -22,6 +23,8 @@ const emit = defineEmits<{
   terminal: []
   open: []
 }>()
+
+const showDatabaseTab = ref(false)
 
 const badgeVariant = computed(() => {
   if (!props.status) return 'secondary' as const
@@ -90,6 +93,19 @@ const statusLabel = computed(() => {
       >
         Terminal
       </Button>
+      <Button
+        size="sm"
+        :variant="showDatabaseTab ? 'secondary' : 'outline'"
+        :disabled="opening || starting || stopping"
+        @click="showDatabaseTab = !showDatabaseTab"
+      >
+        Database
+      </Button>
     </CardFooter>
+
+    <!-- Database tab panel (v-if so Vue teardown clears Channel listeners) -->
+    <div v-if="showDatabaseTab" class="border-t">
+      <DatabaseTab :project-id="project.id" :project-name="project.name" />
+    </div>
   </Card>
 </template>

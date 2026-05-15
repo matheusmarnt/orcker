@@ -189,7 +189,7 @@ export type ScaffoldChunk = {
 	error: boolean,
 };
 
-export type ScaffoldTemplate = "Tall" | "InertiaVue3" | "InertiaReact";
+export type ScaffoldTemplate = "Tall" | "InertiaVue3" | "InertiaReact" | "Filament" | "ApiOnly" | "Jetstream";
 
 export type ServiceConfig = {
 	image_tag: string,
