@@ -8,7 +8,7 @@ export default [
   },
   {
     name: 'app/files-to-ignore',
-    ignores: ['**/dist/**', '**/dist-ssr/**', '**/coverage/**', 'src-tauri/**'],
+    ignores: ['**/dist/**', '**/dist-ssr/**', '**/coverage/**', 'src-tauri/**', 'src/ipc/bindings.ts'],
   },
   ...pluginVue.configs['flat/essential'],
   ...vueTsEslintConfig(),
