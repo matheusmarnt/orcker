@@ -7,6 +7,7 @@ import type { ArtisanCommand } from '@/ipc/bindings'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import CommandPanel from '@/components/projects/CommandPanel.vue'
+import EnvEditor from '@/components/projects/EnvEditor.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -18,6 +19,7 @@ const project = computed(() =>
 
 const catalog = ref<ArtisanCommand[]>([])
 const showPanel = ref(false)
+const showEnvEditor = ref(false)
 
 onMounted(async () => {
   await store.init()
@@ -62,11 +64,19 @@ onMounted(async () => {
         </div>
       </div>
 
-      <!-- Open Terminal button -->
-      <div class="mb-4">
+      <!-- Actions row -->
+      <div class="mb-4 flex items-center gap-2">
         <Button variant="outline" @click="showPanel = true">
           Open Terminal
         </Button>
+        <Button variant="outline" @click="showEnvEditor = !showEnvEditor">
+          {{ showEnvEditor ? 'Close .env Editor' : 'Edit .env' }}
+        </Button>
+      </div>
+
+      <!-- .env Editor — v-if so teardown clears state -->
+      <div v-if="showEnvEditor" class="mb-4">
+        <EnvEditor :project-id="project.id" />
       </div>
 
       <!-- Command Panel — v-if so teardown clears the stream -->
