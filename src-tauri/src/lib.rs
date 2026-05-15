@@ -3,6 +3,8 @@ pub mod commands;
 pub mod core;
 
 use crate::adapters::docker::client::DockerAdapter;
+use crate::core::compose::detect_compose_driver;
+use crate::core::projects::ProjectsState;
 use crate::core::state::AppState;
 use tauri::{Emitter, Manager};
 use tauri_plugin_global_shortcut::ShortcutState;
@@ -22,6 +24,11 @@ pub fn run() {
         commands::global_stack::set_service_config,
         commands::global_stack::global_on,
         commands::global_stack::global_off,
+        commands::projects::pick_project_folder,
+        commands::projects::register_project,
+        commands::projects::import_project,
+        commands::projects::list_projects,
+        commands::projects::get_compose_driver,
     ]);
 
     // Export TypeScript bindings in debug builds only
@@ -53,6 +60,7 @@ pub fn run() {
     // tracing_subscriber handles stdout — tauri_plugin_log not needed
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
@@ -66,6 +74,11 @@ pub fn run() {
                 .build(),
         )
         .setup(|app| {
+            // Detect compose driver synchronously before window opens (R-M2.5)
+            // detect_compose_driver() shells out to `docker compose version` / `docker-compose version`
+            let compose_driver = detect_compose_driver();
+            app.manage(ProjectsState::new(compose_driver));
+
             // Register disconnected state IMMEDIATELY — window opens before Docker probe
             app.manage(AppState::disconnected());
 

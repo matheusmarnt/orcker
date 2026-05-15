@@ -12,10 +12,17 @@ export const commands = {
 	setServiceConfig: (service: ServiceId, config: ServiceConfig) => typedError<boolean, AppError>(__TAURI_INVOKE("set_service_config", { service, config })),
 	globalOn: () => typedError<null, AppError>(__TAURI_INVOKE("global_on")),
 	globalOff: () => typedError<null, AppError>(__TAURI_INVOKE("global_off")),
+	pickProjectFolder: () => typedError<string | null, AppError>(__TAURI_INVOKE("pick_project_folder")),
+	registerProject: (name: string, path: string) => typedError<ProjectConfig, AppError>(__TAURI_INVOKE("register_project", { name, path })),
+	importProject: (path: string) => typedError<ImportResult, AppError>(__TAURI_INVOKE("import_project", { path })),
+	listProjects: () => typedError<ProjectConfig[], AppError>(__TAURI_INVOKE("list_projects")),
+	getComposeDriver: () => typedError<ComposeDriver, AppError>(__TAURI_INVOKE("get_compose_driver")),
 };
 
 /* Types */
 export type AppError = { kind: "DockerUnavailable"; message: string } | { kind: "DockerApi"; message: string } | { kind: "DockerPermission"; message: string } | { kind: "ContainerNotFound"; message: string } | { kind: "Internal"; message: string };
+
+export type ComposeDriver = "Plugin" | "Legacy" | "None";
 
 /**  Typed summary of a container — specta-exportable (no serde_json::Value) */
 export type ContainerSummary = {
@@ -24,6 +31,18 @@ export type ContainerSummary = {
 	image: string,
 	status: string,
 	state: string,
+};
+
+export type ImportResult = {
+	path: string,
+	detected_files: string[],
+};
+
+export type ProjectConfig = {
+	id: string,
+	name: string,
+	path: string,
+	vite_auto: boolean,
 };
 
 export type ServiceConfig = {

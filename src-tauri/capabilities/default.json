@@ -8,6 +8,7 @@
     "opener:default",
     "log:default",
     "global-shortcut:default",
-    "store:default"
+    "store:default",
+    "dialog:default"
   ]
 }
