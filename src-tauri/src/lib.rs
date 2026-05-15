@@ -68,6 +68,8 @@ pub fn run() {
             commands::infra::pull_image,
             commands::infra::remove_image,
             commands::infra::prune_images,
+            commands::templates::fetch_template_manifest,
+            commands::templates::install_template,
         ])
         .events(collect_events![crate::core::projects::ProjectStatusEvent]);
 
@@ -106,6 +108,8 @@ pub fn run() {
         ))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()

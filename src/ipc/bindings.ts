@@ -96,6 +96,10 @@ export const commands = {
 	removeImage: (imageId: string) => typedError<null, AppError>(__TAURI_INVOKE("remove_image", { imageId })),
 	/** Prune dangling (unused) images. Returns reclaimed space in bytes. */
 	pruneImages: () => typedError<number, AppError>(__TAURI_INVOKE("prune_images")),
+	/** Fetch template manifest from GitHub raw URL. Done in Rust to avoid CSP issues. */
+	fetchTemplateManifest: () => typedError<TemplateEntry[], AppError>(__TAURI_INVOKE("fetch_template_manifest")),
+	/** Download a template's docker-compose.yml to a user-chosen directory. */
+	installTemplate: (composeUrl: string) => typedError<string, AppError>(__TAURI_INVOKE("install_template", { composeUrl })),
 };
 
 /** Events */
@@ -223,6 +227,14 @@ export type ServiceStatus = { kind: "stopped" } | { kind: "starting" } | { kind:
 export type SupervisorWorker = {
 	name: string,
 	status: string,
+};
+
+export type TemplateEntry = {
+	id: string,
+	name: string,
+	description: string,
+	tags: string[],
+	compose_url: string,
 };
 
 export type VolumeInfo = {

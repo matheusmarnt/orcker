@@ -7,3 +7,4 @@ pub mod infra;
 pub mod logs;
 pub mod projects;
 pub mod settings;
+pub mod templates;
