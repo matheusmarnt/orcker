@@ -45,7 +45,13 @@ async function runCommand(commandId: string) {
   }
 
   try {
-    await commands.runArtisanCommand(commandId, props.project.id, channel)
+    const result = await commands.runArtisanCommand(commandId, props.project.id, channel)
+    if (result.status === 'error') {
+      lines.value.push({
+        html: convert.toHtml(`Error: ${JSON.stringify(result.error)}`),
+        isStderr: true,
+      })
+    }
   } catch (e) {
     lines.value.push({
       html: convert.toHtml(`Error: ${String(e)}`),

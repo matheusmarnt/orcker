@@ -74,11 +74,13 @@ pub async fn file_tail_stream(
     use tokio::fs::File;
     use tokio::io::{AsyncBufReadExt, AsyncSeekExt, BufReader, SeekFrom};
 
-    // Open and seek to end — only emit lines written after stream starts
+    // Open and seek to last ~100KB so existing content is shown on attach
     let mut file = File::open(&path)
         .await
         .map_err(|e| AppError::Internal(format!("Cannot open {}: {}", path, e)))?;
-    file.seek(SeekFrom::End(0))
+    let len = file.metadata().await.map(|m| m.len()).unwrap_or(0);
+    let start = len.saturating_sub(102_400);
+    file.seek(SeekFrom::Start(start))
         .await
         .map_err(|e| AppError::Internal(e.to_string()))?;
 
