@@ -18,8 +18,12 @@ onMounted(() => {
 })
 
 async function openFolder(projectId: string) {
-  const result = await commands.openProjectFolder(projectId)
-  if (result.status === 'error') toast.error(result.error.message)
+  try {
+    const result = await commands.openProjectFolder(projectId)
+    if (result.status === 'error') toast.error(result.error.message)
+  } catch (e) {
+    toast.error(e instanceof Error ? e.message : String(e))
+  }
 }
 
 async function startProject(projectId: string) {
@@ -27,10 +31,12 @@ async function startProject(projectId: string) {
   try {
     const result = await commands.startProject(projectId)
     if (result.status === 'error') {
-      toast.error(result.error.message)
+      toast.error(result.error.message ?? JSON.stringify(result.error))
     } else {
       toast.success('Project started')
     }
+  } catch (e) {
+    toast.error(e instanceof Error ? e.message : String(e))
   } finally {
     startingProjectId.value = null
   }
@@ -41,10 +47,12 @@ async function stopProject(projectId: string) {
   try {
     const result = await commands.stopProject(projectId)
     if (result.status === 'error') {
-      toast.error(result.error.message)
+      toast.error(result.error.message ?? JSON.stringify(result.error))
     } else {
       toast.success('Project stopped')
     }
+  } catch (e) {
+    toast.error(e instanceof Error ? e.message : String(e))
   } finally {
     stoppingProjectId.value = null
   }
