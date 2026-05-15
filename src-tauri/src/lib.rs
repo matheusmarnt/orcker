@@ -5,7 +5,9 @@ pub mod core;
 use crate::adapters::docker::client::DockerAdapter;
 use crate::core::compose::detect_compose_driver;
 use crate::core::projects::ProjectsState;
+use crate::core::settings::{AppSettings, AppSettingsData};
 use crate::core::state::AppState;
+use std::sync::atomic::Ordering;
 use tauri::{Emitter, Manager};
 use tauri_plugin_global_shortcut::ShortcutState;
 use tauri_plugin_store::StoreExt;
@@ -48,6 +50,14 @@ pub fn run() {
             commands::projects::start_project,
             commands::projects::stop_project,
             commands::projects::get_project_status,
+            commands::compose::read_compose_file,
+            commands::compose::save_compose_file,
+            commands::settings::get_settings,
+            commands::settings::save_settings,
+            commands::database::create_testing_db,
+            commands::database::dump_db,
+            commands::database::restore_db,
+            commands::database::open_db_cli,
         ])
         .events(collect_events![crate::core::projects::ProjectStatusEvent]);
 
@@ -102,6 +112,17 @@ pub fn run() {
             // Register disconnected state IMMEDIATELY — window opens before Docker probe
             app.manage(AppState::disconnected());
 
+            // Load settings from store (or use Default if missing)
+            let settings_data = if let Ok(store) = app.store("settings.json") {
+                store
+                    .get("settings")
+                    .and_then(|v| serde_json::from_value::<AppSettingsData>(v).ok())
+                    .unwrap_or_default()
+            } else {
+                AppSettingsData::default()
+            };
+            app.manage(AppSettings::new(settings_data));
+
             // Spawn async init: hydrate persisted configs → then probe Docker
             // setup() runs on the main thread; .await here would deadlock
             let handle = app.handle().clone();
@@ -127,6 +148,17 @@ pub fn run() {
             });
 
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            // Close-to-tray: when tray is enabled, hide window instead of closing
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                let app = window.app_handle();
+                let settings = app.state::<AppSettings>();
+                if settings.tray_enabled.load(Ordering::Relaxed) {
+                    window.hide().ok();
+                    api.prevent_close();
+                }
+            }
         })
         .invoke_handler(specta_builder.invoke_handler())
         .run(tauri::generate_context!())
