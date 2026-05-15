@@ -110,6 +110,12 @@ pub enum ScaffoldTemplate {
     Tall,
     InertiaVue3,
     InertiaReact,
+    /// Filament v3 admin panel (requires network, may take several minutes)
+    Filament,
+    /// Laravel API without frontend (Laravel 11+)
+    ApiOnly,
+    /// Laravel Jetstream with Livewire stack (requires network, may take several minutes)
+    Jetstream,
 }
 
 #[derive(Debug, Clone, serde::Serialize, specta::Type)]
@@ -269,6 +275,94 @@ pub async fn scaffold_project(
                 ["install", "@inertiajs/react", "react", "react-dom"],
                 &project_dir
             );
+        }
+        ScaffoldTemplate::Filament => {
+            let _ = on_chunk.send(ScaffoldChunk {
+                text: "Installing Filament v3 (this may take several minutes)...".into(),
+                done: false,
+                error: false,
+            });
+            run_step!(
+                "composer",
+                ["require", "filament/filament", "--no-interaction"],
+                &project_dir
+            );
+            let _ = on_chunk.send(ScaffoldChunk {
+                text: "Installing Filament admin panel...".into(),
+                done: false,
+                error: false,
+            });
+            run_step!(
+                "php",
+                [
+                    "artisan",
+                    "filament:install",
+                    "--panels",
+                    "--no-interaction"
+                ],
+                &project_dir
+            );
+            let _ = on_chunk.send(ScaffoldChunk {
+                text: "Publishing Filament config...".into(),
+                done: false,
+                error: false,
+            });
+            run_step!(
+                "php",
+                [
+                    "artisan",
+                    "vendor:publish",
+                    "--tag=filament-config",
+                    "--no-interaction"
+                ],
+                &project_dir
+            );
+        }
+        ScaffoldTemplate::ApiOnly => {
+            let _ = on_chunk.send(ScaffoldChunk {
+                text: "Installing Laravel API scaffold (Laravel 11+)...".into(),
+                done: false,
+                error: false,
+            });
+            run_step!(
+                "php",
+                ["artisan", "install:api", "--no-interaction"],
+                &project_dir
+            );
+        }
+        ScaffoldTemplate::Jetstream => {
+            let _ = on_chunk.send(ScaffoldChunk {
+                text: "Installing Jetstream (this may take several minutes)...".into(),
+                done: false,
+                error: false,
+            });
+            run_step!(
+                "composer",
+                ["require", "laravel/jetstream", "--no-interaction"],
+                &project_dir
+            );
+            let _ = on_chunk.send(ScaffoldChunk {
+                text: "Installing Jetstream with Livewire stack...".into(),
+                done: false,
+                error: false,
+            });
+            run_step!(
+                "php",
+                [
+                    "artisan",
+                    "jetstream:install",
+                    "livewire",
+                    "--no-interaction"
+                ],
+                &project_dir
+            );
+            let _ = on_chunk.send(ScaffoldChunk {
+                text: "Building frontend assets...".into(),
+                done: false,
+                error: false,
+            });
+            run_step!("npm", ["install"], &project_dir);
+            run_step!("npm", ["run", "build"], &project_dir);
         }
     }
 

@@ -51,10 +51,13 @@ async function browseScaffoldDest() {
   if (path) scaffoldDest.value = path
 }
 
-const scaffoldTemplates: { id: ScaffoldTemplate; label: string; description: string }[] = [
+const scaffoldTemplates: { id: ScaffoldTemplate; label: string; description: string; warning?: string }[] = [
   { id: 'Tall', label: 'TALL Stack', description: 'Tailwind + Alpine + Livewire + Laravel' },
   { id: 'InertiaVue3', label: 'Inertia + Vue 3', description: 'Laravel + Inertia.js + Vue 3' },
   { id: 'InertiaReact', label: 'Inertia + React', description: 'Laravel + Inertia.js + React' },
+  { id: 'Filament', label: 'Filament v3', description: 'Laravel + Filament admin panel', warning: 'Requires network access — may take several minutes' },
+  { id: 'ApiOnly', label: 'API Only', description: 'Laravel API without frontend (Laravel 11+)' },
+  { id: 'Jetstream', label: 'Jetstream (Livewire)', description: 'Laravel Jetstream with Livewire stack', warning: 'Requires network access — may take several minutes' },
 ]
 
 async function handleScaffold() {
@@ -184,6 +187,7 @@ const tabClass = computed(() => (tab: 'import' | 'scaffold') =>
                   <div>
                     <p class="text-sm font-medium">{{ tpl.label }}</p>
                     <p class="text-xs text-muted-foreground">{{ tpl.description }}</p>
+                    <p v-if="tpl.warning" class="text-xs text-amber-500 mt-0.5">⚠ {{ tpl.warning }}</p>
                   </div>
                 </label>
               </div>

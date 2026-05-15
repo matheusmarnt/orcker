@@ -8,6 +8,9 @@ const DEFAULTS: Record<ServiceId, { image_tag: string; port: number }> = {
   redis: { image_tag: 'redis:7-alpine', port: 6379 },
   postgres: { image_tag: 'postgres:16-alpine', port: 5432 },
   mailpit: { image_tag: 'axllent/mailpit:latest', port: 8025 },
+  minio: { image_tag: 'minio/minio:latest', port: 9000 },
+  soketi: { image_tag: 'quay.io/soketi/soketi:latest', port: 6001 },
+  meilisearch: { image_tag: 'getmeili/meilisearch:latest', port: 7700 },
 }
 
 const props = defineProps<{ serviceId: ServiceId }>()

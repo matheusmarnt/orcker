@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
-import { defineComponent, ref } from 'vue'
+import { defineComponent } from 'vue'
 
 // Mock monaco-editor-vue3 to avoid web worker / DOM complexity in Vitest
 vi.mock('monaco-editor-vue3', () => ({

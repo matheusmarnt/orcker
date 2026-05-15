@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import type { ProjectConfig, ProjectStatus } from '@/ipc/bindings'
 import DatabaseTab from '@/components/database/DatabaseTab.vue'
+import ComposeEditor from '@/components/compose/ComposeEditor.vue'
 
 const router = useRouter()
 
@@ -26,6 +27,14 @@ const emit = defineEmits<{
 
 // Database tab toggle — DatabaseTab component implemented in 04-04
 const showDatabaseTab = ref(false)
+
+// Compose editor drawer toggle
+const showComposeEditor = ref(false)
+
+const projectStatusString = computed(() => {
+  if (!props.status) return 'stopped'
+  return props.status.kind
+})
 
 const badgeVariant = computed(() => {
   if (!props.status) return 'secondary' as const
@@ -102,6 +111,14 @@ const statusLabel = computed(() => {
       >
         Database
       </Button>
+      <Button
+        size="sm"
+        variant="outline"
+        :disabled="opening || starting || stopping"
+        @click="showComposeEditor = true"
+      >
+        Edit Compose
+      </Button>
     </CardFooter>
 
     <!-- Database tab panel (v-if so Vue teardown clears Channel listeners) -->
@@ -109,4 +126,13 @@ const statusLabel = computed(() => {
       <DatabaseTab :project-id="project.id" :project-name="project.name" />
     </div>
   </Card>
+
+  <!-- Compose editor right-side drawer (mounted only when open) -->
+  <ComposeEditor
+    v-if="showComposeEditor"
+    :project-id="project.id"
+    :project-status="projectStatusString"
+    @close="showComposeEditor = false"
+    @restart="emit('start')"
+  />
 </template>
