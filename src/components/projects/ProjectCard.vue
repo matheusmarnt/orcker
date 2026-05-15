@@ -13,6 +13,8 @@ export type ProjectStatus = { kind: 'running' } | { kind: 'stopped' } | { kind: 
 const props = defineProps<{
   project: ProjectConfig
   status?: ProjectStatus
+  starting?: boolean
+  stopping?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -54,8 +56,12 @@ const statusLabel = computed(() => {
 
     <CardFooter class="flex gap-2 flex-wrap pt-2">
       <Button size="sm" variant="outline" @click="emit('open')">Open</Button>
-      <Button size="sm" variant="outline" @click="emit('start')">Start</Button>
-      <Button size="sm" variant="outline" @click="emit('stop')">Stop</Button>
+      <Button size="sm" variant="outline" :disabled="starting || stopping" @click="emit('start')">
+        {{ starting ? '…' : 'Start' }}
+      </Button>
+      <Button size="sm" variant="outline" :disabled="starting || stopping" @click="emit('stop')">
+        {{ stopping ? '…' : 'Stop' }}
+      </Button>
       <Button size="sm" variant="outline" @click="router.push({ name: 'project-detail', params: { id: project.id } })">Terminal</Button>
     </CardFooter>
   </Card>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { toast } from 'vue-sonner'
 import { useProjectsStore } from '@/stores/useProjectsStore'
 import { commands } from '@/ipc/bindings'
 import { Button } from '@/components/ui/button'
@@ -9,22 +10,44 @@ import NewProjectModal from '@/components/projects/NewProjectModal.vue'
 
 const store = useProjectsStore()
 const showModal = ref(false)
+const startingProjectId = ref<string | null>(null)
+const stoppingProjectId = ref<string | null>(null)
 
 onMounted(() => {
   store.init()
 })
 
 async function openFolder(projectId: string) {
+  const result = await commands.openProjectFolder(projectId)
+  if (result.status === 'error') toast.error(result.error.message)
+}
+
+async function startProject(projectId: string) {
+  startingProjectId.value = projectId
   try {
-    await commands.openProjectFolder(projectId)
-  } catch (e) {
-    console.error('Failed to open folder:', e)
+    const result = await commands.startProject(projectId)
+    if (result.status === 'error') {
+      toast.error(result.error.message)
+    } else {
+      toast.success('Project started')
+    }
+  } finally {
+    startingProjectId.value = null
   }
 }
 
-function notImplemented(action: string) {
-  // Start/Stop requires docker compose — inform user
-  console.info(`${action}: run 'sail up -d' or 'docker compose up -d' in the project directory`)
+async function stopProject(projectId: string) {
+  stoppingProjectId.value = projectId
+  try {
+    const result = await commands.stopProject(projectId)
+    if (result.status === 'error') {
+      toast.error(result.error.message)
+    } else {
+      toast.success('Project stopped')
+    }
+  } finally {
+    stoppingProjectId.value = null
+  }
 }
 </script>
 
@@ -70,9 +93,11 @@ function notImplemented(action: string) {
         v-for="project in store.projects"
         :key="project.id"
         :project="project"
+        :starting="startingProjectId === project.id"
+        :stopping="stoppingProjectId === project.id"
         @open="openFolder(project.id)"
-        @start="notImplemented('Start')"
-        @stop="notImplemented('Stop')"
+        @start="startProject(project.id)"
+        @stop="stopProject(project.id)"
         @terminal="() => {}"
       />
     </div>
