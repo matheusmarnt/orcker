@@ -53,6 +53,9 @@ importers:
       vue-sonner:
         specifier: ^2.0.9
         version: 2.0.9
+      vue-virtual-scroller:
+        specifier: ^3.0.3
+        version: 3.0.3(vue@3.5.34(typescript@5.6.3))
     devDependencies:
       '@tailwindcss/vite':
         specifier: ^4.3.0
@@ -2175,6 +2178,11 @@ packages:
     peerDependencies:
       typescript: '>=5.0.0'
 
+  vue-virtual-scroller@3.0.3:
+    resolution: {integrity: sha512-nLWjtpPf/GyvIEEIWAuzevmTlC/aVf0yOcNkXDTUxZWyshsK6B6vc8R8wo9Nb8bpjy7wbi1zPMhzTKwUvWHQmg==}
+    peerDependencies:
+      vue: ^3.3.0
+
   vue@3.5.34:
     resolution: {integrity: sha512-WdLBG9gm02OgJIG9axd5Hpx0TFLdzVgfG2evFFu8Rur5O/IoGc5cMjnjh3tPL6GnRGsYvUhBSKVPYVcxRKpMCA==}
     peerDependencies:
@@ -4092,6 +4100,10 @@ snapshots:
       '@volar/typescript': 2.4.15
       '@vue/language-core': 2.2.12(typescript@5.6.3)
       typescript: 5.6.3
+
+  vue-virtual-scroller@3.0.3(vue@3.5.34(typescript@5.6.3)):
+    dependencies:
+      vue: 3.5.34(typescript@5.6.3)
 
   vue@3.5.34(typescript@5.6.3):
     dependencies:
