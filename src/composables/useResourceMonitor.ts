@@ -13,16 +13,15 @@ export function useResourceMonitor(projectId: string) {
 
   async function poll() {
     const r = await commands.getResourceStats(projectId).catch(() => null)
-    if (r?.status === 'ok') {
-      series.value = [
-        ...series.value.slice(-30), // keep last 30 points (60 seconds)
-        {
-          time: new Date().toLocaleTimeString(),
-          cpu: r.data.cpu_percent,
-          mem: r.data.mem_mb,
-        },
-      ]
-    }
+    if (!r || r.status !== 'ok') return
+    series.value = [
+      ...series.value.slice(-30), // keep last 30 points (60 seconds)
+      {
+        time: new Date().toLocaleTimeString(),
+        cpu: r.data.cpu_percent,
+        mem: r.data.mem_mb,
+      },
+    ]
   }
 
   onMounted(() => {

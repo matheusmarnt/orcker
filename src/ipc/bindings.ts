@@ -68,7 +68,10 @@ export const commands = {
 	getProjectStatus: (projectId: string) => typedError<ProjectStatus, AppError>(__TAURI_INVOKE("get_project_status", { projectId })),
 	readComposeFile: (projectId: string) => typedError<string, AppError>(__TAURI_INVOKE("read_compose_file", { projectId })),
 	saveComposeFile: (projectId: string, content: string) => typedError<null, AppError>(__TAURI_INVOKE("save_compose_file", { projectId, content })),
-	/** Return unified diff between last two committed versions of docker-compose.yml. Empty string when fewer than 2 commits. */
+	/**
+	 *  Return a unified diff string between the last two committed versions of docker-compose.yml.
+	 *  Returns an empty string when fewer than two commits exist (i.e., no prior saved version).
+	 */
 	getComposeDiff: (projectId: string) => typedError<string, AppError>(__TAURI_INVOKE("get_compose_diff", { projectId })),
 	getSettings: () => typedError<AppSettingsData, AppError>(__TAURI_INVOKE("get_settings")),
 	saveSettings: (newData: AppSettingsData) => typedError<null, AppError>(__TAURI_INVOKE("save_settings", { newData })),
@@ -80,27 +83,33 @@ export const commands = {
 	restoreDb: (projectName: string) => typedError<null, AppError>(__TAURI_INVOKE("restore_db", { projectName })),
 	/**
 	 *  Open an interactive psql CLI session in the global postgres container.
-	 *
+	 * 
 	 *  Streams output via the existing docker_exec_stream adapter.
 	 */
 	openDbCli: (projectName: string, onChunk: Channel<CommandChunk>) => typedError<null, AppError>(__TAURI_INVOKE("open_db_cli", { projectName, onChunk })),
-	/** List all Docker volumes with name, driver, mountpoint, and size in MB. */
+	/**  List all Docker volumes with name, driver, mountpoint, and size in MB. */
 	listVolumes: () => typedError<VolumeInfo[], AppError>(__TAURI_INVOKE("list_volumes")),
-	/** Prune dangling (unused) volumes. Returns reclaimed space in bytes. */
+	/**  Prune dangling (unused) volumes. Returns reclaimed space in bytes. */
 	pruneVolumes: () => typedError<number, AppError>(__TAURI_INVOKE("prune_volumes")),
-	/** List all local Docker images with tags and size. */
+	/**  List all local Docker images with tags and size. */
 	listImages: () => typedError<ImageInfo[], AppError>(__TAURI_INVOKE("list_images")),
-	/** Pull a Docker image by name and tag. Drains the stream fully before returning. */
+	/**  Pull a Docker image by name and tag. Drains the stream fully before returning. */
 	pullImage: (image: string, tag: string) => typedError<null, AppError>(__TAURI_INVOKE("pull_image", { image, tag })),
-	/** Remove a Docker image by ID. */
+	/**  Remove a Docker image by ID. */
 	removeImage: (imageId: string) => typedError<null, AppError>(__TAURI_INVOKE("remove_image", { imageId })),
-	/** Prune dangling (unused) images. Returns reclaimed space in bytes. */
+	/**  Prune dangling (unused) images. Returns reclaimed space in bytes. */
 	pruneImages: () => typedError<number, AppError>(__TAURI_INVOKE("prune_images")),
-	/** Fetch template manifest from GitHub raw URL. Done in Rust to avoid CSP issues. */
+	/**
+	 *  Fetch template manifest from GitHub raw URL.
+	 *  Done in Rust to avoid CSP issues — frontend never contacts external HTTPS.
+	 */
 	fetchTemplateManifest: () => typedError<TemplateEntry[], AppError>(__TAURI_INVOKE("fetch_template_manifest")),
-	/** Download a template's docker-compose.yml to a user-chosen directory. */
+	/**  Download a template's docker-compose.yml to a user-chosen directory. */
 	installTemplate: (composeUrl: string) => typedError<string, AppError>(__TAURI_INVOKE("install_template", { composeUrl })),
-	/** Aggregated CPU% and memory usage (MB) for all containers in a project. */
+	/**
+	 *  Collect stats for all running containers belonging to a project (identified by
+	 *  `com.docker.compose.project.working_dir` label == project path).
+	 */
 	getResourceStats: (projectId: string) => typedError<ResourceStats, AppError>(__TAURI_INVOKE("get_resource_stats", { projectId })),
 };
 
@@ -168,7 +177,7 @@ export type EnvReadResult = {
 export type ImageInfo = {
 	id: string,
 	tags: string[],
-	size: number,
+	size: number | null,
 };
 
 export type ImportResult = {
@@ -209,6 +218,7 @@ export type ProjectStatusEvent = {
 	status: ProjectStatus,
 };
 
+/**  Aggregated CPU% and memory usage (MB) for all containers in a project. */
 export type ResourceStats = {
 	cpu_percent: number,
 	mem_mb: number,
@@ -220,14 +230,20 @@ export type ScaffoldChunk = {
 	error: boolean,
 };
 
-export type ScaffoldTemplate = "Tall" | "InertiaVue3" | "InertiaReact" | "Filament" | "ApiOnly" | "Jetstream";
+export type ScaffoldTemplate = "Tall" | "InertiaVue3" | "InertiaReact" | 
+/**  Filament v3 admin panel (requires network, may take several minutes) */
+"Filament" | 
+/**  Laravel API without frontend (Laravel 11+) */
+"ApiOnly" | 
+/**  Laravel Jetstream with Livewire stack (requires network, may take several minutes) */
+"Jetstream";
 
 export type ServiceConfig = {
 	image_tag: string,
 	port: number,
 };
 
-export type ServiceId = "redis" | "postgres" | "mailpit" | "minio" | "soketi" | "meilisearch";
+export type ServiceId = "redis" | "postgres" | "mysql" | "mailpit" | "minio" | "soketi" | "meilisearch";
 
 export type ServiceStatus = { kind: "stopped" } | { kind: "starting" } | { kind: "running" } | { kind: "stopping" } | { kind: "unhealthy" } | { kind: "error"; message: string };
 
@@ -248,7 +264,7 @@ export type VolumeInfo = {
 	name: string,
 	driver: string,
 	mountpoint: string,
-	/** Size in MB; null if Docker daemon has not computed usage data. */
+	/**  Size in MB; None if Docker daemon has not computed usage data (size == -1). */
 	size_mb: number | null,
 };
 

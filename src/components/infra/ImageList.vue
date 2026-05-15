@@ -1,19 +1,29 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { toast } from 'vue-sonner'
 import { commands } from '@/ipc/bindings'
 import { useInfraStore } from '@/stores/useInfraStore'
+
+const PAGE_SIZE = 10
 
 const store = useInfraStore()
 const confirmingPrune = ref(false)
 const pullImageName = ref('')
 const isPulling = ref(false)
+const page = ref(1)
+
+const totalPages = computed(() => Math.max(1, Math.ceil(store.images.length / PAGE_SIZE)))
+const pageImages = computed(() => {
+  const start = (page.value - 1) * PAGE_SIZE
+  return store.images.slice(start, start + PAGE_SIZE)
+})
 
 onMounted(() => {
   store.refreshImages()
 })
 
-function formatMb(bytes: number): string {
+function formatMb(bytes: number | null): string {
+  if (bytes === null) return '—'
   return Math.round(bytes / 1_048_576).toString()
 }
 
@@ -66,13 +76,13 @@ async function pruneImages() {
     toast.error('Failed to prune images', { description: e.message })
     return null
   })
-  if (!r) return
-  if (r.status === 'error') {
-    toast.error('Failed to prune images', { description: String(r.error) })
+  if (!r || r.status !== 'ok') {
+    if (r?.status === 'error') toast.error('Failed to prune images', { description: String(r.error) })
     return
   }
   const mb = Math.round(r.data / 1_048_576)
   toast.success(`Reclaimed ${mb} MB`)
+  page.value = 1
   store.refreshImages()
 }
 </script>
@@ -141,7 +151,7 @@ async function pruneImages() {
         </thead>
         <tbody>
           <tr
-            v-for="img in store.images"
+            v-for="img in pageImages"
             :key="img.id"
             class="border-t transition-colors hover:bg-muted/30"
           >
@@ -169,6 +179,29 @@ async function pruneImages() {
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <!-- Pagination -->
+    <div v-if="totalPages > 1" class="flex items-center justify-between text-sm">
+      <span class="text-muted-foreground">
+        Page {{ page }} / {{ totalPages }}
+      </span>
+      <div class="flex gap-1">
+        <button
+          :disabled="page <= 1"
+          class="rounded-md border px-3 py-1 hover:bg-accent disabled:opacity-40"
+          @click="page--"
+        >
+          ←
+        </button>
+        <button
+          :disabled="page >= totalPages"
+          class="rounded-md border px-3 py-1 hover:bg-accent disabled:opacity-40"
+          @click="page++"
+        >
+          →
+        </button>
+      </div>
     </div>
   </div>
 </template>

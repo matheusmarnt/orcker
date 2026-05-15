@@ -136,7 +136,9 @@ pub async fn prune_volumes(app_state: State<'_, AppState>) -> Result<f64, AppErr
     let docker = guard
         .as_ref()
         .ok_or_else(|| AppError::DockerUnavailable("Docker not connected".into()))?;
-    volumes::prune_volumes(&docker.client).await.map(|v| v as f64)
+    volumes::prune_volumes(&docker.client)
+        .await
+        .map(|v| v as f64)
 }
 
 /// List all local Docker images with tags and size.
