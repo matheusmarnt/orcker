@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import {
   ChevronLeft,
   ChevronRight,
+  Container,
   FolderOpen,
   LayoutDashboard,
   ScrollText,
@@ -18,6 +19,7 @@ const navItems = [
   { to: '/projects', icon: FolderOpen, label: 'Projects' },
   { to: '/global', icon: Server, label: 'Global Stack' },
   { to: '/logs', icon: ScrollText, label: 'Logs' },
+  { to: '/infra', icon: Container, label: 'Infra' },
 ]
 
 function toggle() {

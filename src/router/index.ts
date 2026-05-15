@@ -32,5 +32,10 @@ export const router = createRouter({
       name: 'project-detail',
       component: () => import('../views/ProjectDetailView.vue'),
     },
+    {
+      path: '/infra',
+      name: 'infra',
+      component: () => import('../views/InfraView.vue'),
+    },
   ],
 })
