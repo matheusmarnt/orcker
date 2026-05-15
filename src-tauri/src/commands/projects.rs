@@ -738,12 +738,14 @@ async fn run_compose_command(
 
 /// Start project containers — 3-stage recovery for partial compose failures.
 ///
-/// Stage 1 — full `up -d`: starts all services.
-/// Stage 2 — Docker restart loop: individually restarts any exited containers
-///            (handles transient healthcheck crashes, e.g. meilisearch data-dir issue).
-///            Follows with a second `up -d` so compose re-evaluates healthchecks.
-/// Stage 3 — `--no-deps` fallback: if app container is still down, force-starts
-///            just the app service bypassing service_healthy dependency gates.
+/// Stage 1 — full `up -d` + readiness poll (30 s): waits until all containers
+///            reach running+healthy state, not just compose exit 0. compose exits
+///            as soon as containers are *started* (detached); meilisearch and
+///            other services with healthchecks may crash seconds after that.
+/// Stage 2 — Docker restart loop: restarts any exited/unhealthy containers, then
+///            re-runs `up -d` and polls again (25 s).
+/// Stage 3 — `--no-deps` fallback: force-starts the app service bypassing
+///            service_healthy dependency gates (Sail projects only).
 #[tauri::command]
 #[specta::specta]
 #[allow(deprecated)]
@@ -768,40 +770,68 @@ pub async fn start_project(
         .to_lowercase();
 
     // Stage 1: full compose up (all services, dependency ordering intact)
-    let (first_output, first_ok) = exec_compose_output(&path, &driver, &["up", "-d"]).await?;
-    if first_ok {
-        return Ok("started".into());
-    }
+    let (first_output, _) = exec_compose_output(&path, &driver, &["up", "-d"]).await?;
 
-    // Acquire Docker client for direct container management
+    // Acquire Docker client for readiness polling and container management.
     let docker_opt = {
         let g = app_state.docker.read().await;
         g.as_ref().map(|a| a.client.clone())
     };
 
-    if let Some(ref docker) = docker_opt {
-        tokio::time::sleep(tokio::time::Duration::from_millis(800)).await;
+    let Some(ref docker) = docker_opt else {
+        // No Docker client available — cannot poll; trust compose exit code.
+        return Ok("started".into());
+    };
 
-        // Stage 2: restart any exited containers individually via Docker API.
-        // Compose's exit-on-dependency-failure leaves crashed services as "exited".
-        // docker restart gives each one another attempt before compose re-runs.
-        let exited = list_exited_project_containers(docker, &project_name).await;
-        for container_id in &exited {
-            let _ = docker.restart_container(container_id, None::<bollard::container::RestartContainerOptions>).await;
-        }
+    // Poll actual container states after compose exits. compose up -d exits 0
+    // as soon as containers are *started*, before healthchecks run or pass.
+    let stage1 = poll_containers_ready(docker, &project_name, 30).await;
 
-        if !exited.is_empty() {
-            // Wait for restarted containers to stabilise
-            tokio::time::sleep(tokio::time::Duration::from_secs(4)).await;
-        }
+    if matches!(stage1, ReadinessResult::AllRunning) {
+        return Ok("started".into());
+    }
 
-        // Re-run full compose up so healthcheck dependencies are re-evaluated
-        let (_, second_ok) = exec_compose_output(&path, &driver, &["up", "-d"]).await?;
-        if second_ok {
-            return Ok("started".into());
-        }
+    // Stage 2: collect IDs of failed/unhealthy containers and restart them.
+    let to_restart = match stage1 {
+        ReadinessResult::SomeExited(ids) => ids,
+        _ => list_exited_project_containers(docker, &project_name).await,
+    };
 
-        // Some services still failing — check whether the app container came up
+    for id in &to_restart {
+        let _ = docker
+            .restart_container(id, None::<bollard::container::RestartContainerOptions>)
+            .await;
+    }
+    if !to_restart.is_empty() {
+        tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+    }
+
+    // Re-run compose so healthcheck dependencies are re-evaluated.
+    exec_compose_output(&path, &driver, &["up", "-d"]).await?;
+
+    match poll_containers_ready(docker, &project_name, 25).await {
+        ReadinessResult::AllRunning => return Ok("started".into()),
+        _ => {}
+    }
+
+    // Stage 3: if the app container is up, that is a partial win.
+    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+    if crate::adapters::docker::containers::find_app_container(docker, &path)
+        .await
+        .is_some()
+    {
+        return Ok("started".into());
+    }
+
+    // Force-start just the app service, bypassing service_healthy dep gates.
+    // mysql/redis/mailpit are already running from earlier stages.
+    if is_sail(&path) {
+        let _ = exec_compose_output(
+            &path,
+            &driver,
+            &["up", "laravel.test", "--no-deps", "-d"],
+        )
+        .await;
         tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
         if crate::adapters::docker::containers::find_app_container(docker, &path)
             .await
@@ -809,27 +839,9 @@ pub async fn start_project(
         {
             return Ok("started".into());
         }
-
-        // Stage 3: force-start just the app service bypassing healthcheck deps.
-        // mysql/redis/mailpit are already running from stages 1-2.
-        if is_sail(&path) {
-            let _ = exec_compose_output(
-                &path,
-                &driver,
-                &["up", "laravel.test", "--no-deps", "-d"],
-            )
-            .await;
-            tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-            if crate::adapters::docker::containers::find_app_container(docker, &path)
-                .await
-                .is_some()
-            {
-                return Ok("started".into());
-            }
-        }
     }
 
-    // All stages exhausted — report original compose error
+    // All stages exhausted — surface original compose error.
     let error_line = first_output
         .lines()
         .rev()
@@ -837,6 +849,96 @@ pub async fn start_project(
         .map(|l| l.trim().to_string())
         .unwrap_or_else(|| "Compose command failed".to_string());
     Err(AppError::Internal(error_line))
+}
+
+/// Outcome of a container readiness poll.
+enum ReadinessResult {
+    /// Every project container is running and has passed its healthcheck (if any).
+    AllRunning,
+    /// One or more containers exited or became unhealthy. Carries their Docker IDs.
+    SomeExited(Vec<String>),
+    /// Timeout elapsed before containers stabilised.
+    Timeout,
+}
+
+/// Returns (id, state, status) for every container in a compose project (all: true).
+#[allow(deprecated)]
+async fn list_all_project_containers(
+    docker: &bollard::Docker,
+    project_name: &str,
+) -> Vec<(String, String, String)> {
+    use bollard::container::ListContainersOptions;
+    let mut filters = std::collections::HashMap::new();
+    filters.insert(
+        "label".to_string(),
+        vec![format!("com.docker.compose.project={}", project_name)],
+    );
+    docker
+        .list_containers(Some(ListContainersOptions::<String> {
+            all: true,
+            filters,
+            ..Default::default()
+        }))
+        .await
+        .unwrap_or_default()
+        .into_iter()
+        .map(|c| {
+            let id = c.id.unwrap_or_default();
+            let state = c
+                .state
+                .map(|s| format!("{:?}", s).to_lowercase())
+                .unwrap_or_default();
+            let status = c.status.unwrap_or_default();
+            (id, state, status)
+        })
+        .collect()
+}
+
+/// Polls container states until all are running+healthy or a failure/timeout occurs.
+///
+/// Docker status strings observed in the wild:
+///   "Up 3 minutes"                  — running, no healthcheck
+///   "Up 3 minutes (healthy)"        — healthcheck passing ✓
+///   "Up 3 minutes (unhealthy)"      — healthcheck failing → treated as failure
+///   "Up 2 seconds (health: starting)" — healthcheck not yet concluded → wait
+///   "Exited (1) 5 seconds ago"      — state == "exited"             → failure
+async fn poll_containers_ready(
+    docker: &bollard::Docker,
+    project_name: &str,
+    timeout_secs: u64,
+) -> ReadinessResult {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(timeout_secs);
+    loop {
+        let containers = list_all_project_containers(docker, project_name).await;
+
+        if !containers.is_empty() {
+            let bad_ids: Vec<String> = containers
+                .iter()
+                .filter(|(_, state, status)| {
+                    state == "exited" || state == "dead" || status.contains("(unhealthy)")
+                })
+                .map(|(id, _, _)| id.clone())
+                .collect();
+
+            if !bad_ids.is_empty() {
+                return ReadinessResult::SomeExited(bad_ids);
+            }
+
+            let all_ready = containers.iter().all(|(_, state, status)| {
+                state == "running" && !status.contains("(health: starting)")
+            });
+
+            if all_ready {
+                return ReadinessResult::AllRunning;
+            }
+        }
+
+        if std::time::Instant::now() >= deadline {
+            return ReadinessResult::Timeout;
+        }
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(600)).await;
+    }
 }
 
 /// List Docker IDs of all exited containers belonging to a compose project.
