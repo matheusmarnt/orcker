@@ -185,7 +185,7 @@
 | R-M5.1 | Phase 4 | Complete |
 | R-M5.2 | Phase 4 | Complete |
 | R-M5.3 | Phase 4 | Complete |
-| R-M5.4 | Phase 4 | Pending |
+| R-M5.4 | Phase 4 | Complete |
 | R-M5.5 | Phase 4 | Pending |
 | R-M6.1 | Phase 4 | Complete |
 | R-M6.2 | Phase 4 | Complete |

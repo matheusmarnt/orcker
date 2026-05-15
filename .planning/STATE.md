@@ -1,6 +1,6 @@
 # Project State — Orcker
 
-*Last updated: 2026-05-15 — Completed 04-03-PLAN.md*
+*Last updated: 2026-05-15 — Completed 04-08-PLAN.md*
 
 ## Current Phase
 
@@ -8,7 +8,7 @@
 **Phase 1 — COMPLETE.** All 5 plans executed.
 **Phase 2 — COMPLETE.** All 4 plans executed.
 **Phase 3 — COMPLETE.** All 12 plans executed.
-**Phase 4 — IN PROGRESS.** Plans 04-01 through 04-07 complete.
+**Phase 4 — IN PROGRESS.** Plans 04-01 through 04-08 complete.
 
 ## Completed
 
@@ -53,7 +53,9 @@
 - [x] Phase 4 Plan 03: Compose editor — read_compose_file + save_compose_file + ComposeEditor.vue Monaco drawer + ComposeErrorPanel.vue — complete (2026-05-15)
 - [x] Phase 4 Plan 04: M6 database commands (create/dump/restore/open-psql) + DatabaseTab Vue component — complete (2026-05-15)
 - [x] Phase 4 Plan 05: Catalog expansion — MinIO/Soketi/Meilisearch global stack + Filament/ApiOnly/Jetstream scaffold templates — complete (2026-05-15)
+- [x] Phase 4 Plan 06: System tray (TrayIconBuilder + recent projects submenu) + close-to-tray + tauri-plugin-updater + autostart + checkForUpdate composable — complete (2026-05-15)
 - [x] Phase 4 Plan 07: Volume and image management — bollard adapters + VolumeList + ImageList + /infra route — complete (2026-05-15)
+- [x] Phase 4 Plan 08: Config versioning (git2) + Command Palette (Cmd/Ctrl+K) + ConfigHistory diff viewer — complete (2026-05-15)
 
 ## Phase Map
 
@@ -70,6 +72,12 @@
 
 - AppSettingsData is the serializable IPC type; AppSettings wraps it with AtomicBool for sync on_window_event use
 - tray_enabled AtomicBool allows reading in Tauri on_window_event (sync context) without async lock
+- show_menu_on_left_click replaces deprecated menu_on_left_click in Tauri 2.x TrayIconBuilder
+- chrono feature "clock" (not "local-offset") enables Local::now() in chrono 0.4
+- tray submenu uses "(no projects)" placeholder at setup() — projects list is empty at tray build time
+- vi.mocked() preferred over unsafe "as ReturnType<typeof vi.fn>" cast for typed mock access
+- bollard 0.19 images: fields id/repo_tags/size are non-optional; use CreateImageOptionsBuilder
+- bollard 0.19 volumes: volumes field is Vec<_> (non-optional); use .into_iter().flatten()
 - vue-i18n legacy:false required for <script setup> Composition API useI18n hook
 - monaco-editor excluded from Vitest server.deps.external — imports window at module level which breaks Node env
 - configureMonacoYaml called once at module scope via _yamlConfigured guard — prevents re-registration on remount
@@ -144,6 +152,10 @@
 - `#![allow(deprecated)]` per module for `CreateImageOptions` — consistent with project bollard 0.19 pattern
 - `chrono` feature `local-offset` does not exist in 0.4; correct name is `clock`
 - `useInfraStore` calls `commands.listVolumes/listImages` (typed commands object, not raw typedError) — cleaner API
+- `git2::DiffFormat::Patch` is the correct unified diff variant in git2 0.20 (not `Unified`)
+- `space_reclaimed` is `Option<i64>` in bollard PruneImagesResponse/PruneVolumesResponse — requires `.unwrap_or(0).max(0) as u64`
+- `pendingCommand` ref in `useCommandPaletteStore` acts as lightweight event bus — avoids global emitter for palette→CommandPanel routing
+- `useCommandPaletteStore` placed in `src/composables/` (not `src/stores/`) per plan spec
 
 ## Risks
 
