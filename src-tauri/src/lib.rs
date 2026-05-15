@@ -29,6 +29,9 @@ pub fn run() {
         commands::projects::import_project,
         commands::projects::list_projects,
         commands::projects::get_compose_driver,
+        commands::artisan::list_artisan_commands,
+        commands::artisan::run_artisan_command,
+        commands::artisan::cancel_artisan_command,
     ]);
 
     // Export TypeScript bindings in debug builds only

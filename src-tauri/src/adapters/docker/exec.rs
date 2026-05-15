@@ -27,7 +27,7 @@ pub async fn docker_exec_stream(
 ) -> Result<(), AppError> {
     // Guard: container must be running
     let inspect = docker
-        .inspect_container(container_id, None::<bollard::container::InspectContainerOptions>)
+        .inspect_container(container_id, None::<bollard::query_parameters::InspectContainerOptions>)
         .await
         .map_err(|e| AppError::DockerApi(e.to_string()))?;
 
