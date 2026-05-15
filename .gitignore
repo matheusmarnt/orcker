@@ -49,3 +49,6 @@ pnpm-debug.log*
 
 # Tauri build artifacts
 src-tauri/WixTools/
+
+# Node compile cache
+node-compile-cache/
