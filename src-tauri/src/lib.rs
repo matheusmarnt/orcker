@@ -39,6 +39,10 @@ pub fn run() {
         commands::projects::save_env_file,
         commands::projects::toggle_vite_auto,
         commands::projects::generate_xdebug_config,
+        commands::projects::read_php_ini,
+        commands::projects::save_php_ini,
+        commands::projects::list_supervisor_workers,
+        commands::projects::restart_supervisor_worker,
     ]);
 
     // Export TypeScript bindings in debug builds only

@@ -42,6 +42,10 @@ export const commands = {
 	saveEnvFile: (projectId: string, entries: EnvEntry[]) => typedError<null, AppError>(__TAURI_INVOKE("save_env_file", { projectId, entries })),
 	toggleViteAuto: (projectId: string, viteAuto: boolean) => typedError<ProjectConfig, AppError>(__TAURI_INVOKE("toggle_vite_auto", { projectId, viteAuto })),
 	generateXdebugConfig: (projectId: string) => typedError<null, AppError>(__TAURI_INVOKE("generate_xdebug_config", { projectId })),
+	readPhpIni: (projectId: string) => typedError<IniSection[], AppError>(__TAURI_INVOKE("read_php_ini", { projectId })),
+	savePhpIni: (projectId: string, sections: IniSection[]) => typedError<null, AppError>(__TAURI_INVOKE("save_php_ini", { projectId, sections })),
+	listSupervisorWorkers: (supervisorContainer: string) => typedError<SupervisorWorker[], AppError>(__TAURI_INVOKE("list_supervisor_workers", { supervisorContainer })),
+	restartSupervisorWorker: (supervisorContainer: string, workerName: string) => typedError<null, AppError>(__TAURI_INVOKE("restart_supervisor_worker", { supervisorContainer, workerName })),
 };
 
 /* Types */
@@ -96,6 +100,17 @@ export type ImportResult = {
 	detected_files: string[],
 };
 
+export type IniEntry = {
+	key: string,
+	value: string,
+	is_comment: boolean,
+};
+
+export type IniSection = {
+	name: string,
+	entries: IniEntry[],
+};
+
 export type LogLine = {
 	text: string,
 	source: LogSource,
@@ -127,6 +142,11 @@ export type ServiceConfig = {
 export type ServiceId = "redis" | "postgres" | "mailpit";
 
 export type ServiceStatus = { kind: "stopped" } | { kind: "starting" } | { kind: "running" } | { kind: "stopping" } | { kind: "unhealthy" } | { kind: "error"; message: string };
+
+export type SupervisorWorker = {
+	name: string,
+	status: string,
+};
 
 /* Tauri Specta runtime */
 async function typedError<T, E>(result: Promise<T>): Promise<{ status: "ok"; data: T } | { status: "error"; error: E }> {

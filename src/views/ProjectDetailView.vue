@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import CommandPanel from '@/components/projects/CommandPanel.vue'
 import EnvEditor from '@/components/projects/EnvEditor.vue'
+import PhpIniEditor from '@/components/projects/PhpIniEditor.vue'
+import SupervisorPanel from '@/components/projects/SupervisorPanel.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -20,6 +22,13 @@ const project = computed(() =>
 const catalog = ref<ArtisanCommand[]>([])
 const showPanel = ref(false)
 const showEnvEditor = ref(false)
+const showPhpIni = ref(false)
+const showSupervisor = ref(false)
+
+// Supervisor container convention: {project_name}_supervisor_1
+const supervisorContainer = computed(() =>
+  project.value ? `${project.value.name}_supervisor_1` : ''
+)
 
 onMounted(async () => {
   await store.init()
@@ -72,11 +81,30 @@ onMounted(async () => {
         <Button variant="outline" @click="showEnvEditor = !showEnvEditor">
           {{ showEnvEditor ? 'Close .env Editor' : 'Edit .env' }}
         </Button>
+        <Button variant="outline" @click="showPhpIni = !showPhpIni">
+          {{ showPhpIni ? 'Close php.ini' : 'php.ini' }}
+        </Button>
+        <Button variant="outline" @click="showSupervisor = !showSupervisor">
+          {{ showSupervisor ? 'Close Supervisor' : 'Supervisor' }}
+        </Button>
       </div>
 
       <!-- .env Editor — v-if so teardown clears state -->
       <div v-if="showEnvEditor" class="mb-4">
         <EnvEditor :project-id="project.id" />
+      </div>
+
+      <!-- php.ini Editor — v-if so teardown clears state -->
+      <div v-if="showPhpIni" class="mb-4">
+        <PhpIniEditor :project-id="project.id" />
+      </div>
+
+      <!-- Supervisor Panel — v-if so teardown clears state -->
+      <div v-if="showSupervisor" class="mb-4">
+        <SupervisorPanel
+          :project-id="project.id"
+          :supervisor-container="supervisorContainer"
+        />
       </div>
 
       <!-- Command Panel — v-if so teardown clears the stream -->
