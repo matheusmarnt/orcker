@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card'
 import { useProjectsStore } from '@/stores/useProjectsStore'
+import { commands } from '@/ipc/bindings'
+import { Channel } from '@tauri-apps/api/core'
+import type { ScaffoldChunk, ScaffoldTemplate } from '@/ipc/bindings'
 
 const emit = defineEmits<{
   close: []
@@ -36,24 +39,54 @@ async function handleRegister() {
 }
 
 // Scaffold tab state
-const scaffoldTemplate = ref<'tall' | 'inertia-vue' | 'inertia-react'>('tall')
+const scaffoldTemplate = ref<ScaffoldTemplate>('Tall')
 const scaffoldName = ref('')
 const scaffoldDest = ref('')
+const isScaffolding = ref(false)
+const progressLines = ref<string[]>([])
+const progressContainer = ref<HTMLElement | null>(null)
 
 async function browseScaffoldDest() {
   const path = await store.pickFolder()
   if (path) scaffoldDest.value = path
 }
 
-const scaffoldTemplates = [
-  { id: 'tall' as const, label: 'TALL Stack', description: 'Tailwind + Alpine + Livewire + Laravel' },
-  { id: 'inertia-vue' as const, label: 'Inertia + Vue 3', description: 'Laravel + Inertia.js + Vue 3' },
-  { id: 'inertia-react' as const, label: 'Inertia + React', description: 'Laravel + Inertia.js + React' },
+const scaffoldTemplates: { id: ScaffoldTemplate; label: string; description: string }[] = [
+  { id: 'Tall', label: 'TALL Stack', description: 'Tailwind + Alpine + Livewire + Laravel' },
+  { id: 'InertiaVue3', label: 'Inertia + Vue 3', description: 'Laravel + Inertia.js + Vue 3' },
+  { id: 'InertiaReact', label: 'Inertia + React', description: 'Laravel + Inertia.js + React' },
 ]
 
-function handleScaffold() {
-  // Placeholder — scaffold command implemented in a later plan
-  emit('close')
+async function handleScaffold() {
+  if (!scaffoldName.value || !scaffoldDest.value) return
+
+  isScaffolding.value = true
+  progressLines.value = []
+
+  const channel = new Channel<ScaffoldChunk>()
+  channel.onmessage = async (chunk) => {
+    progressLines.value.push(chunk.text)
+    // Auto-scroll to bottom
+    await nextTick()
+    if (progressContainer.value) {
+      progressContainer.value.scrollTop = progressContainer.value.scrollHeight
+    }
+    if (chunk.done) {
+      isScaffolding.value = false
+      if (!chunk.error) {
+        const projectPath = `${scaffoldDest.value}/${scaffoldName.value}`
+        store.registerProject(scaffoldName.value, projectPath)
+        emit('close')
+      }
+    }
+  }
+
+  await commands.scaffoldProject(
+    scaffoldTemplate.value,
+    scaffoldName.value,
+    scaffoldDest.value,
+    channel,
+  )
 }
 
 const tabClass = computed(() => (tab: 'import' | 'scaffold') =>
@@ -131,49 +164,64 @@ const tabClass = computed(() => (tab: 'import' | 'scaffold') =>
 
         <!-- Scaffold tab -->
         <div v-else class="space-y-4">
-          <div>
-            <label class="text-sm font-medium mb-2 block">Template</label>
-            <div class="space-y-2">
-              <label
-                v-for="tpl in scaffoldTemplates"
-                :key="tpl.id"
-                class="flex items-start gap-3 rounded-md border p-3 cursor-pointer transition-colors"
-                :class="scaffoldTemplate === tpl.id ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground'"
-              >
-                <input
-                  type="radio"
-                  :value="tpl.id"
-                  v-model="scaffoldTemplate"
-                  class="mt-0.5"
-                />
-                <div>
-                  <p class="text-sm font-medium">{{ tpl.label }}</p>
-                  <p class="text-xs text-muted-foreground">{{ tpl.description }}</p>
-                </div>
-              </label>
+          <!-- Template selector — hidden while scaffolding -->
+          <template v-if="!isScaffolding">
+            <div>
+              <label class="text-sm font-medium mb-2 block">Template</label>
+              <div class="space-y-2">
+                <label
+                  v-for="tpl in scaffoldTemplates"
+                  :key="tpl.id"
+                  class="flex items-start gap-3 rounded-md border p-3 cursor-pointer transition-colors"
+                  :class="scaffoldTemplate === tpl.id ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground'"
+                >
+                  <input
+                    type="radio"
+                    :value="tpl.id"
+                    v-model="scaffoldTemplate"
+                    class="mt-0.5"
+                  />
+                  <div>
+                    <p class="text-sm font-medium">{{ tpl.label }}</p>
+                    <p class="text-xs text-muted-foreground">{{ tpl.description }}</p>
+                  </div>
+                </label>
+              </div>
             </div>
-          </div>
 
-          <div>
-            <label class="text-sm font-medium mb-1 block">Project Name</label>
-            <input
-              v-model="scaffoldName"
-              type="text"
-              placeholder="my-laravel-app"
-              class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-          </div>
-
-          <div>
-            <label class="text-sm font-medium mb-1 block">Destination Folder</label>
-            <div class="flex gap-2">
+            <div>
+              <label class="text-sm font-medium mb-1 block">Project Name</label>
               <input
-                :value="scaffoldDest"
-                readonly
-                placeholder="Select destination..."
-                class="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground"
+                v-model="scaffoldName"
+                type="text"
+                placeholder="my-laravel-app"
+                class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               />
-              <Button variant="outline" size="sm" @click="browseScaffoldDest">Browse</Button>
+            </div>
+
+            <div>
+              <label class="text-sm font-medium mb-1 block">Destination Folder</label>
+              <div class="flex gap-2">
+                <input
+                  :value="scaffoldDest"
+                  readonly
+                  placeholder="Select destination..."
+                  class="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground"
+                />
+                <Button variant="outline" size="sm" @click="browseScaffoldDest">Browse</Button>
+              </div>
+            </div>
+          </template>
+
+          <!-- Progress panel — shown while scaffolding or if there are lines -->
+          <div v-if="isScaffolding || progressLines.length > 0">
+            <label class="text-sm font-medium mb-1 block">Progress</label>
+            <div
+              ref="progressContainer"
+              class="h-48 overflow-y-auto rounded-md border border-border bg-black/80 p-3 font-mono text-xs text-green-400 space-y-0.5"
+            >
+              <div v-for="(line, i) in progressLines" :key="i" class="whitespace-pre-wrap break-all">{{ line }}</div>
+              <div v-if="isScaffolding" class="animate-pulse text-muted-foreground">Running...</div>
             </div>
           </div>
         </div>
@@ -190,10 +238,10 @@ const tabClass = computed(() => (tab: 'import' | 'scaffold') =>
         </Button>
         <Button
           v-else
-          :disabled="!scaffoldName || !scaffoldDest"
+          :disabled="!scaffoldName || !scaffoldDest || isScaffolding"
           @click="handleScaffold"
         >
-          Scaffold Project
+          {{ isScaffolding ? 'Scaffolding...' : 'Scaffold Project' }}
         </Button>
       </CardFooter>
     </Card>

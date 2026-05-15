@@ -32,6 +32,9 @@ pub fn run() {
         commands::artisan::list_artisan_commands,
         commands::artisan::run_artisan_command,
         commands::artisan::cancel_artisan_command,
+        commands::projects::scaffold_project,
+        commands::logs::start_log_stream,
+        commands::logs::stop_log_stream,
     ]);
 
     // Export TypeScript bindings in debug builds only

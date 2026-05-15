@@ -28,6 +28,16 @@ export const commands = {
 	runArtisanCommand: (commandId: string, projectId: string, containerName: string, onChunk: Channel<CommandChunk>) => typedError<null, AppError>(__TAURI_INVOKE("run_artisan_command", { commandId, projectId, containerName, onChunk })),
 	/**  Cancel a running artisan command for the given project. */
 	cancelArtisanCommand: (projectId: string) => typedError<null, AppError>(__TAURI_INVOKE("cancel_artisan_command", { projectId })),
+	scaffoldProject: (template: ScaffoldTemplate, projectName: string, parentDir: string, onChunk: Channel<ScaffoldChunk>) => typedError<null, AppError>(__TAURI_INVOKE("scaffold_project", { template, projectName, parentDir, onChunk })),
+	/**
+	 *  Start streaming logs for a project: docker container stdout/stderr + laravel.log file tail.
+	 * 
+	 *  Both streams share a single CancellationToken keyed "logs:{project_id}" in ProjectsState.
+	 *  Call stop_log_stream to cancel all streams for this project.
+	 */
+	startLogStream: (projectId: string, projectPath: string, appContainer: string, onLine: Channel<LogLine>) => typedError<null, AppError>(__TAURI_INVOKE("start_log_stream", { projectId, projectPath, appContainer, onLine })),
+	/**  Cancel all log streams for the given project. */
+	stopLogStream: (projectId: string) => typedError<null, AppError>(__TAURI_INVOKE("stop_log_stream", { projectId })),
 };
 
 /* Types */
@@ -67,12 +77,28 @@ export type ImportResult = {
 	detected_files: string[],
 };
 
+export type LogLine = {
+	text: string,
+	source: LogSource,
+	timestamp: string | null,
+};
+
+export type LogSource = "Docker" | "Laravel" | "Nginx" | "Supervisor";
+
 export type ProjectConfig = {
 	id: string,
 	name: string,
 	path: string,
 	vite_auto: boolean,
 };
+
+export type ScaffoldChunk = {
+	text: string,
+	done: boolean,
+	error: boolean,
+};
+
+export type ScaffoldTemplate = "Tall" | "InertiaVue3" | "InertiaReact";
 
 export type ServiceConfig = {
 	image_tag: string,
