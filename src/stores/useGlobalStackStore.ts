@@ -20,11 +20,14 @@ export const useGlobalStackStore = defineStore('globalStack', () => {
   }
 
   function isRunning(id: ServiceId): boolean {
-    return statuses.value[id]?.kind === 'running'
+    const kind = statuses.value[id]?.kind
+    return kind === 'running' || kind === 'unhealthy'
   }
 
   function hasAnyRunning(): boolean {
-    return Object.values(statuses.value).some((s) => s?.kind === 'running')
+    return Object.values(statuses.value).some(
+      (s) => s?.kind === 'running' || s?.kind === 'unhealthy',
+    )
   }
 
   // ---------------------------------------------------------------------------
@@ -32,11 +35,19 @@ export const useGlobalStackStore = defineStore('globalStack', () => {
   // ---------------------------------------------------------------------------
 
   async function init() {
-    const result = await commands.getServicesStatus()
-    if (result.status === 'ok') {
-      statuses.value = result.data as Record<string, ServiceStatus>
+    const [statusResult, configResult] = await Promise.all([
+      commands.getServicesStatus(),
+      commands.getServiceConfigs(),
+    ])
+
+    if (statusResult.status === 'ok') {
+      statuses.value = statusResult.data as Record<string, ServiceStatus>
     } else {
-      toast.error(`Failed to load service statuses: ${result.error.message}`)
+      toast.error(`Failed to load service statuses: ${statusResult.error.message}`)
+    }
+
+    if (configResult.status === 'ok') {
+      configs.value = configResult.data as Record<string, ServiceConfig>
     }
 
     await listen<{ service: ServiceId; status: ServiceStatus }>(

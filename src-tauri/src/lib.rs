@@ -6,6 +6,7 @@ use crate::adapters::docker::client::DockerAdapter;
 use crate::core::state::AppState;
 use tauri::{Emitter, Manager};
 use tauri_plugin_global_shortcut::ShortcutState;
+use tauri_plugin_store::StoreExt;
 use tauri_specta::{collect_commands, Builder as SpectaBuilder};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -17,6 +18,7 @@ pub fn run() {
         commands::docker::list_containers,
         commands::global_stack::toggle_service,
         commands::global_stack::get_services_status,
+        commands::global_stack::get_service_configs,
         commands::global_stack::set_service_config,
         commands::global_stack::global_on,
         commands::global_stack::global_off,
@@ -67,10 +69,27 @@ pub fn run() {
             // Register disconnected state IMMEDIATELY — window opens before Docker probe
             app.manage(AppState::disconnected());
 
-            // Spawn async Docker connection probe — NEVER block setup()
+            // Spawn async init: hydrate persisted configs → then probe Docker
             // setup() runs on the main thread; .await here would deadlock
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
+                // Load saved service configs from store before first Docker probe
+                if let Ok(store) = handle.store("orcker-services.json") {
+                    let state = handle.state::<AppState>();
+                    let mut configs = state.global_stack.configs.write().await;
+                    for id in crate::core::global_stack::ServiceId::all() {
+                        let key = format!("{:?}", id);
+                        if let Some(val) = store.get(&key) {
+                            if let Ok(config) = serde_json::from_value::<
+                                crate::core::global_stack::ServiceConfig,
+                            >(val)
+                            {
+                                configs.insert(id, config);
+                            }
+                        }
+                    }
+                }
+
                 probe_docker_and_update(handle).await;
             });
 

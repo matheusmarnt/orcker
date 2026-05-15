@@ -56,6 +56,105 @@ async fn write_config(state: &AppState, service: ServiceId, config: ServiceConfi
 }
 
 // ---------------------------------------------------------------------------
+// Health monitor — runs in background after a service reaches Running
+// ---------------------------------------------------------------------------
+
+async fn health_monitor(
+    docker: bollard::Docker,
+    service: ServiceId,
+    statuses_arc: std::sync::Arc<tokio::sync::RwLock<HashMap<ServiceId, ServiceStatus>>>,
+    app_handle: AppHandle,
+) {
+    use bollard::models::HealthStatusEnum;
+
+    let container_name = service.container_name();
+    loop {
+        tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
+
+        // Exit if service is no longer running or unhealthy (intentionally stopped)
+        {
+            let map = statuses_arc.read().await;
+            let status = map.get(&service).cloned().unwrap_or(ServiceStatus::Stopped);
+            if !matches!(status, ServiceStatus::Running | ServiceStatus::Unhealthy) {
+                return;
+            }
+        }
+
+        match docker
+            .inspect_container(
+                container_name,
+                None::<bollard::container::InspectContainerOptions>,
+            )
+            .await
+        {
+            Ok(info) => {
+                let running = info.state.as_ref().and_then(|s| s.running).unwrap_or(false);
+                if !running {
+                    let mut map = statuses_arc.write().await;
+                    map.insert(service, ServiceStatus::Stopped);
+                    drop(map);
+                    app_handle
+                        .emit(
+                            "global://service-status",
+                            ServiceStatusEvent {
+                                service,
+                                status: ServiceStatus::Stopped,
+                            },
+                        )
+                        .ok();
+                    return;
+                }
+
+                let health = info
+                    .state
+                    .as_ref()
+                    .and_then(|s| s.health.as_ref())
+                    .and_then(|h| h.status.as_ref())
+                    .cloned();
+
+                let new_status = match health {
+                    Some(HealthStatusEnum::UNHEALTHY) => ServiceStatus::Unhealthy,
+                    Some(HealthStatusEnum::HEALTHY) => ServiceStatus::Running,
+                    _ => continue, // STARTING, NONE, EMPTY — no change yet
+                };
+
+                let mut map = statuses_arc.write().await;
+                let current = map.get(&service).cloned().unwrap_or(ServiceStatus::Stopped);
+                if std::mem::discriminant(&current) != std::mem::discriminant(&new_status) {
+                    map.insert(service, new_status.clone());
+                    drop(map);
+                    app_handle
+                        .emit(
+                            "global://service-status",
+                            ServiceStatusEvent {
+                                service,
+                                status: new_status,
+                            },
+                        )
+                        .ok();
+                }
+            }
+            Err(_) => {
+                // Container gone unexpectedly
+                let mut map = statuses_arc.write().await;
+                map.insert(service, ServiceStatus::Stopped);
+                drop(map);
+                app_handle
+                    .emit(
+                        "global://service-status",
+                        ServiceStatusEvent {
+                            service,
+                            status: ServiceStatus::Stopped,
+                        },
+                    )
+                    .ok();
+                return;
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Internal start/stop logic (shared between toggle_service, global_on, global_off)
 // ---------------------------------------------------------------------------
 
@@ -176,6 +275,9 @@ async fn start_service(
                 return;
             }
         }
+
+        // Clone docker for health monitor (before poll borrows it)
+        let docker_for_health = docker.clone();
 
         // Pull image (no-op if already local)
         {
@@ -357,9 +459,16 @@ async fn start_service(
                     Ok(_) => {
                         let mut map = statuses_arc.write().await;
                         map.insert(service, ServiceStatus::Running);
+                        drop(map);
                         app_clone
                             .emit("global://service-status", ServiceStatusEvent { service, status: ServiceStatus::Running })
                             .ok();
+                        tauri::async_runtime::spawn(health_monitor(
+                            docker_for_health,
+                            service,
+                            statuses_arc.clone(),
+                            app_clone.clone(),
+                        ));
                     }
                     Err(e) => {
                         let mut map = statuses_arc.write().await;
@@ -504,6 +613,15 @@ async fn stop_service(
 
 #[tauri::command]
 #[specta::specta]
+pub async fn get_service_configs(
+    state: State<'_, AppState>,
+) -> Result<HashMap<ServiceId, ServiceConfig>, AppError> {
+    let map = state.global_stack.configs.read().await;
+    Ok(map.clone())
+}
+
+#[tauri::command]
+#[specta::specta]
 pub async fn get_services_status(
     state: State<'_, AppState>,
 ) -> Result<HashMap<ServiceId, ServiceStatus>, AppError> {
@@ -521,16 +639,13 @@ pub async fn toggle_service(
     let current = read_status(&state, service).await;
 
     match current {
-        ServiceStatus::Running | ServiceStatus::Starting => {
+        ServiceStatus::Running | ServiceStatus::Starting | ServiceStatus::Unhealthy => {
             stop_service(app, &state, service).await
         }
         ServiceStatus::Stopped | ServiceStatus::Error(_) => {
             start_service(app, &state, service).await
         }
-        ServiceStatus::Stopping => {
-            // Already stopping — no-op
-            Ok(())
-        }
+        ServiceStatus::Stopping => Ok(()),
     }
 }
 
@@ -581,7 +696,10 @@ pub async fn global_on(app: AppHandle, state: State<'_, AppState>) -> Result<(),
 pub async fn global_off(app: AppHandle, state: State<'_, AppState>) -> Result<(), AppError> {
     for service in ServiceId::all() {
         let current = read_status(&state, service).await;
-        if matches!(current, ServiceStatus::Running | ServiceStatus::Starting) {
+        if matches!(
+            current,
+            ServiceStatus::Running | ServiceStatus::Starting | ServiceStatus::Unhealthy
+        ) {
             stop_service(app.clone(), &state, service).await?;
         }
     }

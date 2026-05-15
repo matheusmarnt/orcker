@@ -25,7 +25,7 @@ const badgeVariant = computed(() => {
   if (kind === 'running') return 'default'
   if (kind === 'stopped') return 'secondary'
   if (kind === 'starting' || kind === 'stopping') return 'outline'
-  if (kind === 'error') return 'destructive'
+  if (kind === 'error' || kind === 'unhealthy') return 'destructive'
   return 'secondary'
 })
 
@@ -33,6 +33,7 @@ const badgeClass = computed(() => {
   const kind = store.statuses[props.serviceId]?.kind ?? 'stopped'
   if (kind === 'running') return 'bg-green-600 text-white'
   if (kind === 'starting' || kind === 'stopping') return 'text-yellow-500'
+  if (kind === 'unhealthy') return 'bg-orange-500 text-white'
   return ''
 })
 
@@ -44,6 +45,7 @@ const badgeText = computed(() => {
     case 'stopped': return 'Stopped'
     case 'starting': return 'Starting...'
     case 'stopping': return 'Stopping...'
+    case 'unhealthy': return 'Unhealthy'
     case 'error': return 'Error'
     default: return 'Stopped'
   }

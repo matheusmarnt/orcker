@@ -8,6 +8,7 @@ export const commands = {
 	listContainers: () => typedError<ContainerSummary[], AppError>(__TAURI_INVOKE("list_containers")),
 	toggleService: (service: ServiceId) => typedError<null, AppError>(__TAURI_INVOKE("toggle_service", { service })),
 	getServicesStatus: () => typedError<Partial<{ [key in ServiceId]: ServiceStatus }>, AppError>(__TAURI_INVOKE("get_services_status")),
+	getServiceConfigs: () => typedError<Partial<{ [key in ServiceId]: ServiceConfig }>, AppError>(__TAURI_INVOKE("get_service_configs")),
 	setServiceConfig: (service: ServiceId, config: ServiceConfig) => typedError<boolean, AppError>(__TAURI_INVOKE("set_service_config", { service, config })),
 	globalOn: () => typedError<null, AppError>(__TAURI_INVOKE("global_on")),
 	globalOff: () => typedError<null, AppError>(__TAURI_INVOKE("global_off")),
@@ -32,7 +33,7 @@ export type ServiceConfig = {
 
 export type ServiceId = "redis" | "postgres" | "mailpit";
 
-export type ServiceStatus = { kind: "stopped" } | { kind: "starting" } | { kind: "running" } | { kind: "stopping" } | { kind: "error"; message: string };
+export type ServiceStatus = { kind: "stopped" } | { kind: "starting" } | { kind: "running" } | { kind: "stopping" } | { kind: "unhealthy" } | { kind: "error"; message: string };
 
 /* Tauri Specta runtime */
 async function typedError<T, E>(result: Promise<T>): Promise<{ status: "ok"; data: T } | { status: "error"; error: E }> {

@@ -90,6 +90,7 @@ pub enum ServiceStatus {
     Starting,
     Running,
     Stopping,
+    Unhealthy,
     Error(String),
 }
 
@@ -164,6 +165,7 @@ mod tests {
         assert!(ServiceStatus::Stopping.is_transitioning());
         assert!(!ServiceStatus::Stopped.is_transitioning());
         assert!(!ServiceStatus::Running.is_transitioning());
+        assert!(!ServiceStatus::Unhealthy.is_transitioning());
         assert!(!ServiceStatus::Error("oops".to_string()).is_transitioning());
     }
 
