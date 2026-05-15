@@ -1,30 +1,47 @@
 import { setActivePinia, createPinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { useProjectsStore } from '../useProjectsStore'
 
-// Mock IPC — store is not yet implemented; this file is the Wave 0 scaffold
-vi.mock('@/ipc/bindings', () => ({
-  commands: {
-    listProjects: vi.fn().mockResolvedValue({ status: 'ok', data: [] }),
-    registerProject: vi.fn().mockResolvedValue({ status: 'ok', data: null }),
-  },
-}))
+const mockProject = { id: '1', name: 'my-app', path: '/home/user/my-app', vite_auto: true }
+
+vi.mock('@/ipc/bindings', () => {
+  const proj = { id: '1', name: 'my-app', path: '/home/user/my-app', vite_auto: true }
+  return {
+    commands: {
+      listProjects: vi.fn().mockResolvedValue({ status: 'ok', data: [proj] }),
+      registerProject: vi.fn().mockResolvedValue({ status: 'ok', data: proj }),
+      importProject: vi.fn().mockResolvedValue({ status: 'ok', data: { path: '/home', detected_files: ['artisan'] } }),
+      pickProjectFolder: vi.fn().mockResolvedValue({ status: 'ok', data: '/home/user/new-app' }),
+    },
+  }
+})
 
 vi.mock('@tauri-apps/api/event', () => ({
   listen: vi.fn().mockResolvedValue(() => {}),
 }))
 
-describe('useProjectsStore (scaffold)', () => {
-  beforeEach(() => {
-    setActivePinia(createPinia())
+vi.mock('vue-sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
+
+describe('useProjectsStore', () => {
+  beforeEach(() => { setActivePinia(createPinia()) })
+
+  it('init loads projects from backend', async () => {
+    const store = useProjectsStore()
+    await store.init()
+    expect(store.projects).toHaveLength(1)
+    expect(store.projects[0].name).toBe('my-app')
   })
 
-  it('stub: projects initializes as empty array', () => {
-    // Real test implemented in plan 03-04 after store is created
-    expect([]).toHaveLength(0)
+  it('loading is false after init completes', async () => {
+    const store = useProjectsStore()
+    await store.init()
+    expect(store.loading).toBe(false)
   })
 
-  it('stub: ring buffer cap placeholder', () => {
-    const MAX_PROJECTS = 100
-    expect(MAX_PROJECTS).toBeGreaterThan(0)
+  it('registerProject adds project to list', async () => {
+    const store = useProjectsStore()
+    const result = await store.registerProject('my-app', '/home/user/my-app')
+    expect(result).not.toBeNull()
+    expect(store.projects.some(p => p.id === '1')).toBe(true)
   })
 })
