@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Toaster } from 'vue-sonner'
+import Sonner from '@/components/ui/sonner/Sonner.vue'
 import DockerStatusBadge from './components/DockerStatusBadge.vue'
 import { useDockerStore } from './stores/docker'
 
@@ -45,5 +45,5 @@ docker.initEventListener()
     </main>
   </div>
 
-  <Toaster rich-colors position="bottom-right" />
+  <Sonner rich-colors position="bottom-right" />
 </template>
