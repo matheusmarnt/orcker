@@ -2,8 +2,6 @@ import { setActivePinia, createPinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useProjectsStore } from '../useProjectsStore'
 
-const mockProject = { id: '1', name: 'my-app', path: '/home/user/my-app', vite_auto: true }
-
 vi.mock('@/ipc/bindings', () => {
   const proj = { id: '1', name: 'my-app', path: '/home/user/my-app', vite_auto: true }
   return {
