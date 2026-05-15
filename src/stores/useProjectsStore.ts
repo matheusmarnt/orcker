@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { listen } from '@tauri-apps/api/event'
 import { toast } from 'vue-sonner'
+import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/plugin-notification'
 import { commands } from '@/ipc/bindings'
 import type { ProjectConfig, ImportResult, ProjectStatus, ProjectStatusEvent } from '@/ipc/bindings'
 
@@ -32,8 +33,32 @@ export const useProjectsStore = defineStore('projects', () => {
 
     await refreshStatuses()
 
-    await listen<ProjectStatusEvent>('project://status', (event) => {
+    await listen<ProjectStatusEvent>('project://status', async (event) => {
+      const prev = statuses.value.get(event.payload.project_id)
       statuses.value.set(event.payload.project_id, event.payload.status)
+
+      // Send OS notification when a project transitions to unhealthy
+      if (
+        event.payload.status.kind === 'unhealthy' &&
+        prev?.kind !== 'unhealthy'
+      ) {
+        const project = projects.value.find((p) => p.id === event.payload.project_id)
+        try {
+          let granted = await isPermissionGranted()
+          if (!granted) {
+            const permission = await requestPermission()
+            granted = permission === 'granted'
+          }
+          if (granted) {
+            sendNotification({
+              title: 'Orcker',
+              body: `Project "${project?.name ?? event.payload.project_id}" is unhealthy`,
+            })
+          }
+        } catch {
+          // Notification not supported in this environment — ignore
+        }
+      }
     })
 
     await listen<ProjectConfig>('projects://registered', (event) => {

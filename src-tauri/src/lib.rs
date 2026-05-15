@@ -70,6 +70,7 @@ pub fn run() {
             commands::infra::prune_images,
             commands::templates::fetch_template_manifest,
             commands::templates::install_template,
+            commands::infra::get_resource_stats,
         ])
         .events(collect_events![crate::core::projects::ProjectStatusEvent]);
 

@@ -8,7 +8,7 @@
 **Phase 1 — COMPLETE.** All 5 plans executed.
 **Phase 2 — COMPLETE.** All 4 plans executed.
 **Phase 3 — COMPLETE.** All 12 plans executed.
-**Phase 4 — IN PROGRESS.** Plans 04-01 through 04-08 complete.
+**Phase 4 — IN PROGRESS.** Plans 04-01 through 04-10 complete.
 
 ## Completed
 
@@ -56,6 +56,7 @@
 - [x] Phase 4 Plan 06: System tray (TrayIconBuilder + recent projects submenu) + close-to-tray + tauri-plugin-updater + autostart + checkForUpdate composable — complete (2026-05-15)
 - [x] Phase 4 Plan 07: Volume and image management — bollard adapters + VolumeList + ImageList + /infra route — complete (2026-05-15)
 - [x] Phase 4 Plan 08: Config versioning (git2) + Command Palette (Cmd/Ctrl+K) + ConfigHistory diff viewer — complete (2026-05-15)
+- [x] Phase 4 Plan 10: Template marketplace (fetch_template_manifest + install_template) + CI bundle matrix (.deb/.AppImage/.dmg/.msi) — complete (2026-05-15)
 
 ## Phase Map
 
@@ -156,6 +157,9 @@
 - `space_reclaimed` is `Option<i64>` in bollard PruneImagesResponse/PruneVolumesResponse — requires `.unwrap_or(0).max(0) as u64`
 - `pendingCommand` ref in `useCommandPaletteStore` acts as lightweight event bus — avoids global emitter for palette→CommandPanel routing
 - `useCommandPaletteStore` placed in `src/composables/` (not `src/stores/`) per plan spec
+- Template manifest fetched from Rust (reqwest) not frontend — CSP blocks external HTTPS from webview
+- `save_file` dialog callback returns `Option<FilePath>` (not `Option<Option<PathBuf>>`); convert via `PathBuf::from(path.to_string())`
+- CI build matrix explicit `--bundles` args: deb,appimage (ubuntu); dmg (macos); msi (windows)
 
 ## Risks
 

@@ -100,6 +100,8 @@ export const commands = {
 	fetchTemplateManifest: () => typedError<TemplateEntry[], AppError>(__TAURI_INVOKE("fetch_template_manifest")),
 	/** Download a template's docker-compose.yml to a user-chosen directory. */
 	installTemplate: (composeUrl: string) => typedError<string, AppError>(__TAURI_INVOKE("install_template", { composeUrl })),
+	/** Aggregated CPU% and memory usage (MB) for all containers in a project. */
+	getResourceStats: (projectId: string) => typedError<ResourceStats, AppError>(__TAURI_INVOKE("get_resource_stats", { projectId })),
 };
 
 /** Events */
@@ -205,6 +207,11 @@ export type ProjectStatus = { kind: "running" } | { kind: "partially_running" } 
 export type ProjectStatusEvent = {
 	project_id: string,
 	status: ProjectStatus,
+};
+
+export type ResourceStats = {
+	cpu_percent: number,
+	mem_mb: number,
 };
 
 export type ScaffoldChunk = {

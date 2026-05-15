@@ -17,8 +17,9 @@
     "autostart:allow-is-enabled",
     "fs:allow-read-text-file",
     "fs:allow-write-text-file",
-    "fs:allow-read-text-file-text",
-    "notification:allow-send-notification",
+    "fs:scope-download",
+    "fs:scope-document",
+    "notification:allow-notify",
     "notification:allow-request-permission",
     "notification:allow-is-permission-granted"
   ]
