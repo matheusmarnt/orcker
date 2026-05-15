@@ -9,7 +9,10 @@ import {
   LayoutDashboard,
   ScrollText,
   Server,
+  Settings,
 } from 'lucide-vue-next'
+
+const emit = defineEmits<{ openSettings: [] }>()
 
 const collapsed = useLocalStorage('sidebar:collapsed', false)
 const route = useRoute()
@@ -54,8 +57,17 @@ function toggle() {
       </nav>
     </div>
 
-    <!-- Collapse toggle -->
-    <div class="border-t border-border p-2">
+    <!-- Settings + Collapse -->
+    <div class="border-t border-border p-2 space-y-1">
+      <button
+        class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+        :class="collapsed ? 'justify-center px-2' : ''"
+        title="Settings"
+        @click="emit('openSettings')"
+      >
+        <Settings class="h-4 w-4 flex-shrink-0" />
+        <span v-if="!collapsed">Settings</span>
+      </button>
       <button
         class="flex w-full items-center justify-center rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
         :title="collapsed ? 'Expand sidebar' : 'Collapse sidebar'"

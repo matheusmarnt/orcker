@@ -14,6 +14,12 @@
     "updater:allow-download-and-install",
     "autostart:allow-enable",
     "autostart:allow-disable",
-    "autostart:allow-is-enabled"
+    "autostart:allow-is-enabled",
+    "fs:allow-read-text-file",
+    "fs:allow-write-text-file",
+    "fs:allow-read-text-file-text",
+    "notification:allow-send-notification",
+    "notification:allow-request-permission",
+    "notification:allow-is-permission-granted"
   ]
 }
