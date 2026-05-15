@@ -1,0 +1,13 @@
+{
+  "app": { "title": "Orcker" },
+  "settings": {
+    "appearance": "Appearance",
+    "docker": "Docker",
+    "updates": "Updates",
+    "data": "Data",
+    "theme": "Theme",
+    "language": "Language",
+    "tray": "System Tray",
+    "autostart": "Start at Login"
+  }
+}

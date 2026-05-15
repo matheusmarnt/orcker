@@ -10,6 +10,21 @@ const host = process.env.TAURI_DEV_HOST;
 export default defineConfig(async () => ({
   plugins: [vue(), tailwindcss()],
 
+  optimizeDeps: {
+    include: ['monaco-editor-vue3'],
+  },
+  worker: { format: 'es' as const },
+
+  test: {
+    // monaco-editor imports browser globals (window) at module level.
+    // Exclude it from the Node test environment — ComposeEditor.spec mocks it.
+    server: {
+      deps: {
+        external: ['monaco-editor', /monaco-editor\/.*/],
+      },
+    },
+  },
+
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

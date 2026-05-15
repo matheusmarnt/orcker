@@ -27,6 +27,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-vue-next": "^1.0.0",
+    "monaco-editor": "^0.55.1",
     "monaco-editor-vue3": "^1.0.5",
     "monaco-yaml": "^5.5.0",
     "pinia": "^3.0.4",
