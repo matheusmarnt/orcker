@@ -1,3 +1,4 @@
+use crate::commands::database::create_testing_db_inner;
 use crate::core::compose::ComposeDriver;
 use crate::core::error::AppError;
 use crate::core::projects::{ProjectConfig, ProjectStatus, ProjectStatusEvent, ProjectsState};
@@ -26,17 +27,30 @@ pub async fn pick_project_folder(app: AppHandle) -> Result<Option<String>, AppEr
 #[specta::specta]
 pub async fn register_project(
     state: State<'_, ProjectsState>,
+    app_state: State<'_, AppState>,
     name: String,
     path: String,
 ) -> Result<ProjectConfig, AppError> {
     let config = ProjectConfig {
         id: uuid::Uuid::new_v4().to_string(),
-        name,
+        name: name.clone(),
         path,
         vite_auto: true,
     };
     let mut projects = state.projects.write().await;
     projects.push(config.clone());
+
+    // Fire-and-forget: auto-create testing DB; failure does not fail registration
+    let docker_opt = {
+        let g = app_state.docker.read().await;
+        g.as_ref().map(|a| a.client.clone())
+    };
+    if let Some(docker) = docker_opt {
+        tokio::spawn(async move {
+            let _ = create_testing_db_inner(&docker, &name).await;
+        });
+    }
+
     Ok(config)
 }
 
@@ -112,6 +126,7 @@ pub async fn scaffold_project(
     project_name: String,
     parent_dir: String,
     on_chunk: tauri::ipc::Channel<ScaffoldChunk>,
+    app_state: State<'_, AppState>,
 ) -> Result<(), AppError> {
     use tokio::io::{AsyncBufReadExt, BufReader};
     use tokio::process::Command;
@@ -262,6 +277,19 @@ pub async fn scaffold_project(
         done: true,
         error: false,
     });
+
+    // Fire-and-forget: auto-create testing DB; failure does not fail scaffold
+    let docker_opt = {
+        let g = app_state.docker.read().await;
+        g.as_ref().map(|a| a.client.clone())
+    };
+    if let Some(docker) = docker_opt {
+        let name_clone = project_name.clone();
+        tokio::spawn(async move {
+            let _ = create_testing_db_inner(&docker, &name_clone).await;
+        });
+    }
+
     Ok(())
 }
 
