@@ -36,6 +36,18 @@ impl ServiceId {
             ServiceId::Mailpit => "8025/tcp",
         }
     }
+
+    /// Environment variables required to start this service.
+    pub fn default_env_vars(&self) -> Vec<String> {
+        match self {
+            ServiceId::Postgres => vec![
+                "POSTGRES_PASSWORD=postgres".to_string(),
+                "POSTGRES_USER=postgres".to_string(),
+                "POSTGRES_DB=postgres".to_string(),
+            ],
+            ServiceId::Redis | ServiceId::Mailpit => vec![],
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------

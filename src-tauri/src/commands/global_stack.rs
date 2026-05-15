@@ -103,12 +103,11 @@ async fn start_service(app: AppHandle, state: &AppState, service: ServiceId) -> 
 
         let container_name = service.container_name();
 
-        // Inspect existing container
-        let inspect_result = docker.inspect_container(container_name, None::<bollard::container::InspectContainerOptions>).await;
-
-        match inspect_result {
+        // If container exists and is already running → emit Running and return early.
+        // If it exists but is not running → remove it so we always recreate with current
+        // config (applies env vars, port changes, image updates).
+        match docker.inspect_container(container_name, None::<bollard::container::InspectContainerOptions>).await {
             Ok(info) => {
-                // Container exists — check its state
                 let running = info
                     .state
                     .as_ref()
@@ -116,7 +115,6 @@ async fn start_service(app: AppHandle, state: &AppState, service: ServiceId) -> 
                     .unwrap_or(false);
 
                 if running {
-                    // Already running — update status
                     let mut map = statuses_arc.write().await;
                     map.insert(service, ServiceStatus::Running);
                     app_clone
@@ -125,131 +123,15 @@ async fn start_service(app: AppHandle, state: &AppState, service: ServiceId) -> 
                     return;
                 }
 
-                // Stopped container — start it
-                if let Err(e) = docker.start_container(container_name, None::<bollard::container::StartContainerOptions<String>>).await {
-                    let mut map = statuses_arc.write().await;
-                    let err_status = ServiceStatus::Error(e.to_string());
-                    map.insert(service, err_status.clone());
-                    app_clone
-                        .emit("global://service-status", ServiceStatusEvent { service, status: err_status })
-                        .ok();
-                    return;
-                }
+                // Not running — remove to recreate fresh with current config
+                use bollard::container::RemoveContainerOptions;
+                docker
+                    .remove_container(container_name, Some(RemoveContainerOptions { force: true, ..Default::default() }))
+                    .await
+                    .ok();
             }
             Err(bollard::errors::Error::DockerResponseServerError { status_code: 404, .. }) => {
-                // Container doesn't exist — create + start
-                use bollard::container::{Config, CreateContainerOptions};
-                use bollard::models::{HostConfig, PortBinding, RestartPolicy, RestartPolicyNameEnum};
-
-                let image = config.image_tag.clone();
-
-                // Pull image before creating container (no-op if already local)
-                {
-                    use bollard::image::CreateImageOptions;
-                    use futures_util::StreamExt;
-                    let mut pull = docker.create_image(
-                        Some(CreateImageOptions {
-                            from_image: image.clone(),
-                            ..Default::default()
-                        }),
-                        None,
-                        None,
-                    );
-                    while let Some(msg) = pull.next().await {
-                        if let Err(e) = msg {
-                            let err_status = ServiceStatus::Error(
-                                format!("Pull '{}' failed: {}", image, e),
-                            );
-                            let mut map = statuses_arc.write().await;
-                            map.insert(service, err_status.clone());
-                            app_clone
-                                .emit("global://service-status", ServiceStatusEvent { service, status: err_status })
-                                .ok();
-                            return;
-                        }
-                    }
-                }
-
-                let internal_port = service.internal_port();
-                let host_port = config.port.to_string();
-
-                let mut port_bindings: HashMap<String, Option<Vec<PortBinding>>> = HashMap::new();
-                port_bindings.insert(
-                    internal_port.to_string(),
-                    Some(vec![PortBinding {
-                        host_ip: Some("127.0.0.1".to_string()),
-                        host_port: Some(host_port),
-                    }]),
-                );
-
-                let host_config = HostConfig {
-                    network_mode: Some("orcker-global".to_string()),
-                    port_bindings: Some(port_bindings),
-                    restart_policy: Some(RestartPolicy {
-                        name: Some(RestartPolicyNameEnum::NO),
-                        maximum_retry_count: None,
-                    }),
-                    ..Default::default()
-                };
-
-                let mut exposed_ports: HashMap<&str, HashMap<(), ()>> = HashMap::new();
-                exposed_ports.insert(internal_port, HashMap::new());
-
-                let container_config = Config {
-                    image: Some(image.as_str()),
-                    host_config: Some(host_config),
-                    exposed_ports: Some(exposed_ports),
-                    ..Default::default()
-                };
-
-                let create_result = docker
-                    .create_container(
-                        Some(CreateContainerOptions {
-                            name: container_name,
-                            platform: None,
-                        }),
-                        container_config,
-                    )
-                    .await;
-
-                if let Err(e) = create_result {
-                    let msg = e.to_string();
-                    let err_status = if msg.contains("port is already allocated") {
-                        ServiceStatus::Error(format!(
-                            "Port {} is already in use — change the port in settings",
-                            config.port
-                        ))
-                    } else {
-                        ServiceStatus::Error(msg)
-                    };
-                    let mut map = statuses_arc.write().await;
-                    map.insert(service, err_status.clone());
-                    app_clone
-                        .emit("global://service-status", ServiceStatusEvent { service, status: err_status })
-                        .ok();
-                    return;
-                }
-
-                if let Err(e) = docker
-                    .start_container(container_name, None::<bollard::container::StartContainerOptions<String>>)
-                    .await
-                {
-                    let msg = e.to_string();
-                    let err_status = if msg.contains("port is already allocated") {
-                        ServiceStatus::Error(format!(
-                            "Port {} is already in use — change the port in settings",
-                            config.port
-                        ))
-                    } else {
-                        ServiceStatus::Error(msg)
-                    };
-                    let mut map = statuses_arc.write().await;
-                    map.insert(service, err_status.clone());
-                    app_clone
-                        .emit("global://service-status", ServiceStatusEvent { service, status: err_status })
-                        .ok();
-                    return;
-                }
+                // Container doesn't exist — will create below
             }
             Err(e) => {
                 let mut map = statuses_arc.write().await;
@@ -262,19 +144,141 @@ async fn start_service(app: AppHandle, state: &AppState, service: ServiceId) -> 
             }
         }
 
-        // Poll until running or 30s timeout
+        // Pull image (no-op if already local)
+        {
+            use bollard::image::CreateImageOptions;
+            use futures_util::StreamExt;
+            let mut pull = docker.create_image(
+                Some(CreateImageOptions {
+                    from_image: config.image_tag.clone(),
+                    ..Default::default()
+                }),
+                None,
+                None,
+            );
+            while let Some(msg) = pull.next().await {
+                if let Err(e) = msg {
+                    let err_status = ServiceStatus::Error(
+                        format!("Pull '{}' failed: {}", config.image_tag, e),
+                    );
+                    let mut map = statuses_arc.write().await;
+                    map.insert(service, err_status.clone());
+                    app_clone
+                        .emit("global://service-status", ServiceStatusEvent { service, status: err_status })
+                        .ok();
+                    return;
+                }
+            }
+        }
+
+        // Create container with full config (env vars, ports, network)
+        {
+            use bollard::container::{Config, CreateContainerOptions};
+            use bollard::models::{HostConfig, PortBinding, RestartPolicy, RestartPolicyNameEnum};
+
+            let internal_port = service.internal_port();
+            let host_port = config.port.to_string();
+
+            let mut port_bindings: HashMap<String, Option<Vec<PortBinding>>> = HashMap::new();
+            port_bindings.insert(
+                internal_port.to_string(),
+                Some(vec![PortBinding {
+                    host_ip: Some("127.0.0.1".to_string()),
+                    host_port: Some(host_port),
+                }]),
+            );
+
+            let host_config = HostConfig {
+                network_mode: Some("orcker-global".to_string()),
+                port_bindings: Some(port_bindings),
+                restart_policy: Some(RestartPolicy {
+                    name: Some(RestartPolicyNameEnum::NO),
+                    maximum_retry_count: None,
+                }),
+                ..Default::default()
+            };
+
+            let mut exposed_ports: HashMap<&str, HashMap<(), ()>> = HashMap::new();
+            exposed_ports.insert(internal_port, HashMap::new());
+
+            // Service-specific env vars (e.g. POSTGRES_PASSWORD for postgres)
+            let env_vars = service.default_env_vars();
+            let env_refs: Vec<&str> = env_vars.iter().map(|s| s.as_str()).collect();
+
+            let container_config = Config {
+                image: Some(config.image_tag.as_str()),
+                host_config: Some(host_config),
+                exposed_ports: Some(exposed_ports),
+                env: if env_refs.is_empty() { None } else { Some(env_refs) },
+                ..Default::default()
+            };
+
+            let create_result = docker
+                .create_container(
+                    Some(CreateContainerOptions {
+                        name: container_name,
+                        platform: None,
+                    }),
+                    container_config,
+                )
+                .await;
+
+            if let Err(e) = create_result {
+                let msg = e.to_string();
+                let err_status = if msg.contains("port is already allocated") {
+                    ServiceStatus::Error(format!(
+                        "Port {} is already in use — change the port in settings",
+                        config.port
+                    ))
+                } else {
+                    ServiceStatus::Error(msg)
+                };
+                let mut map = statuses_arc.write().await;
+                map.insert(service, err_status.clone());
+                app_clone
+                    .emit("global://service-status", ServiceStatusEvent { service, status: err_status })
+                    .ok();
+                return;
+            }
+        }
+
+        // Start container
+        if let Err(e) = docker
+            .start_container(container_name, None::<bollard::container::StartContainerOptions<String>>)
+            .await
+        {
+            let msg = e.to_string();
+            let err_status = if msg.contains("port is already allocated") {
+                ServiceStatus::Error(format!(
+                    "Port {} is already in use — change the port in settings",
+                    config.port
+                ))
+            } else {
+                ServiceStatus::Error(msg)
+            };
+            let mut map = statuses_arc.write().await;
+            map.insert(service, err_status.clone());
+            app_clone
+                .emit("global://service-status", ServiceStatusEvent { service, status: err_status })
+                .ok();
+            return;
+        }
+
+        // Poll until running, crashed, or 30s timeout.
+        // Fail fast: exit_code is Some when container exited — no need to wait full 30s.
         let poll = async {
             loop {
                 tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
                 match docker.inspect_container(container_name, None::<bollard::container::InspectContainerOptions>).await {
                     Ok(info) => {
-                        let running = info
-                            .state
-                            .as_ref()
-                            .and_then(|s| s.running)
-                            .unwrap_or(false);
+                        let state_ref = info.state.as_ref();
+                        let running = state_ref.and_then(|s| s.running).unwrap_or(false);
                         if running {
                             break Ok::<(), String>(());
+                        }
+                        // exit_code is Some(n) once container has exited — fail fast
+                        if let Some(code) = state_ref.and_then(|s| s.exit_code) {
+                            break Err(format!("Container exited (code {})", code));
                         }
                     }
                     Err(e) => break Err(e.to_string()),
