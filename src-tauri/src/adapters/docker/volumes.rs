@@ -11,7 +11,7 @@ pub struct VolumeInfo {
     pub driver: String,
     pub mountpoint: String,
     /// Size in MB; None if Docker daemon has not computed usage data (size == -1).
-    pub size_mb: Option<i64>,
+    pub size_mb: Option<f64>,
 }
 
 pub async fn list_volumes(docker: &Docker) -> Result<Vec<VolumeInfo>, AppError> {
@@ -27,7 +27,7 @@ pub async fn list_volumes(docker: &Docker) -> Result<Vec<VolumeInfo>, AppError> 
         .map(|v| {
             let size_mb = v.usage_data.and_then(|u| {
                 if u.size >= 0 {
-                    Some(u.size / 1_048_576)
+                    Some(u.size as f64 / 1_048_576.0)
                 } else {
                     None
                 }

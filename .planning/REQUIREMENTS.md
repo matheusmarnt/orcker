@@ -180,8 +180,8 @@
 | R-M4.2 | Phase 3 | Complete |
 | R-M4.3 | Phase 3 | Complete |
 | R-M4.4 | Phase 3 | Complete |
-| R-M4.5 | Phase 4 | Pending |
-| R-M4.6 | Phase 4 | Pending |
+| R-M4.5 | Phase 4 | Complete |
+| R-M4.6 | Phase 4 | Complete |
 | R-M5.1 | Phase 4 | Complete |
 | R-M5.2 | Phase 4 | Complete |
 | R-M5.3 | Phase 4 | Complete |

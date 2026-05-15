@@ -1,6 +1,6 @@
 # Project State — Orcker
 
-*Last updated: 2026-05-15 — Completed 04-08-PLAN.md*
+*Last updated: 2026-05-15 — Completed 04-09-PLAN.md*
 
 ## Current Phase
 
@@ -56,6 +56,7 @@
 - [x] Phase 4 Plan 06: System tray (TrayIconBuilder + recent projects submenu) + close-to-tray + tauri-plugin-updater + autostart + checkForUpdate composable — complete (2026-05-15)
 - [x] Phase 4 Plan 07: Volume and image management — bollard adapters + VolumeList + ImageList + /infra route — complete (2026-05-15)
 - [x] Phase 4 Plan 08: Config versioning (git2) + Command Palette (Cmd/Ctrl+K) + ConfigHistory diff viewer — complete (2026-05-15)
+- [x] Phase 4 Plan 09: Settings modal (Appearance/Docker/Updates/Data) + ResourceGraph Chart.js + OS notifications on Unhealthy — complete (2026-05-15)
 - [x] Phase 4 Plan 10: Template marketplace (fetch_template_manifest + install_template) + CI bundle matrix (.deb/.AppImage/.dmg/.msi) — complete (2026-05-15)
 
 ## Phase Map
@@ -157,6 +158,12 @@
 - `space_reclaimed` is `Option<i64>` in bollard PruneImagesResponse/PruneVolumesResponse — requires `.unwrap_or(0).max(0) as u64`
 - `pendingCommand` ref in `useCommandPaletteStore` acts as lightweight event bus — avoids global emitter for palette→CommandPanel routing
 - `useCommandPaletteStore` placed in `src/composables/` (not `src/stores/`) per plan spec
+- bollard 0.19 memory_stats.stats is `HashMap<String, u64>` (not a named struct) — cache accessed via `.get("cache").copied()`
+- bollard 0.19 cpu_stats/precpu_stats are `Option<ContainerCpuStats>` — must `.as_ref()` before accessing cpu_usage fields
+- OS notification permission requested lazily on first Unhealthy transition — not at app startup
+- SettingsModal uses `<Teleport to="body">` with fixed overlay — same Card pattern as DestructiveConfirmDialog
+- DataSection uses tauri-plugin-fs for readTextFile/writeTextFile — required separate npm + Cargo install
+- fs:allow-read-text-file-text is not a valid Tauri 2 permission — correct names are fs:allow-read-text-file + fs:allow-write-text-file
 - Template manifest fetched from Rust (reqwest) not frontend — CSP blocks external HTTPS from webview
 - `save_file` dialog callback returns `Option<FilePath>` (not `Option<Option<PathBuf>>`); convert via `PathBuf::from(path.to_string())`
 - CI build matrix explicit `--bundles` args: deb,appimage (ubuntu); dmg (macos); msi (windows)

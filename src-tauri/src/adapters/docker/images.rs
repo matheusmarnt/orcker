@@ -11,7 +11,7 @@ use crate::core::error::AppError;
 pub struct ImageInfo {
     pub id: String,
     pub tags: Vec<String>,
-    pub size: i64,
+    pub size: f64,
 }
 
 pub async fn list_images(docker: &Docker) -> Result<Vec<ImageInfo>, AppError> {
@@ -28,7 +28,7 @@ pub async fn list_images(docker: &Docker) -> Result<Vec<ImageInfo>, AppError> {
             // bollard 0.19: id, repo_tags, size are non-Option on ImageSummary
             id: i.id,
             tags: i.repo_tags,
-            size: i.size,
+            size: i.size as f64,
         })
         .collect())
 }

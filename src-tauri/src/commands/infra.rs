@@ -131,12 +131,12 @@ pub async fn list_volumes(app_state: State<'_, AppState>) -> Result<Vec<VolumeIn
 /// Prune dangling (unused) volumes. Returns reclaimed space in bytes.
 #[tauri::command]
 #[specta::specta]
-pub async fn prune_volumes(app_state: State<'_, AppState>) -> Result<u64, AppError> {
+pub async fn prune_volumes(app_state: State<'_, AppState>) -> Result<f64, AppError> {
     let guard = app_state.docker.read().await;
     let docker = guard
         .as_ref()
         .ok_or_else(|| AppError::DockerUnavailable("Docker not connected".into()))?;
-    volumes::prune_volumes(&docker.client).await
+    volumes::prune_volumes(&docker.client).await.map(|v| v as f64)
 }
 
 /// List all local Docker images with tags and size.
@@ -182,10 +182,10 @@ pub async fn remove_image(
 /// Prune dangling (unused) images. Returns reclaimed space in bytes.
 #[tauri::command]
 #[specta::specta]
-pub async fn prune_images(app_state: State<'_, AppState>) -> Result<u64, AppError> {
+pub async fn prune_images(app_state: State<'_, AppState>) -> Result<f64, AppError> {
     let guard = app_state.docker.read().await;
     let docker = guard
         .as_ref()
         .ok_or_else(|| AppError::DockerUnavailable("Docker not connected".into()))?;
-    images::prune_images(&docker.client).await
+    images::prune_images(&docker.client).await.map(|v| v as f64)
 }
