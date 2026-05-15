@@ -1,5 +1,5 @@
-use bollard::Docker;
 use crate::core::error::AppError;
+use bollard::Docker;
 
 pub struct DockerAdapter {
     pub client: Docker,
@@ -11,7 +11,10 @@ impl DockerAdapter {
         if let Ok(host) = std::env::var("DOCKER_HOST") {
             let client = Docker::connect_with_socket(&host, 30, bollard::API_DEFAULT_VERSION)
                 .map_err(|e| AppError::DockerUnavailable(e.to_string()))?;
-            client.ping().await.map_err(|e| AppError::DockerUnavailable(e.to_string()))?;
+            client
+                .ping()
+                .await
+                .map_err(|e| AppError::DockerUnavailable(e.to_string()))?;
             return Ok((Self { client }, host));
         }
 
@@ -35,7 +38,9 @@ impl DockerAdapter {
                     continue;
                 }
                 if std::path::Path::new(path).exists() {
-                    if let Ok(client) = Docker::connect_with_socket(path, 30, bollard::API_DEFAULT_VERSION) {
+                    if let Ok(client) =
+                        Docker::connect_with_socket(path, 30, bollard::API_DEFAULT_VERSION)
+                    {
                         if client.ping().await.is_ok() {
                             return Ok((Self { client }, path.clone()));
                         }
@@ -53,7 +58,10 @@ impl DockerAdapter {
         {
             let client = Docker::connect_with_named_pipe_defaults()
                 .map_err(|e| AppError::DockerUnavailable(e.to_string()))?;
-            client.ping().await.map_err(|e| AppError::DockerUnavailable(e.to_string()))?;
+            client
+                .ping()
+                .await
+                .map_err(|e| AppError::DockerUnavailable(e.to_string()))?;
             Ok((Self { client }, "\\\\.\\pipe\\docker_engine".to_string()))
         }
     }

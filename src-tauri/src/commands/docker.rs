@@ -12,9 +12,7 @@ pub struct ContainerSummary {
 
 #[tauri::command]
 #[specta::specta]
-pub async fn get_docker_version(
-    state: tauri::State<'_, AppState>,
-) -> Result<String, AppError> {
+pub async fn get_docker_version(state: tauri::State<'_, AppState>) -> Result<String, AppError> {
     let guard = state.docker.read().await;
     match guard.as_ref() {
         None => Err(AppError::DockerUnavailable("Not connected".to_string())),

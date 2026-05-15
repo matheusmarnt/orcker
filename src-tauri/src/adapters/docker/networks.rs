@@ -1,7 +1,7 @@
 #![allow(deprecated)]
+use crate::core::error::AppError;
 use bollard::network::{CreateNetworkOptions, InspectNetworkOptions};
 use bollard::Docker;
-use crate::core::error::AppError;
 use std::collections::HashMap;
 
 /// Lazily creates the shared bridge network "orcker-global".

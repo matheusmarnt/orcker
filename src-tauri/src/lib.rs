@@ -2,26 +2,25 @@ pub mod adapters;
 pub mod commands;
 pub mod core;
 
-use tauri::{Emitter, Manager};
-use tauri_specta::{collect_commands, Builder as SpectaBuilder};
-use tauri_plugin_global_shortcut::ShortcutState;
-use crate::core::state::AppState;
 use crate::adapters::docker::client::DockerAdapter;
+use crate::core::state::AppState;
+use tauri::{Emitter, Manager};
+use tauri_plugin_global_shortcut::ShortcutState;
+use tauri_specta::{collect_commands, Builder as SpectaBuilder};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // STEP 1: Build tauri-specta collection BEFORE tauri::Builder
     // This must happen at startup — not in build.rs
-    let specta_builder = SpectaBuilder::<tauri::Wry>::new()
-        .commands(collect_commands![
-            commands::docker::get_docker_version,
-            commands::docker::list_containers,
-            commands::global_stack::toggle_service,
-            commands::global_stack::get_services_status,
-            commands::global_stack::set_service_config,
-            commands::global_stack::global_on,
-            commands::global_stack::global_off,
-        ]);
+    let specta_builder = SpectaBuilder::<tauri::Wry>::new().commands(collect_commands![
+        commands::docker::get_docker_version,
+        commands::docker::list_containers,
+        commands::global_stack::toggle_service,
+        commands::global_stack::get_services_status,
+        commands::global_stack::set_service_config,
+        commands::global_stack::global_on,
+        commands::global_stack::global_off,
+    ]);
 
     // Export TypeScript bindings in debug builds only
     #[cfg(debug_assertions)]
@@ -111,7 +110,8 @@ async fn probe_docker_and_update(handle: tauri::AppHandle) {
                     adapters::docker::containers::subscribe_events(
                         adapter.client.clone(),
                         handle.clone(),
-                    ).await;
+                    )
+                    .await;
                 }
                 drop(guard);
                 // If subscribe_events returns, Docker disconnected — retry
@@ -119,7 +119,12 @@ async fn probe_docker_and_update(handle: tauri::AppHandle) {
             }
             Err(e) => {
                 tracing::warn!(error = %e, "Docker probe failed");
-                handle.emit("docker://error", serde_json::to_string(&e).unwrap_or_default()).ok();
+                handle
+                    .emit(
+                        "docker://error",
+                        serde_json::to_string(&e).unwrap_or_default(),
+                    )
+                    .ok();
             }
         }
         tokio::time::sleep(tokio::time::Duration::from_secs(4)).await;
