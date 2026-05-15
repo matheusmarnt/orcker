@@ -812,12 +812,9 @@ pub async fn start_project(
 
     exec_compose_output(&path, &driver, &["up", "-d"]).await?;
 
-    match poll_containers_ready(docker, &path, 25).await {
-        ReadinessResult::AllRunning => {
-            spawn_project_monitor(app, docker.clone(), project_id, path, &state).await;
-            return Ok("started".into());
-        }
-        _ => {}
+    if let ReadinessResult::AllRunning = poll_containers_ready(docker, &path, 25).await {
+        spawn_project_monitor(app, docker.clone(), project_id, path, &state).await;
+        return Ok("started".into());
     }
 
     // All stages exhausted — report which services failed.
