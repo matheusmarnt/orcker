@@ -44,6 +44,8 @@ pub fn run() {
         commands::projects::list_supervisor_workers,
         commands::projects::restart_supervisor_worker,
         commands::projects::open_project_folder,
+        commands::projects::start_project,
+        commands::projects::stop_project,
     ]);
 
     // Export TypeScript bindings in debug builds only

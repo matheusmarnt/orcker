@@ -649,6 +649,109 @@ pub async fn restart_supervisor_worker(
     Ok(())
 }
 
+// ── Compose lifecycle ──────────────────────────────────────────────────────
+
+/// Detect whether the project uses Laravel Sail.
+fn is_sail(project_path: &str) -> bool {
+    std::path::Path::new(project_path)
+        .join("vendor/bin/sail")
+        .exists()
+}
+
+/// Run a docker compose command (up/down/etc.) in the project directory.
+/// Auto-selects Sail > Compose Plugin > Compose Legacy.
+async fn run_compose_command(
+    project_path: &str,
+    driver: &crate::core::compose::ComposeDriver,
+    args: &[&str],
+) -> Result<String, AppError> {
+    use crate::core::compose::ComposeDriver;
+    use tokio::process::Command;
+
+    let (program, cmd_args): (String, Vec<String>) = if is_sail(project_path) {
+        let sail = std::path::Path::new(project_path)
+            .join("vendor/bin/sail")
+            .to_string_lossy()
+            .to_string();
+        (sail, args.iter().map(|s| s.to_string()).collect())
+    } else {
+        match driver {
+            ComposeDriver::Plugin => {
+                let mut v = vec!["compose".to_string()];
+                v.extend(args.iter().map(|s| s.to_string()));
+                ("docker".to_string(), v)
+            }
+            ComposeDriver::Legacy => (
+                "docker-compose".to_string(),
+                args.iter().map(|s| s.to_string()).collect(),
+            ),
+            ComposeDriver::None => {
+                return Err(AppError::Internal(
+                    "No Docker Compose driver found on this system.".into(),
+                ))
+            }
+        }
+    };
+
+    let out = Command::new(&program)
+        .args(&cmd_args)
+        .current_dir(project_path)
+        .output()
+        .await
+        .map_err(|e| AppError::Internal(format!("Failed to run '{}': {}", program, e)))?;
+
+    let stdout = String::from_utf8_lossy(&out.stdout).to_string();
+    let stderr = String::from_utf8_lossy(&out.stderr).to_string();
+    let combined = format!("{}{}", stdout, stderr).trim().to_string();
+
+    if !out.status.success() {
+        return Err(AppError::Internal(
+            if combined.is_empty() {
+                format!("Command failed (exit {})", out.status)
+            } else {
+                combined
+            },
+        ));
+    }
+    Ok(combined)
+}
+
+/// Start project containers. Auto-detects Sail, Compose Plugin, or Legacy.
+#[tauri::command]
+#[specta::specta]
+pub async fn start_project(
+    project_id: String,
+    state: State<'_, ProjectsState>,
+) -> Result<String, AppError> {
+    let (path, driver) = {
+        let projects = state.projects.read().await;
+        let p = projects
+            .iter()
+            .find(|p| p.id == project_id)
+            .ok_or_else(|| AppError::NotFound("Project not found".into()))?;
+        (p.path.clone(), state.compose_driver.clone())
+    };
+    run_compose_command(&path, &driver, &["up", "-d"]).await
+}
+
+/// Stop project containers. Auto-detects Sail, Compose Plugin, or Legacy.
+#[tauri::command]
+#[specta::specta]
+pub async fn stop_project(
+    project_id: String,
+    state: State<'_, ProjectsState>,
+) -> Result<String, AppError> {
+    let (path, driver) = {
+        let projects = state.projects.read().await;
+        let p = projects
+            .iter()
+            .find(|p| p.id == project_id)
+            .ok_or_else(|| AppError::NotFound("Project not found".into()))?;
+        (p.path.clone(), state.compose_driver.clone())
+    };
+    run_compose_command(&path, &driver, &["down"]).await
+}
+
 #[cfg(test)]
 mod ini_tests {
     use super::parse_php_ini;

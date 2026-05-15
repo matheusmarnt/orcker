@@ -21,7 +21,7 @@ export const commands = {
 	listArtisanCommands: () => typedError<ArtisanCommand[], AppError>(__TAURI_INVOKE("list_artisan_commands")),
 	/**
 	 *  Stream artisan/shell output to the frontend via Channel<CommandChunk>.
-	 *
+	 * 
 	 *  Auto-detects the running app container via Docker Compose labels (project folder name).
 	 *  Stores a CancellationToken in ProjectsState keyed by project_id for cancellation.
 	 */
@@ -31,8 +31,9 @@ export const commands = {
 	scaffoldProject: (template: ScaffoldTemplate, projectName: string, parentDir: string, onChunk: Channel<ScaffoldChunk>) => typedError<null, AppError>(__TAURI_INVOKE("scaffold_project", { template, projectName, parentDir, onChunk })),
 	/**
 	 *  Start streaming logs for a project: docker container stdout/stderr + laravel.log file tail.
-	 *
-	 *  Auto-detects running app container via Docker Compose labels. File tail runs regardless.
+	 * 
+	 *  Auto-detects the running app container via Docker Compose labels (project folder name).
+	 *  File tail runs even when no container is running — docker stream is optional.
 	 *  Both streams share a single CancellationToken keyed "logs:{project_id}" in ProjectsState.
 	 *  Call stop_log_stream to cancel all streams for this project.
 	 */
@@ -48,6 +49,10 @@ export const commands = {
 	listSupervisorWorkers: (supervisorContainer: string) => typedError<SupervisorWorker[], AppError>(__TAURI_INVOKE("list_supervisor_workers", { supervisorContainer })),
 	restartSupervisorWorker: (supervisorContainer: string, workerName: string) => typedError<null, AppError>(__TAURI_INVOKE("restart_supervisor_worker", { supervisorContainer, workerName })),
 	openProjectFolder: (projectId: string) => typedError<null, AppError>(__TAURI_INVOKE("open_project_folder", { projectId })),
+	/**  Start project containers. Auto-detects Sail, Compose Plugin, or Legacy. */
+	startProject: (projectId: string) => typedError<string, AppError>(__TAURI_INVOKE("start_project", { projectId })),
+	/**  Stop project containers. Auto-detects Sail, Compose Plugin, or Legacy. */
+	stopProject: (projectId: string) => typedError<string, AppError>(__TAURI_INVOKE("stop_project", { projectId })),
 };
 
 /* Types */
