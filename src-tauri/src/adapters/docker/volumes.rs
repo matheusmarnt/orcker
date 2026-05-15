@@ -48,7 +48,7 @@ pub async fn prune_volumes(docker: &Docker) -> Result<u64, AppError> {
         .prune_volumes(None::<PruneVolumesOptions<String>>)
         .await
         .map_err(|e| AppError::DockerApi(e.to_string()))?;
-    // space_reclaimed is i64 in bollard 0.19; cast to u64 safely
-    let reclaimed = resp.space_reclaimed.max(0) as u64;
+    // space_reclaimed is Option<i64> in bollard PruneVolumesResponse
+    let reclaimed = resp.space_reclaimed.unwrap_or(0).max(0) as u64;
     Ok(reclaimed)
 }
