@@ -68,6 +68,8 @@ export const commands = {
 	getProjectStatus: (projectId: string) => typedError<ProjectStatus, AppError>(__TAURI_INVOKE("get_project_status", { projectId })),
 	readComposeFile: (projectId: string) => typedError<string, AppError>(__TAURI_INVOKE("read_compose_file", { projectId })),
 	saveComposeFile: (projectId: string, content: string) => typedError<null, AppError>(__TAURI_INVOKE("save_compose_file", { projectId, content })),
+	/** Return unified diff between last two committed versions of docker-compose.yml. Empty string when fewer than 2 commits. */
+	getComposeDiff: (projectId: string) => typedError<string, AppError>(__TAURI_INVOKE("get_compose_diff", { projectId })),
 	getSettings: () => typedError<AppSettingsData, AppError>(__TAURI_INVOKE("get_settings")),
 	saveSettings: (newData: AppSettingsData) => typedError<null, AppError>(__TAURI_INVOKE("save_settings", { newData })),
 	/**  Tauri command wrapper for create_testing_db_inner. */
