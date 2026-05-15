@@ -705,13 +705,14 @@ async fn run_compose_command(
     let combined = format!("{}{}", stdout, stderr).trim().to_string();
 
     if !out.status.success() {
-        return Err(AppError::Internal(
-            if combined.is_empty() {
-                format!("Command failed (exit {})", out.status)
-            } else {
-                combined
-            },
-        ));
+        // Return last non-empty line — compose puts the root cause last
+        let summary = combined
+            .lines()
+            .rev()
+            .find(|l| !l.trim().is_empty())
+            .map(|l| l.trim().to_string())
+            .unwrap_or_else(|| format!("Command failed (exit {})", out.status));
+        return Err(AppError::Internal(summary));
     }
     Ok(combined)
 }

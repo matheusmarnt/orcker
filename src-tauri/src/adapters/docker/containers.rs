@@ -56,13 +56,9 @@ pub async fn find_app_container(docker: &bollard::Docker, project_path: &str) ->
         }
     }
 
-    // Fallback: any running container in this compose project
-    containers.first().and_then(|c| {
-        c.names
-            .as_ref()
-            .and_then(|n| n.first())
-            .map(|n| n.trim_start_matches('/').to_string())
-    })
+    // No preferred app service found — don't fall back to non-app containers
+    // (mysql/redis/mailpit don't have php; exec-ing into them produces misleading errors)
+    None
 }
 
 #[allow(deprecated)]
