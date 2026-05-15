@@ -49,7 +49,12 @@ export const commands = {
 	listSupervisorWorkers: (supervisorContainer: string) => typedError<SupervisorWorker[], AppError>(__TAURI_INVOKE("list_supervisor_workers", { supervisorContainer })),
 	restartSupervisorWorker: (supervisorContainer: string, workerName: string) => typedError<null, AppError>(__TAURI_INVOKE("restart_supervisor_worker", { supervisorContainer, workerName })),
 	openProjectFolder: (projectId: string) => typedError<null, AppError>(__TAURI_INVOKE("open_project_folder", { projectId })),
-	/**  Start project containers. Auto-detects Sail, Compose Plugin, or Legacy. */
+	/**
+	 *  Start project containers. Auto-detects Sail, Compose Plugin, or Legacy.
+	 *  If `up -d` fails due to a healthcheck dependency (e.g. meilisearch exits before
+	 *  laravel.test starts), retries with `--no-deps` on the app service so the Laravel
+	 *  container comes up even when optional services are unhealthy.
+	 */
 	startProject: (projectId: string) => typedError<string, AppError>(__TAURI_INVOKE("start_project", { projectId })),
 	/**  Stop project containers. Auto-detects Sail, Compose Plugin, or Legacy. */
 	stopProject: (projectId: string) => typedError<string, AppError>(__TAURI_INVOKE("stop_project", { projectId })),

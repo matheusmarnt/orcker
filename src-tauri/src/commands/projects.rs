@@ -736,12 +736,17 @@ async fn run_compose_command(
     Ok(combined)
 }
 
-/// Start project containers. Auto-detects Sail, Compose Plugin, or Legacy.
-/// If `up -d` fails due to a healthcheck dependency (e.g. meilisearch exits before
-/// laravel.test starts), retries with `--no-deps` on the app service so the Laravel
-/// container comes up even when optional services are unhealthy.
+/// Start project containers — 3-stage recovery for partial compose failures.
+///
+/// Stage 1 — full `up -d`: starts all services.
+/// Stage 2 — Docker restart loop: individually restarts any exited containers
+///            (handles transient healthcheck crashes, e.g. meilisearch data-dir issue).
+///            Follows with a second `up -d` so compose re-evaluates healthchecks.
+/// Stage 3 — `--no-deps` fallback: if app container is still down, force-starts
+///            just the app service bypassing service_healthy dependency gates.
 #[tauri::command]
 #[specta::specta]
+#[allow(deprecated)]
 pub async fn start_project(
     project_id: String,
     state: State<'_, ProjectsState>,
@@ -756,25 +761,48 @@ pub async fn start_project(
         (p.path.clone(), state.compose_driver.clone())
     };
 
-    // First attempt: full compose up
-    let (compose_output, compose_ok) =
-        exec_compose_output(&path, &driver, &["up", "-d"]).await?;
+    let project_name = std::path::Path::new(&path)
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("")
+        .to_lowercase();
 
-    if compose_ok {
+    // Stage 1: full compose up (all services, dependency ordering intact)
+    let (first_output, first_ok) = exec_compose_output(&path, &driver, &["up", "-d"]).await?;
+    if first_ok {
         return Ok("started".into());
     }
 
-    // Compose exited non-zero — some services may still have started.
-    // Check via Docker API if the app container is actually running.
+    // Acquire Docker client for direct container management
     let docker_opt = {
         let g = app_state.docker.read().await;
         g.as_ref().map(|a| a.client.clone())
     };
 
     if let Some(ref docker) = docker_opt {
-        // Brief settle — containers may still be transitioning
-        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(800)).await;
 
+        // Stage 2: restart any exited containers individually via Docker API.
+        // Compose's exit-on-dependency-failure leaves crashed services as "exited".
+        // docker restart gives each one another attempt before compose re-runs.
+        let exited = list_exited_project_containers(docker, &project_name).await;
+        for container_id in &exited {
+            let _ = docker.restart_container(container_id, None::<bollard::container::RestartContainerOptions>).await;
+        }
+
+        if !exited.is_empty() {
+            // Wait for restarted containers to stabilise
+            tokio::time::sleep(tokio::time::Duration::from_secs(4)).await;
+        }
+
+        // Re-run full compose up so healthcheck dependencies are re-evaluated
+        let (_, second_ok) = exec_compose_output(&path, &driver, &["up", "-d"]).await?;
+        if second_ok {
+            return Ok("started".into());
+        }
+
+        // Some services still failing — check whether the app container came up
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
         if crate::adapters::docker::containers::find_app_container(docker, &path)
             .await
             .is_some()
@@ -782,10 +810,8 @@ pub async fn start_project(
             return Ok("started".into());
         }
 
-        // App container not up — retry without healthcheck deps.
-        // For Sail projects: `sail up laravel.test --no-deps -d`.
-        // This starts the app container even when service_healthy deps (e.g. meilisearch) failed,
-        // relying on the other infra containers (mysql/redis/mailpit) that already started.
+        // Stage 3: force-start just the app service bypassing healthcheck deps.
+        // mysql/redis/mailpit are already running from stages 1-2.
         if is_sail(&path) {
             let _ = exec_compose_output(
                 &path,
@@ -803,14 +829,40 @@ pub async fn start_project(
         }
     }
 
-    // All attempts failed — report last compose error line
-    let error_line = compose_output
+    // All stages exhausted — report original compose error
+    let error_line = first_output
         .lines()
         .rev()
         .find(|l| !l.trim().is_empty())
         .map(|l| l.trim().to_string())
         .unwrap_or_else(|| "Compose command failed".to_string());
     Err(AppError::Internal(error_line))
+}
+
+/// List Docker IDs of all exited containers belonging to a compose project.
+#[allow(deprecated)]
+async fn list_exited_project_containers(
+    docker: &bollard::Docker,
+    project_name: &str,
+) -> Vec<String> {
+    use bollard::container::ListContainersOptions;
+    let mut filters = std::collections::HashMap::new();
+    filters.insert(
+        "label".to_string(),
+        vec![format!("com.docker.compose.project={}", project_name)],
+    );
+    filters.insert("status".to_string(), vec!["exited".to_string()]);
+    docker
+        .list_containers(Some(ListContainersOptions::<String> {
+            all: true,
+            filters,
+            ..Default::default()
+        }))
+        .await
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|c| c.id)
+        .collect()
 }
 
 /// Stop project containers. Auto-detects Sail, Compose Plugin, or Legacy.
