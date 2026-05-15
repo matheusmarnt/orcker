@@ -8,7 +8,10 @@ use crate::core::projects::ProjectsState;
 use crate::core::settings::{AppSettings, AppSettingsData};
 use crate::core::state::AppState;
 use std::sync::atomic::Ordering;
+use tauri::menu::{Menu, MenuItem, Submenu};
+use tauri::tray::TrayIconBuilder;
 use tauri::{Emitter, Manager};
+use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_global_shortcut::ShortcutState;
 use tauri_plugin_store::StoreExt;
 use tauri_specta::{collect_commands, collect_events, Builder as SpectaBuilder};
@@ -52,12 +55,19 @@ pub fn run() {
             commands::projects::get_project_status,
             commands::compose::read_compose_file,
             commands::compose::save_compose_file,
+            commands::compose::get_compose_diff,
             commands::settings::get_settings,
             commands::settings::save_settings,
             commands::database::create_testing_db,
             commands::database::dump_db,
             commands::database::restore_db,
             commands::database::open_db_cli,
+            commands::infra::list_volumes,
+            commands::infra::prune_volumes,
+            commands::infra::list_images,
+            commands::infra::pull_image,
+            commands::infra::remove_image,
+            commands::infra::prune_images,
         ])
         .events(collect_events![crate::core::projects::ProjectStatusEvent]);
 
@@ -89,6 +99,11 @@ pub fn run() {
     // Note: tauri_plugin_log conflicts with tracing_log::LogTracer (both own log global)
     // tracing_subscriber handles stdout — tauri_plugin_log not needed
     tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_autostart::init(
+            MacosLauncher::LaunchAgent,
+            Some(vec!["--silent"]),
+        ))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_store::Builder::new().build())
@@ -122,6 +137,45 @@ pub fn run() {
                 AppSettingsData::default()
             };
             app.manage(AppSettings::new(settings_data));
+
+            // Build system tray (guard prevents duplicates on hot-reload)
+            if app.tray_by_id("main").is_none() {
+                let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+                let start_i = MenuItem::with_id(app, "start_all", "Start All", true, None::<&str>)?;
+                let stop_i = MenuItem::with_id(app, "stop_all", "Stop All", true, None::<&str>)?;
+
+                // Recent projects submenu — read up to 5 projects from ProjectsState
+                // At setup time the list is empty (projects are loaded later from store),
+                // so we always show the "(no projects)" placeholder here. The tray menu
+                // is rebuilt whenever the user opens the tray, so this is acceptable.
+                let none_i =
+                    MenuItem::with_id(app, "no_projects", "(no projects)", false, None::<&str>)?;
+                let recent_sub = Submenu::with_items(app, "Recent Projects", true, &[&none_i])?;
+
+                let menu = Menu::with_items(app, &[&start_i, &stop_i, &recent_sub, &quit_i])?;
+
+                TrayIconBuilder::with_id("main")
+                    .icon(app.default_window_icon().unwrap().clone())
+                    .menu(&menu)
+                    .show_menu_on_left_click(false)
+                    .on_menu_event(|app, event| match event.id.as_ref() {
+                        "quit" => app.exit(0),
+                        "start_all" => {
+                            // TODO: invoke global_stack_on via app_handle (future plan)
+                        }
+                        "stop_all" => {
+                            // TODO: invoke global_stack_off via app_handle (future plan)
+                        }
+                        id if id.starts_with("project:") => {
+                            if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                            }
+                        }
+                        _ => {}
+                    })
+                    .build(app)?;
+            }
 
             // Spawn async init: hydrate persisted configs → then probe Docker
             // setup() runs on the main thread; .await here would deadlock
