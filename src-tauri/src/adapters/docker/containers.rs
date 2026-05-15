@@ -4,14 +4,12 @@ use futures_util::StreamExt;
 use tauri::Emitter;
 
 #[allow(deprecated)]
-pub async fn subscribe_events(
-    docker: bollard::Docker,
-    app_handle: tauri::AppHandle,
-) {
+pub async fn subscribe_events(docker: bollard::Docker, app_handle: tauri::AppHandle) {
     let mut stream = docker.events(Some(EventsOptions::<String> {
-        filters: std::collections::HashMap::from([
-            ("type".to_string(), vec!["container".to_string()]),
-        ]),
+        filters: std::collections::HashMap::from([(
+            "type".to_string(),
+            vec!["container".to_string()],
+        )]),
         ..Default::default()
     }));
 

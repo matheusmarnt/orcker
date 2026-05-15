@@ -45,6 +45,7 @@ const badgeText = computed(() => {
     case 'starting': return 'Starting...'
     case 'stopping': return 'Stopping...'
     case 'error': return 'Error'
+    default: return 'Stopped'
   }
 })
 

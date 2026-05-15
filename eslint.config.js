@@ -12,4 +12,12 @@ export default [
   },
   ...pluginVue.configs['flat/essential'],
   ...vueTsEslintConfig(),
+  {
+    // shadcn-vue generates single-word component names — exempt from multi-word rule
+    name: 'app/shadcn-ui-overrides',
+    files: ['src/components/ui/**/*.vue'],
+    rules: {
+      'vue/multi-word-component-names': 'off',
+    },
+  },
 ]

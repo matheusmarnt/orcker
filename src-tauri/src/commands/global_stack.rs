@@ -3,10 +3,10 @@ use std::collections::HashMap;
 use tauri::{AppHandle, Emitter, State};
 use tauri_plugin_store::StoreExt;
 
+use crate::adapters::docker::networks::ensure_global_network;
 use crate::core::error::AppError;
 use crate::core::global_stack::{ServiceConfig, ServiceId, ServiceStatus};
 use crate::core::state::AppState;
-use crate::adapters::docker::networks::ensure_global_network;
 
 // ---------------------------------------------------------------------------
 // Event payload
@@ -23,12 +23,7 @@ pub struct ServiceStatusEvent {
 // ---------------------------------------------------------------------------
 
 /// Emit "global://service-status" and update the status map in one call.
-async fn emit_status(
-    app: &AppHandle,
-    state: &AppState,
-    service: ServiceId,
-    status: ServiceStatus,
-) {
+async fn emit_status(app: &AppHandle, state: &AppState, service: ServiceId, status: ServiceStatus) {
     {
         let mut map = state.global_stack.statuses.write().await;
         map.insert(service, status.clone());
@@ -43,9 +38,7 @@ async fn emit_status(
 /// Read current status for a service (takes read lock).
 async fn read_status(state: &AppState, service: ServiceId) -> ServiceStatus {
     let map = state.global_stack.statuses.read().await;
-    map.get(&service)
-        .cloned()
-        .unwrap_or(ServiceStatus::Stopped)
+    map.get(&service).cloned().unwrap_or(ServiceStatus::Stopped)
 }
 
 /// Read current config for a service (takes read lock).
@@ -66,7 +59,11 @@ async fn write_config(state: &AppState, service: ServiceId, config: ServiceConfi
 // Internal start/stop logic (shared between toggle_service, global_on, global_off)
 // ---------------------------------------------------------------------------
 
-async fn start_service(app: AppHandle, state: &AppState, service: ServiceId) -> Result<(), AppError> {
+async fn start_service(
+    app: AppHandle,
+    state: &AppState,
+    service: ServiceId,
+) -> Result<(), AppError> {
     // Already starting/running — skip
     let current = read_status(state, service).await;
     if matches!(current, ServiceStatus::Running | ServiceStatus::Starting) {
@@ -79,8 +76,16 @@ async fn start_service(app: AppHandle, state: &AppState, service: ServiceId) -> 
     let docker = match docker_guard.as_ref() {
         Some(d) => d.client.clone(),
         None => {
-            emit_status(&app, state, service, ServiceStatus::Error("Docker not connected".to_string())).await;
-            return Err(AppError::DockerUnavailable("Docker not connected".to_string()));
+            emit_status(
+                &app,
+                state,
+                service,
+                ServiceStatus::Error("Docker not connected".to_string()),
+            )
+            .await;
+            return Err(AppError::DockerUnavailable(
+                "Docker not connected".to_string(),
+            ));
         }
     };
     drop(docker_guard);
@@ -96,7 +101,13 @@ async fn start_service(app: AppHandle, state: &AppState, service: ServiceId) -> 
             let err_status = ServiceStatus::Error(format!("Network error: {}", e));
             map.insert(service, err_status.clone());
             app_clone
-                .emit("global://service-status", ServiceStatusEvent { service, status: err_status })
+                .emit(
+                    "global://service-status",
+                    ServiceStatusEvent {
+                        service,
+                        status: err_status,
+                    },
+                )
                 .ok();
             return;
         }
@@ -106,19 +117,27 @@ async fn start_service(app: AppHandle, state: &AppState, service: ServiceId) -> 
         // If container exists and is already running → emit Running and return early.
         // If it exists but is not running → remove it so we always recreate with current
         // config (applies env vars, port changes, image updates).
-        match docker.inspect_container(container_name, None::<bollard::container::InspectContainerOptions>).await {
+        match docker
+            .inspect_container(
+                container_name,
+                None::<bollard::container::InspectContainerOptions>,
+            )
+            .await
+        {
             Ok(info) => {
-                let running = info
-                    .state
-                    .as_ref()
-                    .and_then(|s| s.running)
-                    .unwrap_or(false);
+                let running = info.state.as_ref().and_then(|s| s.running).unwrap_or(false);
 
                 if running {
                     let mut map = statuses_arc.write().await;
                     map.insert(service, ServiceStatus::Running);
                     app_clone
-                        .emit("global://service-status", ServiceStatusEvent { service, status: ServiceStatus::Running })
+                        .emit(
+                            "global://service-status",
+                            ServiceStatusEvent {
+                                service,
+                                status: ServiceStatus::Running,
+                            },
+                        )
                         .ok();
                     return;
                 }
@@ -126,11 +145,19 @@ async fn start_service(app: AppHandle, state: &AppState, service: ServiceId) -> 
                 // Not running — remove to recreate fresh with current config
                 use bollard::container::RemoveContainerOptions;
                 docker
-                    .remove_container(container_name, Some(RemoveContainerOptions { force: true, ..Default::default() }))
+                    .remove_container(
+                        container_name,
+                        Some(RemoveContainerOptions {
+                            force: true,
+                            ..Default::default()
+                        }),
+                    )
                     .await
                     .ok();
             }
-            Err(bollard::errors::Error::DockerResponseServerError { status_code: 404, .. }) => {
+            Err(bollard::errors::Error::DockerResponseServerError {
+                status_code: 404, ..
+            }) => {
                 // Container doesn't exist — will create below
             }
             Err(e) => {
@@ -138,7 +165,13 @@ async fn start_service(app: AppHandle, state: &AppState, service: ServiceId) -> 
                 let err_status = ServiceStatus::Error(e.to_string());
                 map.insert(service, err_status.clone());
                 app_clone
-                    .emit("global://service-status", ServiceStatusEvent { service, status: err_status })
+                    .emit(
+                        "global://service-status",
+                        ServiceStatusEvent {
+                            service,
+                            status: err_status,
+                        },
+                    )
                     .ok();
                 return;
             }
@@ -158,13 +191,18 @@ async fn start_service(app: AppHandle, state: &AppState, service: ServiceId) -> 
             );
             while let Some(msg) = pull.next().await {
                 if let Err(e) = msg {
-                    let err_status = ServiceStatus::Error(
-                        format!("Pull '{}' failed: {}", config.image_tag, e),
-                    );
+                    let err_status =
+                        ServiceStatus::Error(format!("Pull '{}' failed: {}", config.image_tag, e));
                     let mut map = statuses_arc.write().await;
                     map.insert(service, err_status.clone());
                     app_clone
-                        .emit("global://service-status", ServiceStatusEvent { service, status: err_status })
+                        .emit(
+                            "global://service-status",
+                            ServiceStatusEvent {
+                                service,
+                                status: err_status,
+                            },
+                        )
                         .ok();
                     return;
                 }
@@ -209,7 +247,11 @@ async fn start_service(app: AppHandle, state: &AppState, service: ServiceId) -> 
                 image: Some(config.image_tag.as_str()),
                 host_config: Some(host_config),
                 exposed_ports: Some(exposed_ports),
-                env: if env_refs.is_empty() { None } else { Some(env_refs) },
+                env: if env_refs.is_empty() {
+                    None
+                } else {
+                    Some(env_refs)
+                },
                 ..Default::default()
             };
 
@@ -236,7 +278,13 @@ async fn start_service(app: AppHandle, state: &AppState, service: ServiceId) -> 
                 let mut map = statuses_arc.write().await;
                 map.insert(service, err_status.clone());
                 app_clone
-                    .emit("global://service-status", ServiceStatusEvent { service, status: err_status })
+                    .emit(
+                        "global://service-status",
+                        ServiceStatusEvent {
+                            service,
+                            status: err_status,
+                        },
+                    )
                     .ok();
                 return;
             }
@@ -244,7 +292,10 @@ async fn start_service(app: AppHandle, state: &AppState, service: ServiceId) -> 
 
         // Start container
         if let Err(e) = docker
-            .start_container(container_name, None::<bollard::container::StartContainerOptions<String>>)
+            .start_container(
+                container_name,
+                None::<bollard::container::StartContainerOptions<String>>,
+            )
             .await
         {
             let msg = e.to_string();
@@ -259,7 +310,13 @@ async fn start_service(app: AppHandle, state: &AppState, service: ServiceId) -> 
             let mut map = statuses_arc.write().await;
             map.insert(service, err_status.clone());
             app_clone
-                .emit("global://service-status", ServiceStatusEvent { service, status: err_status })
+                .emit(
+                    "global://service-status",
+                    ServiceStatusEvent {
+                        service,
+                        status: err_status,
+                    },
+                )
                 .ok();
             return;
         }
@@ -269,7 +326,13 @@ async fn start_service(app: AppHandle, state: &AppState, service: ServiceId) -> 
         let poll = async {
             loop {
                 tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-                match docker.inspect_container(container_name, None::<bollard::container::InspectContainerOptions>).await {
+                match docker
+                    .inspect_container(
+                        container_name,
+                        None::<bollard::container::InspectContainerOptions>,
+                    )
+                    .await
+                {
                     Ok(info) => {
                         let state_ref = info.state.as_ref();
                         let running = state_ref.and_then(|s| s.running).unwrap_or(false);
@@ -324,7 +387,11 @@ async fn start_service(app: AppHandle, state: &AppState, service: ServiceId) -> 
     Ok(())
 }
 
-async fn stop_service(app: AppHandle, state: &AppState, service: ServiceId) -> Result<(), AppError> {
+async fn stop_service(
+    app: AppHandle,
+    state: &AppState,
+    service: ServiceId,
+) -> Result<(), AppError> {
     let current = read_status(state, service).await;
     if matches!(current, ServiceStatus::Stopped | ServiceStatus::Stopping) {
         return Ok(());
@@ -336,8 +403,16 @@ async fn stop_service(app: AppHandle, state: &AppState, service: ServiceId) -> R
     let docker = match docker_guard.as_ref() {
         Some(d) => d.client.clone(),
         None => {
-            emit_status(&app, state, service, ServiceStatus::Error("Docker not connected".to_string())).await;
-            return Err(AppError::DockerUnavailable("Docker not connected".to_string()));
+            emit_status(
+                &app,
+                state,
+                service,
+                ServiceStatus::Error("Docker not connected".to_string()),
+            )
+            .await;
+            return Err(AppError::DockerUnavailable(
+                "Docker not connected".to_string(),
+            ));
         }
     };
     drop(docker_guard);
@@ -349,16 +424,28 @@ async fn stop_service(app: AppHandle, state: &AppState, service: ServiceId) -> R
     tauri::async_runtime::spawn(async move {
         // Stop container (ignore 404)
         let stop_result = docker
-            .stop_container(container_name, None::<bollard::container::StopContainerOptions>)
+            .stop_container(
+                container_name,
+                None::<bollard::container::StopContainerOptions>,
+            )
             .await;
 
         if let Err(e) = &stop_result {
-            if let bollard::errors::Error::DockerResponseServerError { status_code: 404, .. } = e {
+            if let bollard::errors::Error::DockerResponseServerError {
+                status_code: 404, ..
+            } = e
+            {
                 // Already gone — mark stopped
                 let mut map = statuses_arc.write().await;
                 map.insert(service, ServiceStatus::Stopped);
                 app_clone
-                    .emit("global://service-status", ServiceStatusEvent { service, status: ServiceStatus::Stopped })
+                    .emit(
+                        "global://service-status",
+                        ServiceStatusEvent {
+                            service,
+                            status: ServiceStatus::Stopped,
+                        },
+                    )
                     .ok();
                 return;
             }
@@ -377,11 +464,20 @@ async fn stop_service(app: AppHandle, state: &AppState, service: ServiceId) -> R
             .await;
 
         match remove_result {
-            Ok(_) | Err(bollard::errors::Error::DockerResponseServerError { status_code: 404, .. }) => {
+            Ok(_)
+            | Err(bollard::errors::Error::DockerResponseServerError {
+                status_code: 404, ..
+            }) => {
                 let mut map = statuses_arc.write().await;
                 map.insert(service, ServiceStatus::Stopped);
                 app_clone
-                    .emit("global://service-status", ServiceStatusEvent { service, status: ServiceStatus::Stopped })
+                    .emit(
+                        "global://service-status",
+                        ServiceStatusEvent {
+                            service,
+                            status: ServiceStatus::Stopped,
+                        },
+                    )
                     .ok();
             }
             Err(e) => {
@@ -389,7 +485,13 @@ async fn stop_service(app: AppHandle, state: &AppState, service: ServiceId) -> R
                 let err_status = ServiceStatus::Error(e.to_string());
                 map.insert(service, err_status.clone());
                 app_clone
-                    .emit("global://service-status", ServiceStatusEvent { service, status: err_status })
+                    .emit(
+                        "global://service-status",
+                        ServiceStatusEvent {
+                            service,
+                            status: err_status,
+                        },
+                    )
                     .ok();
             }
         }
@@ -452,7 +554,9 @@ pub async fn set_service_config(
         service_key,
         serde_json::to_value(&config).map_err(|e| AppError::Internal(e.to_string()))?,
     );
-    store.save().map_err(|e| AppError::Internal(e.to_string()))?;
+    store
+        .save()
+        .map_err(|e| AppError::Internal(e.to_string()))?;
 
     // Update in-memory config
     write_config(&state, service, config).await;
@@ -464,10 +568,7 @@ pub async fn set_service_config(
 
 #[tauri::command]
 #[specta::specta]
-pub async fn global_on(
-    app: AppHandle,
-    state: State<'_, AppState>,
-) -> Result<(), AppError> {
+pub async fn global_on(app: AppHandle, state: State<'_, AppState>) -> Result<(), AppError> {
     for service in ServiceId::all() {
         let current = read_status(&state, service).await;
         if matches!(current, ServiceStatus::Stopped | ServiceStatus::Error(_)) {
@@ -479,10 +580,7 @@ pub async fn global_on(
 
 #[tauri::command]
 #[specta::specta]
-pub async fn global_off(
-    app: AppHandle,
-    state: State<'_, AppState>,
-) -> Result<(), AppError> {
+pub async fn global_off(app: AppHandle, state: State<'_, AppState>) -> Result<(), AppError> {
     for service in ServiceId::all() {
         let current = read_status(&state, service).await;
         if matches!(current, ServiceStatus::Running | ServiceStatus::Starting) {

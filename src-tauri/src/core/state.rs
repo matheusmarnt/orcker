@@ -1,7 +1,7 @@
-use std::sync::Arc;
-use tokio::sync::RwLock;
 use crate::adapters::docker::client::DockerAdapter;
 use crate::core::global_stack::GlobalStackState;
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
 pub struct AppState {
     pub docker: Arc<RwLock<Option<DockerAdapter>>>,
