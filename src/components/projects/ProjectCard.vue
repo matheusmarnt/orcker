@@ -24,6 +24,7 @@ const emit = defineEmits<{
   open: []
 }>()
 
+// Database tab toggle — DatabaseTab component implemented in 04-04
 const showDatabaseTab = ref(false)
 
 const badgeVariant = computed(() => {
