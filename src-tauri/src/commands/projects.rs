@@ -1,6 +1,7 @@
 use crate::core::compose::ComposeDriver;
 use crate::core::error::AppError;
 use crate::core::projects::{ProjectConfig, ProjectsState};
+use crate::core::state::AppState;
 use tauri::{AppHandle, State};
 use tauri_plugin_dialog::DialogExt;
 
@@ -398,6 +399,253 @@ pub async fn generate_xdebug_config(
         .map_err(|e| AppError::Internal(e.to_string()))?;
 
     Ok(())
+}
+
+// ─── php.ini types ───────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
+pub struct IniEntry {
+    pub key: String,
+    pub value: String,
+    pub is_comment: bool,
+}
+
+#[derive(Debug, Clone, serde::Serialize, specta::Type)]
+pub struct IniSection {
+    pub name: String,
+    pub entries: Vec<IniEntry>,
+}
+
+pub fn parse_php_ini(content: &str) -> Vec<IniSection> {
+    let mut sections: Vec<IniSection> = vec![IniSection {
+        name: "Global".into(),
+        entries: vec![],
+    }];
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        if trimmed.starts_with('[') && trimmed.ends_with(']') {
+            let name = trimmed[1..trimmed.len() - 1].to_string();
+            sections.push(IniSection {
+                name,
+                entries: vec![],
+            });
+        } else if trimmed.starts_with(';') {
+            sections.last_mut().unwrap().entries.push(IniEntry {
+                key: trimmed.to_string(),
+                value: String::new(),
+                is_comment: true,
+            });
+        } else if let Some(pos) = trimmed.find('=') {
+            let key = trimmed[..pos].trim().to_string();
+            let value = trimmed[pos + 1..].trim().to_string();
+            sections.last_mut().unwrap().entries.push(IniEntry {
+                key,
+                value,
+                is_comment: false,
+            });
+        }
+    }
+    // Drop empty sections (e.g. Global with no entries)
+    sections.retain(|s| !s.entries.is_empty());
+    sections
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn read_php_ini(
+    project_id: String,
+    state: State<'_, ProjectsState>,
+) -> Result<Vec<IniSection>, AppError> {
+    let projects = state.projects.read().await;
+    let project = projects
+        .iter()
+        .find(|p| p.id == project_id)
+        .ok_or_else(|| AppError::NotFound(format!("Project {} not found", project_id)))?;
+
+    // Try docker/php.ini first, then root php.ini
+    let docker_path = format!("{}/docker/php.ini", project.path);
+    let root_path = format!("{}/php.ini", project.path);
+    let path = if std::fs::metadata(&docker_path).is_ok() {
+        docker_path
+    } else {
+        root_path
+    };
+
+    let content = std::fs::read_to_string(&path)
+        .map_err(|e| AppError::Internal(format!("Cannot read {}: {}", path, e)))?;
+    Ok(parse_php_ini(&content))
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn save_php_ini(
+    project_id: String,
+    sections: Vec<IniSection>,
+    state: State<'_, ProjectsState>,
+) -> Result<(), AppError> {
+    let projects = state.projects.read().await;
+    let project = projects
+        .iter()
+        .find(|p| p.id == project_id)
+        .ok_or_else(|| AppError::NotFound(format!("Project {} not found", project_id)))?;
+
+    let content: String = sections
+        .iter()
+        .map(|section| {
+            let header = format!("[{}]\n", section.name);
+            let entries: String = section
+                .entries
+                .iter()
+                .map(|e| {
+                    if e.is_comment {
+                        format!("{}\n", e.key)
+                    } else {
+                        format!("{} = {}\n", e.key, e.value)
+                    }
+                })
+                .collect();
+            format!("{}{}", header, entries)
+        })
+        .collect();
+
+    let docker_path = format!("{}/docker/php.ini", project.path);
+    let root_path = format!("{}/php.ini", project.path);
+    let path = if std::fs::metadata(&docker_path).is_ok() {
+        docker_path
+    } else {
+        root_path
+    };
+
+    std::fs::write(path, content).map_err(|e| AppError::Internal(e.to_string()))?;
+    Ok(())
+}
+
+// ─── Supervisor types ─────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, serde::Serialize, specta::Type)]
+pub struct SupervisorWorker {
+    pub name: String,
+    pub status: String,
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn list_supervisor_workers(
+    supervisor_container: String,
+    app_state: State<'_, AppState>,
+) -> Result<Vec<SupervisorWorker>, AppError> {
+    use futures_util::StreamExt;
+
+    let docker_guard = app_state.docker.read().await;
+    let docker = docker_guard
+        .as_ref()
+        .ok_or_else(|| AppError::Internal("Docker not connected".into()))?;
+
+    let exec = docker
+        .client
+        .create_exec(
+            &supervisor_container,
+            bollard::exec::CreateExecOptions {
+                attach_stdout: Some(true),
+                attach_stderr: Some(true),
+                cmd: Some(vec!["supervisorctl".to_string(), "status".to_string()]),
+                ..Default::default()
+            },
+        )
+        .await
+        .map_err(|e| AppError::DockerApi(e.to_string()))?;
+
+    let mut workers = Vec::new();
+    if let bollard::exec::StartExecResults::Attached { mut output, .. } = docker
+        .client
+        .start_exec(&exec.id, None)
+        .await
+        .map_err(|e| AppError::DockerApi(e.to_string()))?
+    {
+        while let Some(Ok(chunk)) = output.next().await {
+            let text = chunk.to_string();
+            for line in text.lines() {
+                // supervisorctl status output: "worker_name   RUNNING   pid 123, uptime 0:00:01"
+                let parts: Vec<&str> = line
+                    .splitn(3, char::is_whitespace)
+                    .filter(|s| !s.is_empty())
+                    .collect();
+                if parts.len() >= 2 {
+                    workers.push(SupervisorWorker {
+                        name: parts[0].to_string(),
+                        status: parts[1].to_string(),
+                    });
+                }
+            }
+        }
+    }
+    Ok(workers)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn restart_supervisor_worker(
+    supervisor_container: String,
+    worker_name: String,
+    app_state: State<'_, AppState>,
+) -> Result<(), AppError> {
+    use futures_util::StreamExt;
+
+    let docker_guard = app_state.docker.read().await;
+    let docker = docker_guard
+        .as_ref()
+        .ok_or_else(|| AppError::Internal("Docker not connected".into()))?;
+
+    let exec = docker
+        .client
+        .create_exec(
+            &supervisor_container,
+            bollard::exec::CreateExecOptions {
+                attach_stdout: Some(true),
+                attach_stderr: Some(true),
+                cmd: Some(vec![
+                    "supervisorctl".to_string(),
+                    "restart".to_string(),
+                    worker_name,
+                ]),
+                ..Default::default()
+            },
+        )
+        .await
+        .map_err(|e| AppError::DockerApi(e.to_string()))?;
+
+    if let bollard::exec::StartExecResults::Attached { mut output, .. } = docker
+        .client
+        .start_exec(&exec.id, None)
+        .await
+        .map_err(|e| AppError::DockerApi(e.to_string()))?
+    {
+        while output.next().await.is_some() {} // drain output
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod ini_tests {
+    use super::parse_php_ini;
+
+    #[test]
+    fn test_parse_php_ini_two_sections() {
+        let content = "[PHP]\nmemory_limit=128M\n; comment\n[OPcache]\nopcache.enable=1";
+        let sections = parse_php_ini(content);
+        assert_eq!(sections.len(), 2);
+    }
+
+    #[test]
+    fn test_parse_php_ini_groups_entries_correctly() {
+        let content = "[PHP]\nmemory_limit=128M\n[OPcache]\nopcache.enable=1";
+        let sections = parse_php_ini(content);
+        assert_eq!(sections[0].name, "PHP");
+        assert_eq!(sections[0].entries[0].key, "memory_limit");
+    }
 }
 
 #[cfg(test)]
