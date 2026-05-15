@@ -13,6 +13,7 @@ export type ProjectStatus = { kind: 'running' } | { kind: 'stopped' } | { kind: 
 const props = defineProps<{
   project: ProjectConfig
   status?: ProjectStatus
+  opening?: boolean
   starting?: boolean
   stopping?: boolean
 }>()
@@ -55,14 +56,41 @@ const statusLabel = computed(() => {
     </CardContent>
 
     <CardFooter class="flex gap-2 flex-wrap pt-2">
-      <Button size="sm" variant="outline" @click="emit('open')">Open</Button>
-      <Button size="sm" variant="outline" :disabled="starting || stopping" @click="emit('start')">
-        {{ starting ? '…' : 'Start' }}
+      <Button
+        size="sm"
+        variant="outline"
+        :disabled="opening || starting || stopping"
+        @click="emit('open')"
+      >
+        <span v-if="opening" class="mr-1.5 h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+        {{ opening ? 'Opening…' : 'Open' }}
       </Button>
-      <Button size="sm" variant="outline" :disabled="starting || stopping" @click="emit('stop')">
-        {{ stopping ? '…' : 'Stop' }}
+      <Button
+        size="sm"
+        variant="outline"
+        :disabled="opening || starting || stopping"
+        @click="emit('start')"
+      >
+        <span v-if="starting" class="mr-1.5 h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+        {{ starting ? 'Starting…' : 'Start' }}
       </Button>
-      <Button size="sm" variant="outline" @click="router.push({ name: 'project-detail', params: { id: project.id } })">Terminal</Button>
+      <Button
+        size="sm"
+        variant="outline"
+        :disabled="opening || starting || stopping"
+        @click="emit('stop')"
+      >
+        <span v-if="stopping" class="mr-1.5 h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+        {{ stopping ? 'Stopping…' : 'Stop' }}
+      </Button>
+      <Button
+        size="sm"
+        variant="outline"
+        :disabled="opening || starting || stopping"
+        @click="router.push({ name: 'project-detail', params: { id: project.id } })"
+      >
+        Terminal
+      </Button>
     </CardFooter>
   </Card>
 </template>

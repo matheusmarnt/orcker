@@ -10,6 +10,7 @@ import NewProjectModal from '@/components/projects/NewProjectModal.vue'
 
 const store = useProjectsStore()
 const showModal = ref(false)
+const openingProjectId = ref<string | null>(null)
 const startingProjectId = ref<string | null>(null)
 const stoppingProjectId = ref<string | null>(null)
 
@@ -18,11 +19,14 @@ onMounted(() => {
 })
 
 async function openFolder(projectId: string) {
+  openingProjectId.value = projectId
   try {
     const result = await commands.openProjectFolder(projectId)
     if (result.status === 'error') toast.error(result.error.message)
   } catch (e) {
     toast.error(e instanceof Error ? e.message : String(e))
+  } finally {
+    openingProjectId.value = null
   }
 }
 
@@ -101,6 +105,7 @@ async function stopProject(projectId: string) {
         v-for="project in store.projects"
         :key="project.id"
         :project="project"
+        :opening="openingProjectId === project.id"
         :starting="startingProjectId === project.id"
         :stopping="stoppingProjectId === project.id"
         @open="openFolder(project.id)"
