@@ -35,6 +35,10 @@ pub fn run() {
         commands::projects::scaffold_project,
         commands::logs::start_log_stream,
         commands::logs::stop_log_stream,
+        commands::projects::read_env_file,
+        commands::projects::save_env_file,
+        commands::projects::toggle_vite_auto,
+        commands::projects::generate_xdebug_config,
     ]);
 
     // Export TypeScript bindings in debug builds only

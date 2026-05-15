@@ -38,10 +38,14 @@ export const commands = {
 	startLogStream: (projectId: string, projectPath: string, appContainer: string, onLine: Channel<LogLine>) => typedError<null, AppError>(__TAURI_INVOKE("start_log_stream", { projectId, projectPath, appContainer, onLine })),
 	/**  Cancel all log streams for the given project. */
 	stopLogStream: (projectId: string) => typedError<null, AppError>(__TAURI_INVOKE("stop_log_stream", { projectId })),
+	readEnvFile: (projectId: string) => typedError<EnvReadResult, AppError>(__TAURI_INVOKE("read_env_file", { projectId })),
+	saveEnvFile: (projectId: string, entries: EnvEntry[]) => typedError<null, AppError>(__TAURI_INVOKE("save_env_file", { projectId, entries })),
+	toggleViteAuto: (projectId: string, viteAuto: boolean) => typedError<ProjectConfig, AppError>(__TAURI_INVOKE("toggle_vite_auto", { projectId, viteAuto })),
+	generateXdebugConfig: (projectId: string) => typedError<null, AppError>(__TAURI_INVOKE("generate_xdebug_config", { projectId })),
 };
 
 /* Types */
-export type AppError = { kind: "DockerUnavailable"; message: string } | { kind: "DockerApi"; message: string } | { kind: "DockerPermission"; message: string } | { kind: "ContainerNotFound"; message: string } | { kind: "Internal"; message: string };
+export type AppError = { kind: "DockerUnavailable"; message: string } | { kind: "DockerApi"; message: string } | { kind: "DockerPermission"; message: string } | { kind: "ContainerNotFound"; message: string } | { kind: "Internal"; message: string } | { kind: "NotFound"; message: string };
 
 export type ArtisanCommand = {
 	id: string,
@@ -70,6 +74,21 @@ export type ContainerSummary = {
 	image: string,
 	status: string,
 	state: string,
+};
+
+export type EnvEntry = {
+	key: string,
+	value: string,
+	is_comment: boolean,
+};
+
+export type EnvFile = {
+	entries: EnvEntry[],
+};
+
+export type EnvReadResult = {
+	env: EnvFile,
+	example: EnvFile,
 };
 
 export type ImportResult = {
