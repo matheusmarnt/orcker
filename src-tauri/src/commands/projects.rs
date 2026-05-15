@@ -658,16 +658,12 @@ fn is_sail(project_path: &str) -> bool {
         .exists()
 }
 
-/// Run a docker compose command (up/down/etc.) in the project directory.
-/// Auto-selects Sail > Compose Plugin > Compose Legacy.
-async fn run_compose_command(
+/// Build the compose command (program + args) for Sail / Plugin / Legacy.
+fn build_compose_cmd(
     project_path: &str,
-    driver: &crate::core::compose::ComposeDriver,
+    driver: &ComposeDriver,
     args: &[&str],
-) -> Result<String, AppError> {
-    use crate::core::compose::ComposeDriver;
-    use tokio::process::Command;
-
+) -> Result<(String, Vec<String>), AppError> {
     let (program, cmd_args): (String, Vec<String>) = if is_sail(project_path) {
         let sail = std::path::Path::new(project_path)
             .join("vendor/bin/sail")
@@ -692,37 +688,64 @@ async fn run_compose_command(
             }
         }
     };
+    Ok((program, cmd_args))
+}
 
+/// Run compose command, return (combined_output, exit_success) without failing on non-zero exit.
+async fn exec_compose_output(
+    project_path: &str,
+    driver: &ComposeDriver,
+    args: &[&str],
+) -> Result<(String, bool), AppError> {
+    use tokio::process::Command;
+    let (program, cmd_args) = build_compose_cmd(project_path, driver, args)?;
     let out = Command::new(&program)
         .args(&cmd_args)
         .current_dir(project_path)
         .output()
         .await
         .map_err(|e| AppError::Internal(format!("Failed to run '{}': {}", program, e)))?;
+    let combined = format!(
+        "{}{}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr)
+    )
+    .trim()
+    .to_string();
+    Ok((combined, out.status.success()))
+}
 
-    let stdout = String::from_utf8_lossy(&out.stdout).to_string();
-    let stderr = String::from_utf8_lossy(&out.stderr).to_string();
-    let combined = format!("{}{}", stdout, stderr).trim().to_string();
-
-    if !out.status.success() {
+/// Run a docker compose command (up/down/etc.) in the project directory.
+/// Auto-selects Sail > Compose Plugin > Compose Legacy.
+async fn run_compose_command(
+    project_path: &str,
+    driver: &ComposeDriver,
+    args: &[&str],
+) -> Result<String, AppError> {
+    let (combined, success) = exec_compose_output(project_path, driver, args).await?;
+    if !success {
         // Return last non-empty line — compose puts the root cause last
         let summary = combined
             .lines()
             .rev()
             .find(|l| !l.trim().is_empty())
             .map(|l| l.trim().to_string())
-            .unwrap_or_else(|| format!("Command failed (exit {})", out.status));
+            .unwrap_or_else(|| "Command failed".to_string());
         return Err(AppError::Internal(summary));
     }
     Ok(combined)
 }
 
 /// Start project containers. Auto-detects Sail, Compose Plugin, or Legacy.
+/// If `up -d` fails due to a healthcheck dependency (e.g. meilisearch exits before
+/// laravel.test starts), retries with `--no-deps` on the app service so the Laravel
+/// container comes up even when optional services are unhealthy.
 #[tauri::command]
 #[specta::specta]
 pub async fn start_project(
     project_id: String,
     state: State<'_, ProjectsState>,
+    app_state: State<'_, AppState>,
 ) -> Result<String, AppError> {
     let (path, driver) = {
         let projects = state.projects.read().await;
@@ -732,7 +755,62 @@ pub async fn start_project(
             .ok_or_else(|| AppError::NotFound("Project not found".into()))?;
         (p.path.clone(), state.compose_driver.clone())
     };
-    run_compose_command(&path, &driver, &["up", "-d"]).await
+
+    // First attempt: full compose up
+    let (compose_output, compose_ok) =
+        exec_compose_output(&path, &driver, &["up", "-d"]).await?;
+
+    if compose_ok {
+        return Ok("started".into());
+    }
+
+    // Compose exited non-zero — some services may still have started.
+    // Check via Docker API if the app container is actually running.
+    let docker_opt = {
+        let g = app_state.docker.read().await;
+        g.as_ref().map(|a| a.client.clone())
+    };
+
+    if let Some(ref docker) = docker_opt {
+        // Brief settle — containers may still be transitioning
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+
+        if crate::adapters::docker::containers::find_app_container(docker, &path)
+            .await
+            .is_some()
+        {
+            return Ok("started".into());
+        }
+
+        // App container not up — retry without healthcheck deps.
+        // For Sail projects: `sail up laravel.test --no-deps -d`.
+        // This starts the app container even when service_healthy deps (e.g. meilisearch) failed,
+        // relying on the other infra containers (mysql/redis/mailpit) that already started.
+        if is_sail(&path) {
+            let _ = exec_compose_output(
+                &path,
+                &driver,
+                &["up", "laravel.test", "--no-deps", "-d"],
+            )
+            .await;
+            tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+            if crate::adapters::docker::containers::find_app_container(docker, &path)
+                .await
+                .is_some()
+            {
+                return Ok("started".into());
+            }
+        }
+    }
+
+    // All attempts failed — report last compose error line
+    let error_line = compose_output
+        .lines()
+        .rev()
+        .find(|l| !l.trim().is_empty())
+        .map(|l| l.trim().to_string())
+        .unwrap_or_else(|| "Compose command failed".to_string());
+    Err(AppError::Internal(error_line))
 }
 
 /// Stop project containers. Auto-detects Sail, Compose Plugin, or Legacy.
