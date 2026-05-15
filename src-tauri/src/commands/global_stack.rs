@@ -345,6 +345,7 @@ async fn start_service(
             let env_vars = service.default_env_vars();
             let env_refs: Vec<&str> = env_vars.iter().map(|s| s.as_str()).collect();
 
+            let cmd = service.command();
             let container_config = Config {
                 image: Some(config.image_tag.as_str()),
                 host_config: Some(host_config),
@@ -354,6 +355,7 @@ async fn start_service(
                 } else {
                     Some(env_refs)
                 },
+                cmd,
                 ..Default::default()
             };
 

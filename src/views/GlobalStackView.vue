@@ -15,6 +15,9 @@ const labels: Record<string, string> = {
   redis: 'Redis',
   postgres: 'PostgreSQL',
   mailpit: 'Mailpit',
+  minio: 'MinIO',
+  soketi: 'Soketi',
+  meilisearch: 'Meilisearch',
 }
 
 // Track previous statuses manually — deep watch gives same ref for old/new
@@ -74,30 +77,18 @@ onUnmounted(() => {
     </div>
 
     <!-- Skeleton during initial load -->
-    <div v-if="loading" class="flex gap-4">
-      <Skeleton v-for="i in 3" :key="i" class="h-40 flex-1 rounded-lg" />
+    <div v-if="loading" class="grid grid-cols-3 gap-4">
+      <Skeleton v-for="i in 6" :key="i" class="h-40 rounded-lg" />
     </div>
 
     <!-- Service cards -->
-    <div v-else class="flex items-start gap-4">
-      <ServiceCard
-        service-id="redis"
-        label="Redis"
-        :default-port="6379"
-        class="flex-1"
-      />
-      <ServiceCard
-        service-id="postgres"
-        label="PostgreSQL"
-        :default-port="5432"
-        class="flex-1"
-      />
-      <ServiceCard
-        service-id="mailpit"
-        label="Mailpit"
-        :default-port="8025"
-        class="flex-1"
-      />
+    <div v-else class="grid grid-cols-3 gap-4">
+      <ServiceCard service-id="redis" label="Redis" :default-port="6379" />
+      <ServiceCard service-id="postgres" label="PostgreSQL" :default-port="5432" />
+      <ServiceCard service-id="mailpit" label="Mailpit" :default-port="8025" />
+      <ServiceCard service-id="minio" label="MinIO" :default-port="9000" />
+      <ServiceCard service-id="soketi" label="Soketi" :default-port="6001" />
+      <ServiceCard service-id="meilisearch" label="Meilisearch" :default-port="7700" />
     </div>
   </div>
 </template>
