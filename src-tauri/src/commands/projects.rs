@@ -229,6 +229,133 @@ pub async fn scaffold_project(
     Ok(())
 }
 
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
+pub struct EnvEntry {
+    pub key: String,
+    pub value: String,
+    pub is_comment: bool,
+}
+
+#[derive(Debug, Clone, serde::Serialize, specta::Type)]
+pub struct EnvFile {
+    pub entries: Vec<EnvEntry>,
+}
+
+pub fn parse_env(content: &str) -> Vec<EnvEntry> {
+    content
+        .lines()
+        .filter_map(|line| {
+            let trimmed = line.trim();
+            if trimmed.is_empty() {
+                return None;
+            }
+            if trimmed.starts_with('#') {
+                return Some(EnvEntry {
+                    key: trimmed.to_string(),
+                    value: String::new(),
+                    is_comment: true,
+                });
+            }
+            if let Some(pos) = trimmed.find('=') {
+                let key = trimmed[..pos].trim().to_string();
+                let value = trimmed[pos + 1..].to_string();
+                Some(EnvEntry {
+                    key,
+                    value,
+                    is_comment: false,
+                })
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+#[derive(Debug, Clone, serde::Serialize, specta::Type)]
+pub struct EnvReadResult {
+    pub env: EnvFile,
+    pub example: EnvFile,
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn read_env_file(
+    project_id: String,
+    state: State<'_, ProjectsState>,
+) -> Result<EnvReadResult, AppError> {
+    let projects = state.projects.read().await;
+    let project = projects
+        .iter()
+        .find(|p| p.id == project_id)
+        .ok_or_else(|| AppError::Internal(format!("Project {} not found", project_id)))?;
+
+    let env_content =
+        std::fs::read_to_string(format!("{}/.env", project.path)).unwrap_or_default();
+    let example_content =
+        std::fs::read_to_string(format!("{}/.env.example", project.path)).unwrap_or_default();
+
+    Ok(EnvReadResult {
+        env: EnvFile {
+            entries: parse_env(&env_content),
+        },
+        example: EnvFile {
+            entries: parse_env(&example_content),
+        },
+    })
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn save_env_file(
+    project_id: String,
+    entries: Vec<EnvEntry>,
+    state: State<'_, ProjectsState>,
+) -> Result<(), AppError> {
+    let projects = state.projects.read().await;
+    let project = projects
+        .iter()
+        .find(|p| p.id == project_id)
+        .ok_or_else(|| AppError::Internal(format!("Project {} not found", project_id)))?;
+
+    let content: String = entries
+        .iter()
+        .map(|e| {
+            if e.is_comment {
+                format!("{}\n", e.key)
+            } else {
+                format!("{}={}\n", e.key, e.value)
+            }
+        })
+        .collect();
+
+    std::fs::write(format!("{}/.env", project.path), content)
+        .map_err(|e| AppError::Internal(e.to_string()))?;
+    Ok(())
+}
+
+#[cfg(test)]
+mod env_tests {
+    use super::parse_env;
+
+    #[test]
+    fn test_parse_env_basic() {
+        let entries = parse_env("KEY=value\n# comment\nEMPTY=");
+        assert_eq!(entries.len(), 3);
+        assert_eq!(entries[0].key, "KEY");
+        assert_eq!(entries[0].value, "value");
+        assert!(!entries[0].is_comment);
+        assert!(entries[1].is_comment);
+        assert_eq!(entries[2].key, "EMPTY");
+        assert_eq!(entries[2].value, "");
+    }
+
+    #[test]
+    fn test_parse_env_splits_on_first_equals() {
+        let entries = parse_env("KEY=value=with=equals");
+        assert_eq!(entries[0].value, "value=with=equals");
+    }
+}
+
 #[cfg(test)]
 mod scaffold_tests {
     use super::*;
