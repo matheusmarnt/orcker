@@ -7,6 +7,7 @@ import type { ServiceId } from '@/ipc/bindings'
 const DEFAULTS: Record<ServiceId, { image_tag: string; port: number }> = {
   redis: { image_tag: 'redis:7-alpine', port: 6379 },
   postgres: { image_tag: 'postgres:16-alpine', port: 5432 },
+  mysql: { image_tag: 'mysql:8-oracle', port: 3306 },
   mailpit: { image_tag: 'axllent/mailpit:latest', port: 8025 },
   minio: { image_tag: 'minio/minio:latest', port: 9000 },
   soketi: { image_tag: 'quay.io/soketi/soketi:latest', port: 6001 },

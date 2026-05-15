@@ -14,6 +14,7 @@ let unlistenShortcut: (() => void) | null = null
 const labels: Record<string, string> = {
   redis: 'Redis',
   postgres: 'PostgreSQL',
+  mysql: 'MySQL',
   mailpit: 'Mailpit',
   minio: 'MinIO',
   soketi: 'Soketi',
@@ -78,13 +79,14 @@ onUnmounted(() => {
 
     <!-- Skeleton during initial load -->
     <div v-if="loading" class="grid grid-cols-3 gap-4">
-      <Skeleton v-for="i in 6" :key="i" class="h-40 rounded-lg" />
+      <Skeleton v-for="i in 7" :key="i" class="h-40 rounded-lg" />
     </div>
 
     <!-- Service cards -->
     <div v-else class="grid grid-cols-3 gap-4">
       <ServiceCard service-id="redis" label="Redis" :default-port="6379" />
       <ServiceCard service-id="postgres" label="PostgreSQL" :default-port="5432" />
+      <ServiceCard service-id="mysql" label="MySQL" :default-port="3306" />
       <ServiceCard service-id="mailpit" label="Mailpit" :default-port="8025" />
       <ServiceCard service-id="minio" label="MinIO" :default-port="9000" />
       <ServiceCard service-id="soketi" label="Soketi" :default-port="6001" />

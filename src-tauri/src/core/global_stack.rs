@@ -12,6 +12,7 @@ use tokio::sync::RwLock;
 pub enum ServiceId {
     Redis,
     Postgres,
+    Mysql,
     Mailpit,
     Minio,
     Soketi,
@@ -19,10 +20,11 @@ pub enum ServiceId {
 }
 
 impl ServiceId {
-    pub fn all() -> [ServiceId; 6] {
+    pub fn all() -> [ServiceId; 7] {
         [
             ServiceId::Redis,
             ServiceId::Postgres,
+            ServiceId::Mysql,
             ServiceId::Mailpit,
             ServiceId::Minio,
             ServiceId::Soketi,
@@ -34,6 +36,7 @@ impl ServiceId {
         match self {
             ServiceId::Redis => "orcker-redis",
             ServiceId::Postgres => "orcker-postgres",
+            ServiceId::Mysql => "orcker-mysql",
             ServiceId::Mailpit => "orcker-mailpit",
             ServiceId::Minio => "orcker-minio",
             ServiceId::Soketi => "orcker-soketi",
@@ -46,6 +49,7 @@ impl ServiceId {
         match self {
             ServiceId::Redis => "6379/tcp",
             ServiceId::Postgres => "5432/tcp",
+            ServiceId::Mysql => "3306/tcp",
             ServiceId::Mailpit => "8025/tcp",
             ServiceId::Minio => "9000/tcp",
             ServiceId::Soketi => "6001/tcp",
@@ -60,6 +64,12 @@ impl ServiceId {
                 "POSTGRES_PASSWORD=postgres".to_string(),
                 "POSTGRES_USER=postgres".to_string(),
                 "POSTGRES_DB=postgres".to_string(),
+            ],
+            ServiceId::Mysql => vec![
+                "MYSQL_ROOT_PASSWORD=root".to_string(),
+                "MYSQL_DATABASE=orcker".to_string(),
+                "MYSQL_USER=orcker".to_string(),
+                "MYSQL_PASSWORD=orcker".to_string(),
             ],
             ServiceId::Minio => vec![
                 "MINIO_ROOT_USER=orcker".to_string(),
@@ -104,6 +114,10 @@ impl ServiceConfig {
             ServiceId::Postgres => ServiceConfig {
                 image_tag: "postgres:16-alpine".to_string(),
                 port: 5432,
+            },
+            ServiceId::Mysql => ServiceConfig {
+                image_tag: "mysql:8-oracle".to_string(),
+                port: 3306,
             },
             ServiceId::Mailpit => ServiceConfig {
                 image_tag: "axllent/mailpit:latest".to_string(),
@@ -217,7 +231,7 @@ mod tests {
 
     #[test]
     fn test_all_services() {
-        assert_eq!(ServiceId::all().len(), 6);
+        assert_eq!(ServiceId::all().len(), 7);
     }
 
     #[test]
