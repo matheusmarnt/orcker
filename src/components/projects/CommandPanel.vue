@@ -36,9 +36,6 @@ async function runCommand(commandId: string) {
   isRunning.value = true
   activeCommandId.value = commandId
 
-  // Container name convention: {project_name}_app_1
-  const containerName = `${props.project.name}_app_1`
-
   const channel = new Channel<CommandChunk>()
   channel.onmessage = (chunk: CommandChunk) => {
     lines.value.push({
@@ -47,8 +44,17 @@ async function runCommand(commandId: string) {
     })
   }
 
-  await commands.runArtisanCommand(commandId, props.project.id, containerName, channel)
-  isRunning.value = false
+  try {
+    await commands.runArtisanCommand(commandId, props.project.id, channel)
+  } catch (e) {
+    lines.value.push({
+      html: convert.toHtml(`Error: ${String(e)}`),
+      isStderr: true,
+    })
+  } finally {
+    isRunning.value = false
+    activeCommandId.value = null
+  }
 }
 
 async function cancelCommand() {

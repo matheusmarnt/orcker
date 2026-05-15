@@ -36,11 +36,11 @@ export const useLogsStore = defineStore('logs', () => {
     }
   }
 
-  async function startStream(projectId: string, projectPath: string, appContainer: string): Promise<void> {
+  async function startStream(projectId: string, projectPath: string): Promise<void> {
     clearLines()
     const channel = new Channel<LogLine>()
     channel.onmessage = (line) => appendLine(line)
-    await commands.startLogStream(projectId, projectPath, appContainer, channel)
+    await commands.startLogStream(projectId, projectPath, channel)
   }
 
   async function stopStream(projectId: string): Promise<void> {

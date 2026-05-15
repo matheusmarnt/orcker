@@ -43,6 +43,7 @@ pub fn run() {
         commands::projects::save_php_ini,
         commands::projects::list_supervisor_workers,
         commands::projects::restart_supervisor_worker,
+        commands::projects::open_project_folder,
     ]);
 
     // Export TypeScript bindings in debug builds only

@@ -17,14 +17,13 @@ pub async fn list_artisan_commands() -> Result<Vec<ArtisanCommand>, AppError> {
 
 /// Stream artisan/shell output to the frontend via Channel<CommandChunk>.
 ///
-/// Stores a CancellationToken in ProjectsState keyed by project_id so that
-/// cancel_artisan_command can stop the stream at any time.
+/// Auto-detects the running app container via Docker Compose labels (project folder name).
+/// Stores a CancellationToken in ProjectsState keyed by project_id for cancellation.
 #[tauri::command]
 #[specta::specta]
 pub async fn run_artisan_command(
     command_id: String,
     project_id: String,
-    container_name: String,
     on_chunk: Channel<CommandChunk>,
     app_state: State<'_, AppState>,
     projects_state: State<'_, ProjectsState>,
@@ -48,12 +47,15 @@ pub async fn run_artisan_command(
         }
     };
 
-    // Create and store cancellation token keyed by project_id
-    let token = CancellationToken::new();
-    {
-        let mut tokens = projects_state.cancel_tokens.write().await;
-        tokens.insert(project_id.clone(), token.clone());
-    }
+    // Look up project path from state
+    let project_path = {
+        let projects = projects_state.projects.read().await;
+        projects
+            .iter()
+            .find(|p| p.id == project_id)
+            .map(|p| p.path.clone())
+            .ok_or_else(|| AppError::NotFound(format!("Project '{}' not found", project_id)))?
+    };
 
     // Acquire Docker client
     let docker_guard = app_state.docker.read().await;
@@ -62,6 +64,24 @@ pub async fn run_artisan_command(
         .ok_or_else(|| AppError::DockerUnavailable("Docker not connected".into()))?;
     let docker = adapter.client.clone();
     drop(docker_guard);
+
+    // Auto-detect app container via Docker Compose labels
+    let container_name =
+        crate::adapters::docker::containers::find_app_container(&docker, &project_path)
+            .await
+            .ok_or_else(|| {
+                AppError::NotFound(format!(
+                    "No running container found for project at '{}'. Start your environment (e.g. sail up -d).",
+                    project_path
+                ))
+            })?;
+
+    // Create and store cancellation token keyed by project_id
+    let token = CancellationToken::new();
+    {
+        let mut tokens = projects_state.cancel_tokens.write().await;
+        tokens.insert(project_id.clone(), token.clone());
+    }
 
     // Stream exec output
     let result = docker_exec_stream(&docker, &container_name, cmd_vec, on_chunk, token).await;

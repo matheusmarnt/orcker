@@ -4,6 +4,7 @@ use crate::core::projects::{ProjectConfig, ProjectsState};
 use crate::core::state::AppState;
 use tauri::{AppHandle, State};
 use tauri_plugin_dialog::DialogExt;
+use tauri_plugin_opener::OpenerExt;
 
 #[derive(Debug, serde::Serialize, specta::Type)]
 pub struct ImportResult {
@@ -60,6 +61,26 @@ pub async fn list_projects(
     state: State<'_, ProjectsState>,
 ) -> Result<Vec<ProjectConfig>, AppError> {
     Ok(state.projects.read().await.clone())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn open_project_folder(
+    project_id: String,
+    state: State<'_, ProjectsState>,
+    app: AppHandle,
+) -> Result<(), AppError> {
+    let path = {
+        let projects = state.projects.read().await;
+        projects
+            .iter()
+            .find(|p| p.id == project_id)
+            .map(|p| p.path.clone())
+            .ok_or_else(|| AppError::NotFound("Project not found".into()))?
+    };
+    app.opener()
+        .open_path(path, None::<&str>)
+        .map_err(|e| AppError::Internal(e.to_string()))
 }
 
 #[tauri::command]
@@ -410,7 +431,7 @@ pub struct IniEntry {
     pub is_comment: bool,
 }
 
-#[derive(Debug, Clone, serde::Serialize, specta::Type)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
 pub struct IniSection {
     pub name: String,
     pub entries: Vec<IniEntry>,

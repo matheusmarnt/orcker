@@ -13,16 +13,14 @@ const SOURCES: Array<'All' | LogSource> = ['All', 'Docker', 'Laravel', 'Nginx', 
 
 const selectedProjectId = ref<string>('')
 const isStreaming = ref(false)
-
-function appContainerName(projectName: string): string {
-  return `${projectName.toLowerCase().replace(/\s+/g, '_')}_app_1`
-}
+const streamError = ref<string>('')
 
 async function onProjectChange(newId: string): Promise<void> {
   if (isStreaming.value && selectedProjectId.value) {
     await logsStore.stopStream(selectedProjectId.value)
     isStreaming.value = false
   }
+  streamError.value = ''
   selectedProjectId.value = newId
   if (!newId) return
 
@@ -30,7 +28,11 @@ async function onProjectChange(newId: string): Promise<void> {
   if (!project) return
 
   isStreaming.value = true
-  await logsStore.startStream(project.id, project.path, appContainerName(project.name))
+  // startStream blocks until stopStream is called — fire-and-forget, catch errors separately
+  logsStore.startStream(project.id, project.path).catch((e: unknown) => {
+    isStreaming.value = false
+    streamError.value = String(e)
+  })
 }
 
 watch(selectedProjectId, async (newId, oldId) => {
@@ -89,7 +91,10 @@ onUnmounted(async () => {
     <LogFilterBar />
 
     <!-- Log panel -->
-    <div v-if="isStreaming" class="flex-1 overflow-hidden">
+    <div v-if="streamError" class="flex-1 flex items-center justify-center">
+      <p class="text-sm text-destructive">{{ streamError }}</p>
+    </div>
+    <div v-else-if="isStreaming" class="flex-1 overflow-hidden">
       <LogViewer />
     </div>
     <div v-else class="flex-1 flex items-center justify-center text-muted-foreground text-sm">

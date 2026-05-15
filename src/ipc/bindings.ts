@@ -21,21 +21,22 @@ export const commands = {
 	listArtisanCommands: () => typedError<ArtisanCommand[], AppError>(__TAURI_INVOKE("list_artisan_commands")),
 	/**
 	 *  Stream artisan/shell output to the frontend via Channel<CommandChunk>.
-	 * 
-	 *  Stores a CancellationToken in ProjectsState keyed by project_id so that
-	 *  cancel_artisan_command can stop the stream at any time.
+	 *
+	 *  Auto-detects the running app container via Docker Compose labels (project folder name).
+	 *  Stores a CancellationToken in ProjectsState keyed by project_id for cancellation.
 	 */
-	runArtisanCommand: (commandId: string, projectId: string, containerName: string, onChunk: Channel<CommandChunk>) => typedError<null, AppError>(__TAURI_INVOKE("run_artisan_command", { commandId, projectId, containerName, onChunk })),
+	runArtisanCommand: (commandId: string, projectId: string, onChunk: Channel<CommandChunk>) => typedError<null, AppError>(__TAURI_INVOKE("run_artisan_command", { commandId, projectId, onChunk })),
 	/**  Cancel a running artisan command for the given project. */
 	cancelArtisanCommand: (projectId: string) => typedError<null, AppError>(__TAURI_INVOKE("cancel_artisan_command", { projectId })),
 	scaffoldProject: (template: ScaffoldTemplate, projectName: string, parentDir: string, onChunk: Channel<ScaffoldChunk>) => typedError<null, AppError>(__TAURI_INVOKE("scaffold_project", { template, projectName, parentDir, onChunk })),
 	/**
 	 *  Start streaming logs for a project: docker container stdout/stderr + laravel.log file tail.
-	 * 
+	 *
+	 *  Auto-detects running app container via Docker Compose labels. File tail runs regardless.
 	 *  Both streams share a single CancellationToken keyed "logs:{project_id}" in ProjectsState.
 	 *  Call stop_log_stream to cancel all streams for this project.
 	 */
-	startLogStream: (projectId: string, projectPath: string, appContainer: string, onLine: Channel<LogLine>) => typedError<null, AppError>(__TAURI_INVOKE("start_log_stream", { projectId, projectPath, appContainer, onLine })),
+	startLogStream: (projectId: string, projectPath: string, onLine: Channel<LogLine>) => typedError<null, AppError>(__TAURI_INVOKE("start_log_stream", { projectId, projectPath, onLine })),
 	/**  Cancel all log streams for the given project. */
 	stopLogStream: (projectId: string) => typedError<null, AppError>(__TAURI_INVOKE("stop_log_stream", { projectId })),
 	readEnvFile: (projectId: string) => typedError<EnvReadResult, AppError>(__TAURI_INVOKE("read_env_file", { projectId })),
@@ -46,6 +47,7 @@ export const commands = {
 	savePhpIni: (projectId: string, sections: IniSection[]) => typedError<null, AppError>(__TAURI_INVOKE("save_php_ini", { projectId, sections })),
 	listSupervisorWorkers: (supervisorContainer: string) => typedError<SupervisorWorker[], AppError>(__TAURI_INVOKE("list_supervisor_workers", { supervisorContainer })),
 	restartSupervisorWorker: (supervisorContainer: string, workerName: string) => typedError<null, AppError>(__TAURI_INVOKE("restart_supervisor_worker", { supervisorContainer, workerName })),
+	openProjectFolder: (projectId: string) => typedError<null, AppError>(__TAURI_INVOKE("open_project_folder", { projectId })),
 };
 
 /* Types */

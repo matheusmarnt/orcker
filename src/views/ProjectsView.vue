@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useProjectsStore } from '@/stores/useProjectsStore'
+import { commands } from '@/ipc/bindings'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import ProjectCard from '@/components/projects/ProjectCard.vue'
@@ -12,6 +13,19 @@ const showModal = ref(false)
 onMounted(() => {
   store.init()
 })
+
+async function openFolder(projectId: string) {
+  try {
+    await commands.openProjectFolder(projectId)
+  } catch (e) {
+    console.error('Failed to open folder:', e)
+  }
+}
+
+function notImplemented(action: string) {
+  // Start/Stop requires docker compose — inform user
+  console.info(`${action}: run 'sail up -d' or 'docker compose up -d' in the project directory`)
+}
 </script>
 
 <template>
@@ -56,10 +70,10 @@ onMounted(() => {
         v-for="project in store.projects"
         :key="project.id"
         :project="project"
-        @start="() => {}"
-        @stop="() => {}"
+        @open="openFolder(project.id)"
+        @start="notImplemented('Start')"
+        @stop="notImplemented('Stop')"
         @terminal="() => {}"
-        @open="() => {}"
       />
     </div>
 
