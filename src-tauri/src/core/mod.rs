@@ -1,3 +1,4 @@
+pub mod artisan;
 pub mod compose;
 pub mod error;
 pub mod global_stack;
