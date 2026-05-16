@@ -1,5 +1,42 @@
 # Changelog
 
+## [0.5.0](https://github.com/matheusmarnt/orcker/compare/orcker-v0.4.0...orcker-v0.5.0) (2026-05-16)
+
+
+### Features
+
+* **m1-global:** add MinIO, Soketi, Meilisearch to global stack ([57bdb13](https://github.com/matheusmarnt/orcker/commit/57bdb1350077b1471d1a887423716e052e2b551b))
+* **m1-global:** add MySQL to global stack ([8cca5b0](https://github.com/matheusmarnt/orcker/commit/8cca5b0ebced1cdd0b9e36ce955c60b5cde72e13))
+* **m2-projects:** add Filament, API-only, Jetstream scaffold templates ([5e76f90](https://github.com/matheusmarnt/orcker/commit/5e76f90f7d4928a2621aefc4183dbce81ef983de))
+* **m3-terminal:** add command palette + ConfigHistory diff viewer ([bd94449](https://github.com/matheusmarnt/orcker/commit/bd944496a50189903827b1717730e32b2a47959b))
+* **m4-logs:** add resource graphs and OS notifications on unhealthy project ([01fdd50](https://github.com/matheusmarnt/orcker/commit/01fdd50a5d3f337f9b61c06205cd3a9ef6501b5f))
+* **m5-infra:** add git2 versioning module + get_compose_diff command ([6540ec5](https://github.com/matheusmarnt/orcker/commit/6540ec5a06d5ae0a02e8f2aa1b366eaf25e22e9e))
+* **m5-infra:** add Infra view with VolumeList and ImageList components ([aeb3a57](https://github.com/matheusmarnt/orcker/commit/aeb3a57343902942fa7b3a2d5280f3ecf625249a))
+* **m5-infra:** add read_compose_file + save_compose_file Tauri commands ([05ed657](https://github.com/matheusmarnt/orcker/commit/05ed6573500f45dd893aec6e8dc535e726115cfc))
+* **m5-infra:** add template marketplace Rust backend + IPC bindings ([907f872](https://github.com/matheusmarnt/orcker/commit/907f8727c37461d6dc519809f8cca748f3f8b5e3))
+* **m5-infra:** add TemplateMarketplace UI + CI bundle targets per platform ([6ede1be](https://github.com/matheusmarnt/orcker/commit/6ede1be31bd16b384970ad8a8a3e3689940b850c))
+* **m5-infra:** add volume and image bollard adapters with Tauri commands ([cc64a4e](https://github.com/matheusmarnt/orcker/commit/cc64a4e2607729cdf10c521aaaf7b278de281c8c))
+* **m5-infra:** tab navigation, pagination, resource monitor ([7e1be87](https://github.com/matheusmarnt/orcker/commit/7e1be87725b1debec6f118c9aaba940e66cd334f))
+* **m6-db:** add database command stub module (R-M6.1) ([d0a14ba](https://github.com/matheusmarnt/orcker/commit/d0a14ba0c6bb0003ed5ad42f3d3da80e494aa543))
+* **m6-db:** add DatabaseTab component and Database button to ProjectCard ([1c3abee](https://github.com/matheusmarnt/orcker/commit/1c3abee0dcf1acb818cfa7df5799400d3157669e))
+* **m6-db:** implement database Rust commands + auto-create testing DB hook ([eb80423](https://github.com/matheusmarnt/orcker/commit/eb80423dbb20d7adf5542492a865bcd67bee05ec))
+* **m7-settings:** add AppSettings struct + get/save_settings commands ([67ace2c](https://github.com/matheusmarnt/orcker/commit/67ace2c00a203613ef64192585590070ea028b40))
+* **m7-settings:** add checkForUpdate composable with Sonner toast and startup wiring ([ecf1179](https://github.com/matheusmarnt/orcker/commit/ecf117915fa742436bd707ca4a5289195c11d34b))
+* **m7-settings:** add Settings modal with 4 sections and gear icon entry ([7218b3f](https://github.com/matheusmarnt/orcker/commit/7218b3f9c487f69edb4fa69168a17f607de036e0))
+* **m7-settings:** add useSettingsStore, vue-i18n bootstrap, and i18n messages ([91ad6d4](https://github.com/matheusmarnt/orcker/commit/91ad6d40ef46b579d33b673e1a8c6a5e6cf8178f))
+* **m7-settings:** apply i18n across all components and views ([f02105c](https://github.com/matheusmarnt/orcker/commit/f02105cd15e7e94790b94dda1d5fef37432c4ff7))
+* **m7-settings:** preferences tab, fix theme/locale toggle, add Spanish ([fd8048b](https://github.com/matheusmarnt/orcker/commit/fd8048bd86f5391924676ac63dc4458919ca7a1c))
+* **m7-settings:** wire system tray, close-to-tray, updater and autostart plugins ([509b312](https://github.com/matheusmarnt/orcker/commit/509b312977aef187c85fb030c03adeff7fd41a4a))
+
+
+### Bug Fixes
+
+* **m5-infra:** guard null prune data in ImageList and VolumeList ([4d4fb7f](https://github.com/matheusmarnt/orcker/commit/4d4fb7f0fe58511ff9d44eafe327342958a86bad))
+* **m5-infra:** prepend diff line origin char in diff_last_two ([693f925](https://github.com/matheusmarnt/orcker/commit/693f9250346dda20c1c5a65558a4597fe2bf9fb7))
+* **m5-infra:** replace i64/u64 with f64 in specta-exported types ([4de2441](https://github.com/matheusmarnt/orcker/commit/4de2441e048162ac457fb00a7f3626b2dbb040fd))
+* **m6-db:** wire DatabaseTab component into ProjectCard panel ([9232ca7](https://github.com/matheusmarnt/orcker/commit/9232ca7ebcb6892619f8e44239ab13e7203b1c4c))
+* **m7-settings:** resolve ESLint errors from i18n pass ([f803082](https://github.com/matheusmarnt/orcker/commit/f8030821110abd4cca6fca240839033a39075904))
+
 ## [0.4.0](https://github.com/matheusmarnt/orcker/compare/orcker-v0.3.0...orcker-v0.4.0) (2026-05-15)
 
 
