@@ -82,7 +82,8 @@ async function pruneImages() {
     if (r?.status === 'error') toast.error('Failed to prune images', { description: String(r.error) })
     return
   }
-  const mb = Math.round(r.data / 1_048_576)
+  const freed = r.data ?? 0
+  const mb = Math.round(freed / 1_048_576)
   toast.success(`Reclaimed ${mb} MB`)
   page.value = 1
   store.refreshImages()
