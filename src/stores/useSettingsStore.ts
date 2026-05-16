@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useColorMode } from '@vueuse/core'
 import { commands } from '@/ipc/bindings'
+import { i18n } from '@/i18n'
 
 export const useSettingsStore = defineStore('settings', () => {
   const colorMode = useColorMode({ storageKey: 'orcker-theme' })
@@ -19,7 +20,7 @@ export const useSettingsStore = defineStore('settings', () => {
       const d = result.data
       theme.value = (d.theme as 'dark' | 'light' | 'auto') ?? 'auto'
       colorMode.value = theme.value
-      locale.value = d.locale
+      setLocale(d.locale)
       trayEnabled.value = d.tray_enabled
       autostartEnabled.value = d.autostart_enabled
       dockerSocket.value = d.docker_socket ?? null
@@ -41,6 +42,11 @@ export const useSettingsStore = defineStore('settings', () => {
     colorMode.value = t
   }
 
+  function setLocale(l: string) {
+    locale.value = l
+    i18n.global.locale.value = l as 'en' | 'pt-BR' | 'es'
+  }
+
   return {
     colorMode,
     theme,
@@ -51,5 +57,6 @@ export const useSettingsStore = defineStore('settings', () => {
     load,
     save,
     setTheme,
+    setLocale,
   }
 })

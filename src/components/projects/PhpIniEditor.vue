@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { commands } from '@/ipc/bindings'
 import type { IniSection } from '@/ipc/bindings'
 import { Button } from '@/components/ui/button'
@@ -9,6 +10,7 @@ const props = defineProps<{
   projectId: string
 }>()
 
+const { t } = useI18n()
 const sections = ref<IniSection[]>([])
 const activeTab = ref<string>('')
 const showRaw = ref(false)
@@ -107,19 +109,19 @@ onMounted(load)
 <template>
   <div class="rounded-md border p-4 space-y-4">
     <div class="flex items-center justify-between">
-      <h3 class="text-sm font-semibold">php.ini Editor</h3>
+      <h3 class="text-sm font-semibold">{{ t('phpini.title') }}</h3>
       <div class="flex items-center gap-2">
         <Button variant="ghost" size="sm" @click="toggleRaw">
-          {{ showRaw ? 'Structured' : 'Raw' }}
+          {{ showRaw ? t('phpini.structured') : t('phpini.raw') }}
         </Button>
         <Button size="sm" :disabled="saving" @click="save">
-          {{ saving ? 'Saving…' : 'Save php.ini' }}
+          {{ saving ? t('phpini.saving') : t('phpini.save') }}
         </Button>
       </div>
     </div>
 
     <div v-if="loading" class="text-sm text-muted-foreground py-4 text-center">
-      Loading…
+      {{ t('phpini.loading') }}
     </div>
 
     <!-- Raw fallback textarea -->

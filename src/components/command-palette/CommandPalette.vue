@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, nextTick, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useCommandPaletteStore } from '@/composables/useCommandPalette'
+
+const { t } = useI18n()
 
 const emit = defineEmits<{
   run: [cmd: string]
@@ -99,7 +102,7 @@ onUnmounted(() => {
           ref="inputRef"
           v-model="store.query"
           type="text"
-          placeholder="Search commands..."
+          :placeholder="t('commandPalette.placeholder')"
           class="placeholder:text-muted-foreground flex h-11 w-full bg-transparent py-3 text-sm outline-none"
         />
         <kbd
@@ -112,7 +115,7 @@ onUnmounted(() => {
       <!-- Command list -->
       <div class="max-h-72 overflow-y-auto p-1">
         <div v-if="store.filtered.length === 0" class="text-muted-foreground py-6 text-center text-sm">
-          No commands found.
+          {{ t('commandPalette.noCommands') }}
         </div>
         <button
           v-for="(cmd, idx) in store.filtered"
@@ -160,9 +163,9 @@ onUnmounted(() => {
 
       <!-- Footer hint -->
       <div class="border-border text-muted-foreground flex items-center gap-3 border-t px-3 py-2 text-xs">
-        <span><kbd class="font-mono">↑↓</kbd> navigate</span>
-        <span><kbd class="font-mono">↵</kbd> execute</span>
-        <span><kbd class="font-mono">Esc</kbd> close</span>
+        <span><kbd class="font-mono">↑↓</kbd> {{ t('commandPalette.navigate') }}</span>
+        <span><kbd class="font-mono">↵</kbd> {{ t('commandPalette.execute') }}</span>
+        <span><kbd class="font-mono">Esc</kbd> {{ t('commandPalette.close') }}</span>
       </div>
     </div>
   </div>

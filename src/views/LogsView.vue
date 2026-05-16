@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { ref, watch, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useProjectsStore } from '@/stores/useProjectsStore'
 import { useLogsStore } from '@/stores/useLogsStore'
 import type { LogSource } from '@/stores/useLogsStore'
 import LogViewer from '@/components/logs/LogViewer.vue'
 import LogFilterBar from '@/components/logs/LogFilterBar.vue'
 
+const { t } = useI18n()
 const projectsStore = useProjectsStore()
 const logsStore = useLogsStore()
 
@@ -83,13 +85,13 @@ onUnmounted(async () => {
     <!-- Header: project selector + source tabs -->
     <div class="flex flex-col gap-2 px-4 pt-4 pb-2 border-b">
       <div class="flex items-center gap-3">
-        <h1 class="text-lg font-semibold shrink-0">Logs</h1>
+        <h1 class="text-lg font-semibold shrink-0">{{ t('logs.title') }}</h1>
         <select
           :value="selectedProjectId"
           class="h-8 text-sm border rounded px-2 bg-background flex-1 max-w-xs"
           @change="onProjectChange(($event.target as HTMLSelectElement).value)"
         >
-          <option value="">Select project...</option>
+          <option value="">{{ t('logs.selectProject') }}</option>
           <option
             v-for="project in projectsStore.projects"
             :key="project.id"
@@ -111,7 +113,7 @@ onUnmounted(async () => {
             : 'bg-background text-muted-foreground border-border hover:text-foreground'"
           @click="logsStore.activeSource = source"
         >
-          {{ source }}
+          {{ t('logs.sources.' + source.toLowerCase()) }}
         </button>
       </div>
     </div>
@@ -127,7 +129,7 @@ onUnmounted(async () => {
       <!-- Loading spinner while initial logs load -->
       <div v-if="isLoading" class="flex-1 flex flex-col items-center justify-center gap-3 text-muted-foreground">
         <div class="h-6 w-6 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-        <span class="text-sm">Loading logs…</span>
+        <span class="text-sm">{{ t('logs.loading') }}</span>
       </div>
       <!-- Empty state when source has no matching lines -->
       <div
@@ -135,15 +137,13 @@ onUnmounted(async () => {
         class="flex-1 flex flex-col items-center justify-center gap-2 text-muted-foreground"
       >
         <span class="text-2xl">📭</span>
-        <span class="text-sm">
-          No {{ logsStore.activeSource === 'All' ? '' : logsStore.activeSource + ' ' }}logs yet
-        </span>
+        <span class="text-sm">{{ t('logs.empty') }}</span>
       </div>
       <!-- Log viewer -->
       <LogViewer v-else class="flex-1 overflow-hidden" />
     </div>
     <div v-else class="flex-1 flex items-center justify-center text-muted-foreground text-sm">
-      Select a project to start streaming logs
+      {{ t('logs.noProjectSelected') }}
     </div>
   </div>
 </template>

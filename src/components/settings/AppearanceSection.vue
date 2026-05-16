@@ -3,13 +3,12 @@ import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useI18n } from 'vue-i18n'
 
 const store = useSettingsStore()
-// useScope: 'global' ensures locale change propagates to all components
-const { locale: i18nLocale } = useI18n({ useScope: 'global' })
+const { t } = useI18n()
 
 const themeOptions = [
-  { value: 'light' as const, label: 'Light' },
-  { value: 'dark' as const, label: 'Dark' },
-  { value: 'auto' as const, label: 'System' },
+  { value: 'light' as const, key: 'theme.light' },
+  { value: 'dark' as const, key: 'theme.dark' },
+  { value: 'auto' as const, key: 'theme.system' },
 ]
 
 const localeOptions = [
@@ -18,14 +17,13 @@ const localeOptions = [
   { value: 'es', label: 'ES' },
 ]
 
-function setTheme(t: 'light' | 'dark' | 'auto') {
-  store.setTheme(t)
+function setTheme(theme: 'light' | 'dark' | 'auto') {
+  store.setTheme(theme)
   store.save()
 }
 
 function setLocale(l: string) {
-  store.locale = l
-  i18nLocale.value = l
+  store.setLocale(l)
   store.save()
 }
 </script>
@@ -33,8 +31,8 @@ function setLocale(l: string) {
 <template>
   <div class="space-y-6">
     <div>
-      <h3 class="mb-1 text-sm font-semibold">Theme</h3>
-      <p class="mb-3 text-xs text-muted-foreground">Select the color theme for the application.</p>
+      <h3 class="mb-1 text-sm font-semibold">{{ t('settings.theme') }}</h3>
+      <p class="mb-3 text-xs text-muted-foreground">{{ t('settings.themeDescription') }}</p>
       <div class="flex gap-2">
         <button
           v-for="option in themeOptions"
@@ -47,14 +45,14 @@ function setLocale(l: string) {
           ]"
           @click="setTheme(option.value)"
         >
-          {{ option.label }}
+          {{ t(option.key) }}
         </button>
       </div>
     </div>
 
     <div>
-      <h3 class="mb-1 text-sm font-semibold">Language</h3>
-      <p class="mb-3 text-xs text-muted-foreground">Choose the display language.</p>
+      <h3 class="mb-1 text-sm font-semibold">{{ t('settings.language') }}</h3>
+      <p class="mb-3 text-xs text-muted-foreground">{{ t('settings.languageDescription') }}</p>
       <div class="flex gap-2">
         <button
           v-for="option in localeOptions"

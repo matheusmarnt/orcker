@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { CircleX, Loader2 } from 'lucide-vue-next'
 
 const props = defineProps<{
@@ -7,14 +8,16 @@ const props = defineProps<{
   errorMessage: string | null
 }>()
 
+const { t } = useI18n()
+
 const title = computed(() => {
   switch (props.errorKind) {
     case 'DockerUnavailable':
-      return 'Docker is not running'
+      return t('error.dockerUnavailable')
     case 'DockerPermission':
-      return 'Permission denied'
+      return t('error.dockerPermission')
     default:
-      return 'Connection error'
+      return t('error.connectionError')
   }
 })
 </script>
@@ -30,7 +33,7 @@ const title = computed(() => {
 
       <!-- Human-readable message -->
       <p class="text-sm text-muted-foreground">
-        {{ errorMessage ?? 'An unexpected error occurred while connecting to Docker.' }}
+        {{ errorMessage ?? t('error.unexpectedError') }}
       </p>
 
       <!-- Expandable raw detail -->
@@ -38,7 +41,7 @@ const title = computed(() => {
         <summary
           class="cursor-pointer select-none text-xs text-muted-foreground hover:text-foreground"
         >
-          Show raw error
+          {{ t('error.showRaw') }}
         </summary>
         <pre
           class="mt-2 overflow-x-auto rounded-md border border-border bg-muted px-3 py-2 text-xs font-mono text-muted-foreground"
@@ -48,7 +51,7 @@ const title = computed(() => {
       <!-- Auto-reconnecting indicator (always visible, no manual retry button) -->
       <div class="flex items-center gap-2 text-sm text-muted-foreground">
         <Loader2 class="h-4 w-4 animate-spin" />
-        <span>Reconnecting…</span>
+        <span>{{ t('error.reconnecting') }}</span>
       </div>
     </div>
   </div>

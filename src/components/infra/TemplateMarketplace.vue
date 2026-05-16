@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 import { commands, type TemplateEntry } from '@/ipc/bindings'
 import { Badge } from '@/components/ui/badge'
@@ -7,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 
+const { t } = useI18n()
 const templates = ref<TemplateEntry[]>([])
 const isLoading = ref(true)
 const error = ref<string | null>(null)
@@ -15,15 +17,15 @@ const installing = ref<Set<string>>(new Set())
 
 const allTags = computed(() => {
   const tags = new Set<string>()
-  for (const t of templates.value) {
-    for (const tag of t.tags) tags.add(tag)
+  for (const tmpl of templates.value) {
+    for (const tag of tmpl.tags) tags.add(tag)
   }
   return Array.from(tags).sort()
 })
 
 const filteredTemplates = computed(() => {
   if (!activeTag.value) return templates.value
-  return templates.value.filter(t => t.tags.includes(activeTag.value!))
+  return templates.value.filter(tmpl => tmpl.tags.includes(activeTag.value!))
 })
 
 function setTag(tag: string | null) {
@@ -67,8 +69,8 @@ onMounted(loadTemplates)
   <div>
     <div class="mb-4 flex items-center justify-between">
       <div>
-        <h3 class="text-lg font-semibold">Template Marketplace</h3>
-        <p class="text-sm text-muted-foreground">Browse and install docker-compose templates</p>
+        <h3 class="text-lg font-semibold">{{ t('templates.title') }}</h3>
+        <p class="text-sm text-muted-foreground">{{ t('templates.search') }}</p>
       </div>
     </div>
 
@@ -94,7 +96,7 @@ onMounted(loadTemplates)
     <!-- Error / empty state -->
     <template v-else-if="error || templates.length === 0">
       <div class="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-        {{ error ?? 'No templates available — check your network connection' }}
+        {{ error ?? t('templates.empty') }}
       </div>
     </template>
 
@@ -106,7 +108,7 @@ onMounted(loadTemplates)
           :class="activeTag === null ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'"
           @click="setTag(null)"
         >
-          All
+          {{ t('logs.sources.all') }}
         </button>
         <button
           v-for="tag in allTags"
@@ -138,7 +140,7 @@ onMounted(loadTemplates)
               :disabled="installing.has(template.id)"
               @click="install(template)"
             >
-              {{ installing.has(template.id) ? 'Installing...' : 'Install' }}
+              {{ installing.has(template.id) ? t('templates.installing') : t('templates.install') }}
             </Button>
           </CardFooter>
         </Card>

@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { onClickOutside } from '@vueuse/core'
 import { CircleDot } from 'lucide-vue-next'
 import { useDockerStore } from '../stores/docker'
 import { getDockerVersion } from '../ipc/docker'
 
+const { t } = useI18n()
 const docker = useDockerStore()
 
 const panelOpen = ref(false)
@@ -30,12 +32,12 @@ const dotColor = computed(() => {
 const label = computed(() => {
   switch (docker.connectionStatus) {
     case 'connected':
-      return 'Docker'
+      return t('docker.connected')
     case 'error':
-      return 'Disconnected'
+      return t('docker.disconnected')
     case 'connecting':
     default:
-      return 'Connecting…'
+      return t('docker.connecting')
   }
 })
 
@@ -97,29 +99,29 @@ onUnmounted(() => {
       class="absolute bottom-full left-0 mb-2 w-64 rounded-md border border-border bg-card p-3 shadow-lg"
     >
       <div class="flex flex-col gap-2 text-xs">
-        <div class="font-semibold text-foreground">Docker Info</div>
+        <div class="font-semibold text-foreground">{{ t('docker.info') }}</div>
 
         <div class="flex items-center justify-between gap-2 text-muted-foreground">
-          <span>Version</span>
+          <span>{{ t('docker.version') }}</span>
           <span class="font-mono text-foreground">{{ docker.dockerVersion ?? '—' }}</span>
         </div>
 
         <div class="flex items-start justify-between gap-2 text-muted-foreground">
-          <span class="flex-shrink-0">Socket</span>
+          <span class="flex-shrink-0">{{ t('docker.socket') }}</span>
           <span class="break-all text-right font-mono text-foreground">
             {{ docker.socketPath ?? '—' }}
           </span>
         </div>
 
         <div class="flex items-center justify-between gap-2 text-muted-foreground">
-          <span>Containers</span>
+          <span>{{ t('docker.containers') }}</span>
           <span class="text-foreground">
-            {{ runningCount }} running, {{ stoppedCount }} stopped
+            {{ runningCount }} {{ t('containerTable.statuses.running').toLowerCase() }}, {{ stoppedCount }} {{ t('containerTable.statuses.stopped').toLowerCase() }}
           </span>
         </div>
 
         <div class="flex items-center justify-between gap-2 text-muted-foreground">
-          <span>Latency</span>
+          <span>{{ t('docker.latency') }}</span>
           <span class="text-foreground">
             {{ latencyMs !== null ? `~${latencyMs}ms` : '—' }}
           </span>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -8,6 +9,7 @@ import type { ProjectConfig, ProjectStatus } from '@/ipc/bindings'
 import DatabaseTab from '@/components/database/DatabaseTab.vue'
 import ComposeEditor from '@/components/compose/ComposeEditor.vue'
 
+const { t } = useI18n()
 const router = useRouter()
 
 const props = defineProps<{
@@ -44,11 +46,11 @@ const badgeVariant = computed(() => {
 })
 
 const statusLabel = computed(() => {
-  if (!props.status) return 'Stopped'
-  if (props.status.kind === 'running') return 'Running'
-  if (props.status.kind === 'partially_running') return 'Partial'
-  if (props.status.kind === 'unhealthy') return 'Unhealthy'
-  return 'Stopped'
+  if (!props.status) return t('projects.status.stopped')
+  if (props.status.kind === 'running') return t('projects.status.running')
+  if (props.status.kind === 'partially_running') return t('projects.status.partial')
+  if (props.status.kind === 'unhealthy') return t('projects.status.unhealthy')
+  return t('projects.status.stopped')
 })
 </script>
 
@@ -75,7 +77,7 @@ const statusLabel = computed(() => {
         @click="emit('open')"
       >
         <span v-if="opening" class="mr-1.5 h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
-        {{ opening ? 'Opening…' : 'Open' }}
+        {{ opening ? t('projects.actions.opening') : t('common.browse') }}
       </Button>
       <Button
         size="sm"
@@ -84,7 +86,7 @@ const statusLabel = computed(() => {
         @click="emit('start')"
       >
         <span v-if="starting" class="mr-1.5 h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
-        {{ starting ? 'Starting…' : 'Start' }}
+        {{ starting ? t('projects.actions.starting') : t('projects.actions.start') }}
       </Button>
       <Button
         size="sm"
@@ -93,7 +95,7 @@ const statusLabel = computed(() => {
         @click="emit('stop')"
       >
         <span v-if="stopping" class="mr-1.5 h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
-        {{ stopping ? 'Stopping…' : 'Stop' }}
+        {{ stopping ? t('projects.actions.stopping') : t('projects.actions.stop') }}
       </Button>
       <Button
         size="sm"
@@ -101,7 +103,7 @@ const statusLabel = computed(() => {
         :disabled="opening || starting || stopping"
         @click="router.push({ name: 'project-detail', params: { id: project.id } })"
       >
-        Terminal
+        {{ t('projects.actions.terminal') }}
       </Button>
       <Button
         size="sm"
@@ -109,7 +111,7 @@ const statusLabel = computed(() => {
         :disabled="opening || starting || stopping"
         @click="showDatabaseTab = !showDatabaseTab"
       >
-        Database
+        {{ t('projects.actions.database') }}
       </Button>
       <Button
         size="sm"
@@ -117,7 +119,7 @@ const statusLabel = computed(() => {
         :disabled="opening || starting || stopping"
         @click="showComposeEditor = true"
       >
-        Edit Compose
+        {{ t('projects.actions.editCompose') }}
       </Button>
     </CardFooter>
 

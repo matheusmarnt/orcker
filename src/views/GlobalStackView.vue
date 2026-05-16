@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { listen } from '@tauri-apps/api/event'
 import { toast } from 'vue-sonner'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -7,6 +8,7 @@ import ServiceCard from '@/components/global/ServiceCard.vue'
 import { useGlobalStackStore } from '@/stores/useGlobalStackStore'
 import type { ServiceStatus } from '@/ipc/bindings'
 
+const { t } = useI18n()
 const store = useGlobalStackStore()
 const loading = ref(true)
 let unlistenShortcut: (() => void) | null = null
@@ -71,9 +73,9 @@ onUnmounted(() => {
   <div class="flex flex-col gap-6 p-6">
     <!-- Header -->
     <div>
-      <h1 class="text-xl font-bold">Global Stack</h1>
+      <h1 class="text-xl font-bold">{{ t('global.title') }}</h1>
       <p class="mt-1 text-sm text-muted-foreground">
-        Shared services for all Laravel projects
+        {{ t('global.description') }}
       </p>
     </div>
 

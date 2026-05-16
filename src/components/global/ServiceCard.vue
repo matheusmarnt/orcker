@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Card, CardHeader, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
@@ -13,6 +14,7 @@ const props = defineProps<{
   defaultPort: number
 }>()
 
+const { t } = useI18n()
 const store = useGlobalStackStore()
 const configOpen = ref(false)
 
@@ -39,15 +41,15 @@ const badgeClass = computed(() => {
 
 const badgeText = computed(() => {
   const status = store.statuses[props.serviceId]
-  if (!status) return 'Stopped'
+  if (!status) return t('global.status.stopped')
   switch (status.kind) {
-    case 'running': return 'Running'
-    case 'stopped': return 'Stopped'
-    case 'starting': return 'Starting...'
-    case 'stopping': return 'Stopping...'
-    case 'unhealthy': return 'Unhealthy'
-    case 'error': return 'Error'
-    default: return 'Stopped'
+    case 'running': return t('global.status.running')
+    case 'stopped': return t('global.status.stopped')
+    case 'starting': return t('global.status.starting')
+    case 'stopping': return t('global.status.stopping')
+    case 'unhealthy': return t('global.status.unhealthy')
+    case 'error': return t('global.status.error')
+    default: return t('global.status.stopped')
   }
 })
 
@@ -86,7 +88,7 @@ const activePort = computed(
         v-if="store.restartRequired[serviceId]"
         class="text-xs text-yellow-600"
       >
-        Restart required to apply changes
+        {{ t('global.restartRequired') }}
       </span>
 
       <!-- Config toggle -->
@@ -94,7 +96,7 @@ const activePort = computed(
         class="self-start text-xs text-muted-foreground underline-offset-2 hover:underline"
         @click="configOpen = !configOpen"
       >
-        {{ configOpen ? 'Hide config' : 'Configure' }}
+        {{ configOpen ? t('global.hideConfig') : t('global.configure') }}
       </button>
 
       <!-- Config panel (expand in-place) -->

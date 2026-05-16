@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Badge } from './ui/badge'
 import type { ContainerSummary } from '../stores/docker'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   containers: ContainerSummary[]
@@ -54,10 +57,10 @@ function statusVariant(status: string): 'default' | 'secondary' | 'destructive' 
 
 function statusLabel(status: string): string {
   const s = status.toLowerCase()
-  if (s.startsWith('up') || s === 'running') return 'Running'
-  if (s === 'paused') return 'Paused'
-  if (s.startsWith('exit') || s === 'stopped') return 'Stopped'
-  if (s === 'dead') return 'Dead'
+  if (s.startsWith('up') || s === 'running') return t('containerTable.statuses.running')
+  if (s === 'paused') return t('containerTable.statuses.paused')
+  if (s.startsWith('exit') || s === 'stopped') return t('containerTable.statuses.stopped')
+  if (s === 'dead') return t('containerTable.statuses.dead')
   return status
 }
 </script>
@@ -67,17 +70,17 @@ function statusLabel(status: string): string {
     <table class="w-full text-sm">
       <thead>
         <tr class="border-b border-border bg-muted/50">
-          <th class="px-4 py-2 text-left font-medium text-muted-foreground">Name</th>
-          <th class="px-4 py-2 text-left font-medium text-muted-foreground">Status</th>
-          <th class="px-4 py-2 text-left font-medium text-muted-foreground">Image</th>
-          <th class="px-4 py-2 text-left font-medium text-muted-foreground">Ports</th>
+          <th class="px-4 py-2 text-left font-medium text-muted-foreground">{{ t('containerTable.name') }}</th>
+          <th class="px-4 py-2 text-left font-medium text-muted-foreground">{{ t('containerTable.status') }}</th>
+          <th class="px-4 py-2 text-left font-medium text-muted-foreground">{{ t('containerTable.image') }}</th>
+          <th class="px-4 py-2 text-left font-medium text-muted-foreground">{{ t('containerTable.ports') }}</th>
         </tr>
       </thead>
       <tbody>
         <!-- Empty state -->
         <tr v-if="containers.length === 0">
           <td colspan="4" class="px-4 py-8 text-center text-muted-foreground">
-            No containers running
+            {{ t('containerTable.empty') }}
           </td>
         </tr>
 

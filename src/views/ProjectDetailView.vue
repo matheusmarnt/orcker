@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { useProjectsStore } from '@/stores/useProjectsStore'
 import { commands } from '@/ipc/bindings'
@@ -11,6 +12,7 @@ import EnvEditor from '@/components/projects/EnvEditor.vue'
 import PhpIniEditor from '@/components/projects/PhpIniEditor.vue'
 import SupervisorPanel from '@/components/projects/SupervisorPanel.vue'
 
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const store = useProjectsStore()
@@ -43,9 +45,9 @@ onMounted(async () => {
   <div class="p-6 flex flex-col h-full relative">
     <!-- Not found -->
     <div v-if="!project" class="flex flex-col items-center justify-center py-24 gap-4">
-      <p class="text-lg font-medium text-muted-foreground">Project not found</p>
+      <p class="text-lg font-medium text-muted-foreground">{{ t('projects.notFound') }}</p>
       <Button variant="outline" @click="router.push({ name: 'projects' })">
-        Back to Projects
+        {{ t('projects.backToProjects') }}
       </Button>
     </div>
 
@@ -53,22 +55,22 @@ onMounted(async () => {
       <!-- Header -->
       <div class="flex items-center gap-4 mb-6">
         <Button variant="ghost" size="sm" @click="router.push({ name: 'projects' })">
-          ← Back
+          {{ t('projects.back') }}
         </Button>
         <h1 class="text-2xl font-semibold">{{ project.name }}</h1>
-        <Badge variant="secondary">Project</Badge>
+        <Badge variant="secondary">{{ t('projects.badge') }}</Badge>
       </div>
 
       <!-- Info -->
       <div class="rounded-md border p-4 mb-6 space-y-2">
         <div class="flex items-start gap-2">
-          <span class="text-sm text-muted-foreground w-20 shrink-0">Path</span>
+          <span class="text-sm text-muted-foreground w-20 shrink-0">{{ t('projects.path') }}</span>
           <span class="text-sm font-mono truncate" :title="project.path">{{ project.path }}</span>
         </div>
         <div class="flex items-center gap-2">
-          <span class="text-sm text-muted-foreground w-20 shrink-0">Vite auto</span>
+          <span class="text-sm text-muted-foreground w-20 shrink-0">{{ t('projects.viteAuto') }}</span>
           <Badge :variant="project.vite_auto ? 'default' : 'secondary'">
-            {{ project.vite_auto ? 'Enabled' : 'Disabled' }}
+            {{ project.vite_auto ? t('projects.enabled') : t('projects.disabled') }}
           </Badge>
         </div>
       </div>
@@ -76,16 +78,16 @@ onMounted(async () => {
       <!-- Actions row -->
       <div class="mb-4 flex items-center gap-2">
         <Button variant="outline" @click="showPanel = true">
-          Open Terminal
+          {{ t('projects.openTerminal') }}
         </Button>
         <Button variant="outline" @click="showEnvEditor = !showEnvEditor">
-          {{ showEnvEditor ? 'Close .env Editor' : 'Edit .env' }}
+          {{ t('projects.editEnv') }}
         </Button>
         <Button variant="outline" @click="showPhpIni = !showPhpIni">
-          {{ showPhpIni ? 'Close php.ini' : 'php.ini' }}
+          {{ t('projects.editPhpIni') }}
         </Button>
         <Button variant="outline" @click="showSupervisor = !showSupervisor">
-          {{ showSupervisor ? 'Close Supervisor' : 'Supervisor' }}
+          {{ showSupervisor ? t('projects.hideSupervisor') : t('projects.showSupervisor') }}
         </Button>
       </div>
 

@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { commands } from '@/ipc/bindings'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   projectId: string
@@ -41,27 +44,27 @@ function diffLines(raw: string) {
   <div class="rounded-md border border-border bg-card text-sm">
     <!-- Header -->
     <div class="flex items-center justify-between border-b border-border px-3 py-2">
-      <span class="font-medium text-foreground">Config Changes</span>
+      <span class="font-medium text-foreground">{{ t('composeEditor.configChanges') }}</span>
       <div class="flex items-center gap-2">
         <button
           class="text-xs text-muted-foreground hover:text-foreground transition-colors"
-          title="Version history coming soon"
+          :title="t('composeEditor.versionSoon')"
           disabled
         >
-          View History
+          {{ t('composeEditor.viewHistory') }}
         </button>
         <button
           class="text-xs text-muted-foreground hover:text-foreground transition-colors"
           @click="loadDiff"
         >
-          Refresh
+          {{ t('common.refresh') }}
         </button>
       </div>
     </div>
 
     <!-- Loading state -->
     <div v-if="isLoading" class="px-3 py-4 text-center text-muted-foreground text-xs">
-      Loading diff...
+      {{ t('composeEditor.loadingDiff') }}
     </div>
 
     <!-- Error state -->
@@ -71,7 +74,7 @@ function diffLines(raw: string) {
 
     <!-- Empty state: no prior commits -->
     <div v-else-if="!diff" class="px-3 py-4 text-center text-muted-foreground text-xs">
-      No previous version to compare. Save the file again to start tracking changes.
+      {{ t('composeEditor.noVersion') }}
     </div>
 
     <!-- Diff viewer -->
@@ -88,7 +91,7 @@ function diffLines(raw: string) {
 
     <!-- Version history placeholder -->
     <div class="border-t border-border px-3 py-2 text-xs text-muted-foreground">
-      Version history coming soon
+      {{ t('composeEditor.versionSoon') }}
     </div>
   </div>
 </template>

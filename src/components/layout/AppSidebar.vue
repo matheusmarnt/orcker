@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useLocalStorage } from '@vueuse/core'
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import {
   ChevronLeft,
   ChevronRight,
@@ -14,15 +15,16 @@ import {
 
 const emit = defineEmits<{ openSettings: [] }>()
 
+const { t } = useI18n()
 const collapsed = useLocalStorage('sidebar:collapsed', false)
 const route = useRoute()
 
 const navItems = [
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/projects', icon: FolderOpen, label: 'Projects' },
-  { to: '/global', icon: Server, label: 'Global Stack' },
-  { to: '/logs', icon: ScrollText, label: 'Logs' },
-  { to: '/infra', icon: Container, label: 'Infra' },
+  { to: '/dashboard', icon: LayoutDashboard, key: 'nav.dashboard' },
+  { to: '/projects', icon: FolderOpen, key: 'nav.projects' },
+  { to: '/global', icon: Server, key: 'nav.globalStack' },
+  { to: '/logs', icon: ScrollText, key: 'nav.logs' },
+  { to: '/infra', icon: Container, key: 'nav.infra' },
 ]
 
 function toggle() {
@@ -49,10 +51,10 @@ function toggle() {
             route.path === item.to ? 'bg-accent text-accent-foreground' : '',
             collapsed ? 'justify-center px-2' : '',
           ]"
-          :title="collapsed ? item.label : undefined"
+          :title="collapsed ? t(item.key) : undefined"
         >
           <component :is="item.icon" class="h-4 w-4 flex-shrink-0" />
-          <span v-if="!collapsed">{{ item.label }}</span>
+          <span v-if="!collapsed">{{ t(item.key) }}</span>
         </RouterLink>
       </nav>
     </div>
@@ -62,15 +64,15 @@ function toggle() {
       <button
         class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
         :class="collapsed ? 'justify-center px-2' : ''"
-        title="Settings"
+        :title="t('nav.settings')"
         @click="emit('openSettings')"
       >
         <Settings class="h-4 w-4 flex-shrink-0" />
-        <span v-if="!collapsed">Settings</span>
+        <span v-if="!collapsed">{{ t('nav.settings') }}</span>
       </button>
       <button
         class="flex w-full items-center justify-center rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-        :title="collapsed ? 'Expand sidebar' : 'Collapse sidebar'"
+        :title="collapsed ? t('nav.expand') : t('nav.collapse')"
         @click="toggle"
       >
         <ChevronLeft v-if="!collapsed" class="h-4 w-4" />

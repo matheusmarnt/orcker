@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
+
+const { t } = useI18n()
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card'
 import { useProjectsStore } from '@/stores/useProjectsStore'
 import { commands } from '@/ipc/bindings'
@@ -109,7 +112,7 @@ const tabClass = computed(() => (tab: 'import' | 'scaffold') =>
       <!-- Header -->
       <CardHeader class="pb-0">
         <div class="flex items-center justify-between">
-          <h2 class="text-lg font-semibold">New Project</h2>
+          <h2 class="text-lg font-semibold">{{ t('newProject.title') }}</h2>
           <button
             class="text-muted-foreground hover:text-foreground transition-colors"
             aria-label="Close"
@@ -126,14 +129,14 @@ const tabClass = computed(() => (tab: 'import' | 'scaffold') =>
             :class="tabClass('import')"
             @click="activeTab = 'import'"
           >
-            Import
+            {{ t('newProject.tabImport') }}
           </button>
           <button
             class="pb-2 text-sm transition-colors"
             :class="tabClass('scaffold')"
             @click="activeTab = 'scaffold'"
           >
-            Scaffold
+            {{ t('newProject.tabScaffold') }}
           </button>
         </div>
       </CardHeader>
@@ -142,24 +145,24 @@ const tabClass = computed(() => (tab: 'import' | 'scaffold') =>
         <!-- Import tab -->
         <div v-if="activeTab === 'import'" class="space-y-4">
           <div>
-            <label class="text-sm font-medium mb-1 block">Folder</label>
+            <label class="text-sm font-medium mb-1 block">{{ t('newProject.folder') }}</label>
             <div class="flex gap-2">
               <input
                 :value="importPath"
                 readonly
-                placeholder="Select a folder..."
+                :placeholder="t('newProject.selectFolder')"
                 class="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground"
               />
-              <Button variant="outline" size="sm" @click="browseImportFolder">Browse</Button>
+              <Button variant="outline" size="sm" @click="browseImportFolder">{{ t('common.browse') }}</Button>
             </div>
           </div>
 
           <div>
-            <label class="text-sm font-medium mb-1 block">Project Name</label>
+            <label class="text-sm font-medium mb-1 block">{{ t('newProject.name') }}</label>
             <input
               v-model="importName"
               type="text"
-              placeholder="my-app"
+              :placeholder="t('newProject.namePlaceholder')"
               class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
@@ -170,7 +173,7 @@ const tabClass = computed(() => (tab: 'import' | 'scaffold') =>
           <!-- Template selector — hidden while scaffolding -->
           <template v-if="!isScaffolding">
             <div>
-              <label class="text-sm font-medium mb-2 block">Template</label>
+              <label class="text-sm font-medium mb-2 block">{{ t('newProject.template') }}</label>
               <div class="space-y-2">
                 <label
                   v-for="tpl in scaffoldTemplates"
@@ -187,65 +190,65 @@ const tabClass = computed(() => (tab: 'import' | 'scaffold') =>
                   <div>
                     <p class="text-sm font-medium">{{ tpl.label }}</p>
                     <p class="text-xs text-muted-foreground">{{ tpl.description }}</p>
-                    <p v-if="tpl.warning" class="text-xs text-amber-500 mt-0.5">⚠ {{ tpl.warning }}</p>
+                    <p v-if="tpl.warning" class="text-xs text-amber-500 mt-0.5">⚠ {{ t('newProject.networkWarning') }}</p>
                   </div>
                 </label>
               </div>
             </div>
 
             <div>
-              <label class="text-sm font-medium mb-1 block">Project Name</label>
+              <label class="text-sm font-medium mb-1 block">{{ t('newProject.name') }}</label>
               <input
                 v-model="scaffoldName"
                 type="text"
-                placeholder="my-laravel-app"
+                :placeholder="t('newProject.laravelAppPlaceholder')"
                 class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
 
             <div>
-              <label class="text-sm font-medium mb-1 block">Destination Folder</label>
+              <label class="text-sm font-medium mb-1 block">{{ t('newProject.destination') }}</label>
               <div class="flex gap-2">
                 <input
                   :value="scaffoldDest"
                   readonly
-                  placeholder="Select destination..."
+                  :placeholder="t('newProject.selectFolder')"
                   class="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground"
                 />
-                <Button variant="outline" size="sm" @click="browseScaffoldDest">Browse</Button>
+                <Button variant="outline" size="sm" @click="browseScaffoldDest">{{ t('common.browse') }}</Button>
               </div>
             </div>
           </template>
 
           <!-- Progress panel — shown while scaffolding or if there are lines -->
           <div v-if="isScaffolding || progressLines.length > 0">
-            <label class="text-sm font-medium mb-1 block">Progress</label>
+            <label class="text-sm font-medium mb-1 block">{{ t('newProject.progress') }}</label>
             <div
               ref="progressContainer"
               class="h-48 overflow-y-auto rounded-md border border-border bg-black/80 p-3 font-mono text-xs text-green-400 space-y-0.5"
             >
               <div v-for="(line, i) in progressLines" :key="i" class="whitespace-pre-wrap break-all">{{ line }}</div>
-              <div v-if="isScaffolding" class="animate-pulse text-muted-foreground">Running...</div>
+              <div v-if="isScaffolding" class="animate-pulse text-muted-foreground">{{ t('newProject.running') }}</div>
             </div>
           </div>
         </div>
       </CardContent>
 
       <CardFooter class="flex justify-end gap-2 pt-2">
-        <Button variant="ghost" @click="emit('close')">Cancel</Button>
+        <Button variant="ghost" @click="emit('close')">{{ t('newProject.cancel') }}</Button>
         <Button
           v-if="activeTab === 'import'"
           :disabled="!importName || !importPath || importLoading"
           @click="handleRegister"
         >
-          {{ importLoading ? 'Registering...' : 'Register Project' }}
+          {{ importLoading ? t('newProject.registering') : t('newProject.register') }}
         </Button>
         <Button
           v-else
           :disabled="!scaffoldName || !scaffoldDest || isScaffolding"
           @click="handleScaffold"
         >
-          {{ isScaffolding ? 'Scaffolding...' : 'Scaffold Project' }}
+          {{ isScaffolding ? t('newProject.scaffolding') : t('newProject.scaffold') }}
         </Button>
       </CardFooter>
     </Card>

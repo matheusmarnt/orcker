@@ -90,7 +90,7 @@ export const commands = {
 	/**  List all Docker volumes with name, driver, mountpoint, and size in MB. */
 	listVolumes: () => typedError<VolumeInfo[], AppError>(__TAURI_INVOKE("list_volumes")),
 	/**  Prune dangling (unused) volumes. Returns reclaimed space in bytes. */
-	pruneVolumes: () => typedError<number, AppError>(__TAURI_INVOKE("prune_volumes")),
+	pruneVolumes: () => typedError<number | null, AppError>(__TAURI_INVOKE("prune_volumes")),
 	/**  List all local Docker images with tags and size. */
 	listImages: () => typedError<ImageInfo[], AppError>(__TAURI_INVOKE("list_images")),
 	/**  Pull a Docker image by name and tag. Drains the stream fully before returning. */
@@ -98,7 +98,7 @@ export const commands = {
 	/**  Remove a Docker image by ID. */
 	removeImage: (imageId: string) => typedError<null, AppError>(__TAURI_INVOKE("remove_image", { imageId })),
 	/**  Prune dangling (unused) images. Returns reclaimed space in bytes. */
-	pruneImages: () => typedError<number, AppError>(__TAURI_INVOKE("prune_images")),
+	pruneImages: () => typedError<number | null, AppError>(__TAURI_INVOKE("prune_images")),
 	/**
 	 *  Fetch template manifest from GitHub raw URL.
 	 *  Done in Rust to avoid CSP issues — frontend never contacts external HTTPS.
@@ -220,8 +220,8 @@ export type ProjectStatusEvent = {
 
 /**  Aggregated CPU% and memory usage (MB) for all containers in a project. */
 export type ResourceStats = {
-	cpu_percent: number,
-	mem_mb: number,
+	cpu_percent: number | null,
+	mem_mb: number | null,
 };
 
 export type ScaffoldChunk = {

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Channel } from '@tauri-apps/api/core'
 import Convert from 'ansi-to-html'
 import { toast } from 'vue-sonner'
@@ -13,6 +14,7 @@ const props = defineProps<{
   projectName: string
 }>()
 
+const { t } = useI18n()
 const convert = new Convert({ escapeXML: true })
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -124,7 +126,7 @@ import { computed } from 'vue'
   <div class="flex flex-col gap-4 p-4">
     <!-- Testing DB status chip -->
     <div class="flex items-center gap-3">
-      <span class="text-sm font-medium text-muted-foreground">Testing DB:</span>
+      <span class="text-sm font-medium text-muted-foreground">{{ t('database.testingDb') }}</span>
       <Badge variant="secondary" class="font-mono text-xs">{{ testingDbName }}</Badge>
       <Button
         size="sm"
@@ -136,7 +138,7 @@ import { computed } from 'vue'
           v-if="isCreating"
           class="mr-1.5 h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent"
         />
-        {{ isCreating ? 'Creating…' : 'Create / Reset' }}
+        {{ isCreating ? t('database.creating') : t('database.createReset') }}
       </Button>
     </div>
 
@@ -152,7 +154,7 @@ import { computed } from 'vue'
           v-if="isLoadingDump"
           class="mr-1.5 h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent"
         />
-        {{ isLoadingDump ? 'Dumping…' : 'Dump' }}
+        {{ isLoadingDump ? t('database.dumping') : t('database.dump') }}
       </Button>
 
       <Button
@@ -165,7 +167,7 @@ import { computed } from 'vue'
           v-if="isLoadingRestore"
           class="mr-1.5 h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent"
         />
-        {{ isLoadingRestore ? 'Restoring…' : 'Restore' }}
+        {{ isLoadingRestore ? t('database.restoring') : t('database.restore') }}
       </Button>
 
       <Button
@@ -178,7 +180,7 @@ import { computed } from 'vue'
           v-if="isOpeningCli"
           class="mr-1.5 h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent"
         />
-        {{ isOpeningCli ? 'Connecting…' : 'Open CLI' }}
+        {{ isOpeningCli ? t('database.connecting') : t('database.openCli') }}
       </Button>
     </div>
 
@@ -197,10 +199,10 @@ import { computed } from 'vue'
           <span v-html="line.html" />
         </div>
         <div v-if="cliLines.length === 0 && isOpeningCli" class="text-zinc-500">
-          Connecting to psql…
+          {{ t('database.connectingToPsql') }}
         </div>
         <div v-if="cliLines.length === 0 && !isOpeningCli" class="text-zinc-500">
-          No output yet.
+          {{ t('database.noOutput') }}
         </div>
       </div>
     </div>

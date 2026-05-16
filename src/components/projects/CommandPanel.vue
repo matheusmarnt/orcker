@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Channel } from '@tauri-apps/api/core'
 import Convert from 'ansi-to-html'
 import { commands } from '@/ipc/bindings'
@@ -16,6 +17,7 @@ const emit = defineEmits<{
   close: []
 }>()
 
+const { t } = useI18n()
 const convert = new Convert({ escapeXML: true })
 
 interface OutputLine {
@@ -94,7 +96,7 @@ function onDestructiveCancel() {
   <div class="border-t bg-background flex flex-col">
     <!-- Panel header -->
     <div class="flex items-center justify-between px-4 py-2 border-b bg-muted/50">
-      <span class="text-sm font-medium">Terminal</span>
+      <span class="text-sm font-medium">{{ t('terminal.title') }}</span>
       <div class="flex items-center gap-2">
         <Button
           v-if="isRunning"
@@ -102,7 +104,7 @@ function onDestructiveCancel() {
           variant="destructive"
           @click="cancelCommand"
         >
-          Cancel
+          {{ t('terminal.cancel') }}
         </Button>
         <Button size="sm" variant="ghost" @click="emit('close')">✕</Button>
       </div>
@@ -118,7 +120,7 @@ function onDestructiveCancel() {
         <span v-html="line.html" />
       </div>
       <div v-if="lines.length === 0 && !isRunning" class="text-zinc-500">
-        Run a command to see output here.
+        {{ t('terminal.empty') }}
       </div>
     </div>
 

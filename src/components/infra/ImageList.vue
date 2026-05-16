@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 import { commands } from '@/ipc/bindings'
 import { useInfraStore } from '@/stores/useInfraStore'
 
 const PAGE_SIZE = 10
 
+const { t } = useI18n()
 const store = useInfraStore()
 const confirmingPrune = ref(false)
 const pullImageName = ref('')
@@ -91,12 +93,12 @@ async function pruneImages() {
   <div class="space-y-4">
     <!-- Header with pull input and prune button -->
     <div class="flex flex-wrap items-center justify-between gap-2">
-      <h3 class="text-lg font-semibold">Images</h3>
+      <h3 class="text-lg font-semibold">{{ t('images.title') }}</h3>
       <div class="flex items-center gap-2">
         <input
           v-model="pullImageName"
           type="text"
-          placeholder="image:tag"
+          :placeholder="t('images.pullPlaceholder')"
           class="h-8 rounded-md border bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           @keyup.enter="pullImage"
         />
@@ -105,22 +107,22 @@ async function pruneImages() {
           :disabled="isPulling || !pullImageName.trim()"
           @click="pullImage"
         >
-          {{ isPulling ? 'Pulling…' : 'Pull' }}
+          {{ isPulling ? t('images.pulling') : t('images.pull') }}
         </button>
 
         <template v-if="confirmingPrune">
-          <span class="text-sm text-muted-foreground">Remove unused images. Continue?</span>
+          <span class="text-sm text-muted-foreground">{{ t('images.pruneConfirm') }}</span>
           <button
             class="rounded-md bg-destructive px-3 py-1 text-sm text-destructive-foreground hover:bg-destructive/90"
             @click="pruneImages"
           >
-            Confirm
+            {{ t('images.confirm') }}
           </button>
           <button
             class="rounded-md border px-3 py-1 text-sm hover:bg-accent"
             @click="confirmingPrune = false"
           >
-            Cancel
+            {{ t('images.cancel') }}
           </button>
         </template>
         <button
@@ -128,7 +130,7 @@ async function pruneImages() {
           class="rounded-md border px-3 py-1 text-sm hover:bg-accent"
           @click="confirmingPrune = true"
         >
-          Prune Unused Images
+          {{ t('images.prune') }}
         </button>
       </div>
     </div>
@@ -143,10 +145,10 @@ async function pruneImages() {
       <table class="w-full text-sm">
         <thead class="bg-muted/50">
           <tr>
-            <th class="px-4 py-2 text-left font-medium">Tags</th>
-            <th class="px-4 py-2 text-left font-medium">ID</th>
-            <th class="px-4 py-2 text-right font-medium">Size (MB)</th>
-            <th class="px-4 py-2 text-right font-medium">Actions</th>
+            <th class="px-4 py-2 text-left font-medium">{{ t('images.repository') }}</th>
+            <th class="px-4 py-2 text-left font-medium">{{ t('images.id') }}</th>
+            <th class="px-4 py-2 text-right font-medium">{{ t('images.size') }}</th>
+            <th class="px-4 py-2 text-right font-medium"></th>
           </tr>
         </thead>
         <tbody>
@@ -170,12 +172,12 @@ async function pruneImages() {
                 class="rounded-md border px-2 py-0.5 text-xs hover:bg-destructive hover:text-destructive-foreground"
                 @click="removeImage(img.id)"
               >
-                Remove
+                {{ t('images.remove') }}
               </button>
             </td>
           </tr>
           <tr v-if="store.images.length === 0">
-            <td colspan="4" class="px-4 py-6 text-center text-muted-foreground">No images found</td>
+            <td colspan="4" class="px-4 py-6 text-center text-muted-foreground">{{ t('images.empty') }}</td>
           </tr>
         </tbody>
       </table>
@@ -184,7 +186,7 @@ async function pruneImages() {
     <!-- Pagination -->
     <div v-if="totalPages > 1" class="flex items-center justify-between text-sm">
       <span class="text-muted-foreground">
-        Page {{ page }} / {{ totalPages }}
+        {{ t('common.page', { page, total: totalPages }) }}
       </span>
       <div class="flex gap-1">
         <button

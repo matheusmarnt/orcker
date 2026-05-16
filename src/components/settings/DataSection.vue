@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import { open, save } from '@tauri-apps/plugin-dialog'
 import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs'
 import { toast } from 'vue-sonner'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 
+const { t } = useI18n()
 const store = useSettingsStore()
 
 async function exportConfig() {
@@ -53,28 +55,28 @@ async function importConfig() {
 <template>
   <div class="space-y-6">
     <div>
-      <h3 class="mb-1 text-sm font-semibold">Export Configuration</h3>
+      <h3 class="mb-1 text-sm font-semibold">{{ t('settings.exportConfig') }}</h3>
       <p class="mb-3 text-xs text-muted-foreground">
-        Save your Orcker settings to a JSON file for backup or migration.
+        {{ t('settings.exportConfigDescription') }}
       </p>
       <button
         class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
         @click="exportConfig"
       >
-        Export Config
+        {{ t('settings.exportButton') }}
       </button>
     </div>
 
     <div class="border-t border-border pt-4">
-      <h3 class="mb-1 text-sm font-semibold">Import Configuration</h3>
+      <h3 class="mb-1 text-sm font-semibold">{{ t('settings.importConfig') }}</h3>
       <p class="mb-3 text-xs text-muted-foreground">
-        Load settings from a previously exported JSON file.
+        {{ t('settings.importConfigDescription') }}
       </p>
       <button
         class="rounded-md border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
         @click="importConfig"
       >
-        Import Config
+        {{ t('settings.importButton') }}
       </button>
     </div>
   </div>

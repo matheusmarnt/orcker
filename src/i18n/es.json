@@ -1,13 +1,294 @@
 {
   "app": { "title": "Orcker" },
+  "common": {
+    "cancel": "Cancelar",
+    "close": "Cerrar",
+    "save": "Guardar",
+    "loading": "Cargando…",
+    "refresh": "Actualizar",
+    "browse": "Explorar",
+    "confirm": "Confirmar",
+    "page": "Página {page} / {total}"
+  },
+  "nav": {
+    "dashboard": "Panel",
+    "projects": "Proyectos",
+    "globalStack": "Stack Global",
+    "logs": "Registros",
+    "infra": "Infra",
+    "settings": "Ajustes",
+    "collapse": "Contraer barra lateral",
+    "expand": "Expandir barra lateral"
+  },
   "settings": {
+    "title": "Ajustes",
     "appearance": "Apariencia",
+    "preferences": "Preferencias",
     "docker": "Docker",
     "updates": "Actualizaciones",
     "data": "Datos",
     "theme": "Tema",
+    "themeDescription": "Selecciona el tema de color de la aplicación.",
     "language": "Idioma",
+    "languageDescription": "Elige el idioma de visualización.",
     "tray": "Bandeja del sistema",
-    "autostart": "Iniciar al arrancar"
+    "trayDescription": "Mantener Orcker en la bandeja del sistema al cerrar.",
+    "autostart": "Iniciar al arrancar",
+    "autostartDescription": "Iniciar Orcker automáticamente al arrancar el sistema.",
+    "dockerSocket": "Ruta del Socket Docker",
+    "dockerSocketDescription": "Ruta personalizada al socket Docker (dejar vacío para el predeterminado).",
+    "exportConfig": "Exportar Configuración",
+    "exportConfigDescription": "Guarda tus ajustes de Orcker en un archivo JSON para respaldo o migración.",
+    "exportButton": "Exportar Config",
+    "importConfig": "Importar Configuración",
+    "importConfigDescription": "Carga ajustes desde un archivo JSON exportado anteriormente.",
+    "importButton": "Importar Config",
+    "currentVersion": "Versión Actual",
+    "checkUpdates": "Buscar Actualizaciones",
+    "updatesAutomatic": "Las actualizaciones se comprueban automáticamente al iniciar."
+  },
+  "theme": {
+    "light": "Claro",
+    "dark": "Oscuro",
+    "system": "Sistema"
+  },
+  "projects": {
+    "title": "Proyectos",
+    "newProject": "+ Nuevo Proyecto",
+    "emptyTitle": "Aún no hay proyectos.",
+    "emptyAction": "Agrega tu primer proyecto",
+    "badge": "Proyecto",
+    "path": "Ruta",
+    "viteAuto": "Vite auto",
+    "enabled": "Activo",
+    "disabled": "Inactivo",
+    "notFound": "Proyecto no encontrado",
+    "backToProjects": "Volver a Proyectos",
+    "back": "← Volver",
+    "openTerminal": "Abrir Terminal",
+    "editEnv": "Editar .env",
+    "editPhpIni": "Editar php.ini",
+    "showSupervisor": "Ver Supervisor",
+    "hideSupervisor": "Ocultar Supervisor",
+    "status": {
+      "running": "Corriendo",
+      "partial": "Parcial",
+      "unhealthy": "Inestable",
+      "stopped": "Detenido"
+    },
+    "actions": {
+      "start": "Iniciar",
+      "stop": "Detener",
+      "starting": "Iniciando…",
+      "stopping": "Deteniendo…",
+      "opening": "Abriendo…",
+      "terminal": "Terminal",
+      "database": "Base de Datos",
+      "editCompose": "Editar Compose"
+    },
+    "toast": {
+      "started": "Proyecto iniciado",
+      "stopped": "Proyecto detenido"
+    }
+  },
+  "newProject": {
+    "title": "Nuevo Proyecto",
+    "tabImport": "Importar",
+    "tabScaffold": "Crear",
+    "folder": "Carpeta",
+    "selectFolder": "Selecciona una carpeta...",
+    "name": "Nombre del Proyecto",
+    "namePlaceholder": "mi-app",
+    "laravelAppPlaceholder": "mi-app-laravel",
+    "destination": "Carpeta de Destino",
+    "template": "Plantilla",
+    "progress": "Progreso",
+    "running": "Ejecutando...",
+    "cancel": "Cancelar",
+    "register": "Registrar Proyecto",
+    "registering": "Registrando...",
+    "scaffold": "Crear Proyecto",
+    "scaffolding": "Creando...",
+    "networkWarning": "Requiere acceso a la red — puede tardar varios minutos"
+  },
+  "logs": {
+    "title": "Registros",
+    "selectProject": "Seleccionar proyecto...",
+    "noProjectSelected": "Selecciona un proyecto para iniciar el streaming de registros",
+    "loading": "Cargando registros…",
+    "empty": "Aún no hay líneas de registro.",
+    "allLevels": "Todos los niveles",
+    "filterKeyword": "Filtrar por palabra clave...",
+    "clearFilter": "Limpiar",
+    "sources": {
+      "all": "Todos",
+      "docker": "Docker",
+      "laravel": "Laravel",
+      "nginx": "Nginx",
+      "supervisor": "Supervisor"
+    }
+  },
+  "global": {
+    "title": "Stack Global",
+    "description": "Servicios compartidos para todos los proyectos Laravel",
+    "status": {
+      "running": "Corriendo",
+      "stopped": "Detenido",
+      "starting": "Iniciando...",
+      "stopping": "Deteniendo...",
+      "unhealthy": "Inestable",
+      "error": "Error"
+    },
+    "configure": "Configurar",
+    "hideConfig": "Ocultar config",
+    "restartRequired": "Se requiere reinicio para aplicar cambios"
+  },
+  "infra": {
+    "title": "Infraestructura",
+    "description": "Gestionar volúmenes, imágenes y plantillas Docker",
+    "tabs": {
+      "volumes": "Volúmenes",
+      "images": "Imágenes",
+      "templates": "Plantillas"
+    }
+  },
+  "volumes": {
+    "title": "Volúmenes",
+    "name": "Nombre",
+    "driver": "Driver",
+    "mountpoint": "Punto de montaje",
+    "size": "Tamaño",
+    "prune": "Limpiar No Usados",
+    "pruneConfirm": "Eliminar todos los volúmenes no utilizados. ¿Continuar?",
+    "confirm": "Confirmar",
+    "cancel": "Cancelar",
+    "empty": "No se encontraron volúmenes"
+  },
+  "images": {
+    "title": "Imágenes",
+    "repository": "Repositorio",
+    "id": "ID",
+    "size": "Tamaño (MB)",
+    "pullPlaceholder": "imagen:tag",
+    "pull": "Descargar",
+    "pulling": "Descargando…",
+    "remove": "Eliminar",
+    "prune": "Limpiar No Usadas",
+    "pruneConfirm": "Eliminar todas las imágenes no utilizadas. ¿Continuar?",
+    "confirm": "Confirmar",
+    "cancel": "Cancelar",
+    "empty": "No se encontraron imágenes"
+  },
+  "templates": {
+    "title": "Plantillas",
+    "search": "Buscar plantillas…",
+    "empty": "No se encontraron plantillas.",
+    "install": "Instalar",
+    "installing": "Instalando…",
+    "installed": "Instalado"
+  },
+  "terminal": {
+    "title": "Terminal",
+    "cancel": "Cancelar",
+    "empty": "Ejecuta un comando para ver la salida aquí."
+  },
+  "destructive": {
+    "title": "Confirmar acción destructiva",
+    "description": "Esta acción no se puede deshacer. Escribe {name} para confirmar.",
+    "cancel": "Cancelar",
+    "run": "Ejecutar {label}"
+  },
+  "envEditor": {
+    "title": "Editar .env",
+    "save": "Guardar .env",
+    "saving": "Guardando…",
+    "loading": "Cargando .env…",
+    "colKey": "Clave",
+    "colValue": "Valor .env",
+    "colExample": ".env.example",
+    "empty": "(vacío)",
+    "missingKeys": "Claves faltantes del .env.example"
+  },
+  "supervisor": {
+    "title": "Workers del Supervisor",
+    "refresh": "Actualizar",
+    "refreshing": "Cargando…",
+    "loading": "Cargando workers…",
+    "empty": "No se encontraron workers. ¿Está corriendo el contenedor del supervisor?",
+    "restart": "Reiniciar",
+    "restarting": "Reiniciando…"
+  },
+  "phpini": {
+    "title": "Editor php.ini",
+    "structured": "Estructurado",
+    "raw": "Sin formato",
+    "save": "Guardar php.ini",
+    "saving": "Guardando…",
+    "loading": "Cargando…"
+  },
+  "database": {
+    "testingDb": "BD de Prueba:",
+    "createReset": "Crear / Resetear",
+    "creating": "Creando…",
+    "dump": "Dump",
+    "dumping": "Exportando…",
+    "restore": "Restaurar",
+    "restoring": "Restaurando…",
+    "openCli": "Abrir CLI",
+    "connecting": "Conectando…",
+    "connectingToPsql": "Conectando a psql…",
+    "noOutput": "Sin salida aún."
+  },
+  "docker": {
+    "info": "Información Docker",
+    "version": "Versión",
+    "socket": "Socket",
+    "containers": "Contenedores",
+    "latency": "Latencia",
+    "connected": "Docker",
+    "disconnected": "Desconectado",
+    "connecting": "Conectando…"
+  },
+  "error": {
+    "dockerUnavailable": "Docker no está en ejecución",
+    "dockerPermission": "Permiso denegado",
+    "connectionError": "Error de conexión",
+    "unexpectedError": "Ocurrió un error inesperado al conectar con Docker.",
+    "reconnecting": "Reconectando…",
+    "showRaw": "Mostrar error sin formato"
+  },
+  "commandPalette": {
+    "placeholder": "Buscar comandos...",
+    "noCommands": "No se encontraron comandos.",
+    "navigate": "navegar",
+    "execute": "ejecutar",
+    "close": "cerrar"
+  },
+  "containerTable": {
+    "name": "Nombre",
+    "status": "Estado",
+    "image": "Imagen",
+    "ports": "Puertos",
+    "empty": "No hay contenedores en ejecución",
+    "statuses": {
+      "running": "Corriendo",
+      "paused": "Pausado",
+      "stopped": "Detenido",
+      "dead": "Muerto"
+    }
+  },
+  "composeEditor": {
+    "title": "Editar Archivo Compose",
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "savedToast": "Guardado — ¿reiniciar para aplicar los cambios?",
+    "configChanges": "Cambios de Configuración",
+    "viewHistory": "Ver Historial",
+    "loadingDiff": "Cargando diff...",
+    "noVersion": "No hay versión anterior para comparar. Guarda el archivo de nuevo para comenzar a rastrear cambios.",
+    "versionSoon": "Historial de versiones próximamente",
+    "actions": {
+      "restart": "Reiniciar"
+    }
   }
 }

@@ -14,12 +14,14 @@ export function useResourceMonitor(projectId: string) {
   async function poll() {
     const r = await commands.getResourceStats(projectId).catch(() => null)
     if (!r || r.status !== 'ok') return
+    const { cpu_percent, mem_mb } = r.data
+    if (cpu_percent === null || mem_mb === null) return
     series.value = [
       ...series.value.slice(-30), // keep last 30 points (60 seconds)
       {
         time: new Date().toLocaleTimeString(),
-        cpu: r.data.cpu_percent,
-        mem: r.data.mem_mb,
+        cpu: cpu_percent,
+        mem: mem_mb,
       },
     ]
   }

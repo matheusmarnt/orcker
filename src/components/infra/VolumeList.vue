@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 import { commands } from '@/ipc/bindings'
 import { useInfraStore } from '@/stores/useInfraStore'
 
 const PAGE_SIZE = 10
 
+const { t } = useI18n()
 const store = useInfraStore()
 const confirming = ref(false)
 const page = ref(1)
@@ -47,23 +49,23 @@ async function pruneVolumes() {
   <div class="space-y-4">
     <div class="flex items-center justify-between">
       <h3 class="text-lg font-semibold">
-        Volumes
+        {{ t('volumes.title') }}
         <span class="ml-1 text-sm font-normal text-muted-foreground">({{ store.volumes.length }})</span>
       </h3>
       <div class="flex items-center gap-2">
         <template v-if="confirming">
-          <span class="text-sm text-muted-foreground">Remove all unused volumes. Continue?</span>
+          <span class="text-sm text-muted-foreground">{{ t('volumes.pruneConfirm') }}</span>
           <button
             class="rounded-md bg-destructive px-3 py-1 text-sm text-destructive-foreground hover:bg-destructive/90"
             @click="pruneVolumes"
           >
-            Confirm
+            {{ t('volumes.confirm') }}
           </button>
           <button
             class="rounded-md border px-3 py-1 text-sm hover:bg-accent"
             @click="confirming = false"
           >
-            Cancel
+            {{ t('volumes.cancel') }}
           </button>
         </template>
         <button
@@ -71,7 +73,7 @@ async function pruneVolumes() {
           class="rounded-md border px-3 py-1 text-sm hover:bg-accent"
           @click="confirming = true"
         >
-          Prune Dangling
+          {{ t('volumes.prune') }}
         </button>
       </div>
     </div>
@@ -86,10 +88,10 @@ async function pruneVolumes() {
       <table class="w-full text-sm">
         <thead class="bg-muted/50">
           <tr>
-            <th class="px-4 py-2 text-left font-medium">Name</th>
-            <th class="px-4 py-2 text-left font-medium">Driver</th>
-            <th class="px-4 py-2 text-left font-medium">Mountpoint</th>
-            <th class="px-4 py-2 text-right font-medium" title="Sizes computed by 'docker system df'">Size</th>
+            <th class="px-4 py-2 text-left font-medium">{{ t('volumes.name') }}</th>
+            <th class="px-4 py-2 text-left font-medium">{{ t('volumes.driver') }}</th>
+            <th class="px-4 py-2 text-left font-medium">{{ t('volumes.mountpoint') }}</th>
+            <th class="px-4 py-2 text-right font-medium" title="Sizes computed by 'docker system df'">{{ t('volumes.size') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -106,7 +108,7 @@ async function pruneVolumes() {
             </td>
           </tr>
           <tr v-if="store.volumes.length === 0">
-            <td colspan="4" class="px-4 py-6 text-center text-muted-foreground">No volumes found</td>
+            <td colspan="4" class="px-4 py-6 text-center text-muted-foreground">{{ t('volumes.empty') }}</td>
           </tr>
         </tbody>
       </table>
@@ -115,7 +117,7 @@ async function pruneVolumes() {
     <!-- Pagination -->
     <div v-if="totalPages > 1" class="flex items-center justify-between text-sm">
       <span class="text-muted-foreground">
-        Page {{ page }} / {{ totalPages }}
+        {{ t('common.page', { page, total: totalPages }) }}
       </span>
       <div class="flex gap-1">
         <button

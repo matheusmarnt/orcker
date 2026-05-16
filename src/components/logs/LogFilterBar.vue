@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import { useLogsStore, LOG_LEVELS } from '@/stores/useLogsStore'
+
+const { t } = useI18n()
 const store = useLogsStore()
 </script>
 
@@ -9,7 +12,7 @@ const store = useLogsStore()
       v-model="store.levelFilter"
       class="h-8 text-sm border rounded px-2 bg-background"
     >
-      <option value="">All levels</option>
+      <option value="">{{ t('logs.allLevels') }}</option>
       <option v-for="level in LOG_LEVELS.filter(l => l)" :key="level" :value="level">
         {{ level }}
       </option>
@@ -17,7 +20,7 @@ const store = useLogsStore()
     <input
       v-model="store.keywordFilter"
       type="text"
-      placeholder="Filter by keyword..."
+      :placeholder="t('logs.filterKeyword')"
       class="h-8 text-sm border rounded px-2 flex-1 bg-background"
     />
     <button
@@ -25,7 +28,7 @@ const store = useLogsStore()
       class="h-8 text-xs px-2 border rounded text-muted-foreground hover:text-foreground"
       @click="store.keywordFilter = ''; store.levelFilter = ''"
     >
-      Clear
+      {{ t('logs.clearFilter') }}
     </button>
   </div>
 </template>

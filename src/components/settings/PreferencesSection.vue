@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { enable, disable } from '@tauri-apps/plugin-autostart'
 
+const { t } = useI18n()
 const store = useSettingsStore()
 
 async function onTrayToggle() {
@@ -31,8 +33,8 @@ async function onAutostartToggle() {
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <div>
-        <p class="text-sm font-semibold">System Tray</p>
-        <p class="text-xs text-muted-foreground">Keep Orcker in the system tray when closed.</p>
+        <p class="text-sm font-semibold">{{ t('settings.tray') }}</p>
+        <p class="text-xs text-muted-foreground">{{ t('settings.trayDescription') }}</p>
       </div>
       <button
         :class="[
@@ -54,8 +56,8 @@ async function onAutostartToggle() {
 
     <div v-if="store.trayEnabled" class="flex items-center justify-between">
       <div>
-        <p class="text-sm font-semibold">Start at Login</p>
-        <p class="text-xs text-muted-foreground">Launch Orcker automatically on system startup.</p>
+        <p class="text-sm font-semibold">{{ t('settings.autostart') }}</p>
+        <p class="text-xs text-muted-foreground">{{ t('settings.autostartDescription') }}</p>
       </div>
       <button
         :class="[

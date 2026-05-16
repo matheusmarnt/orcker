@@ -1,13 +1,294 @@
 {
   "app": { "title": "Orcker" },
+  "common": {
+    "cancel": "Cancel",
+    "close": "Close",
+    "save": "Save",
+    "loading": "Loading…",
+    "refresh": "Refresh",
+    "browse": "Browse",
+    "confirm": "Confirm",
+    "page": "Page {page} / {total}"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "projects": "Projects",
+    "globalStack": "Global Stack",
+    "logs": "Logs",
+    "infra": "Infra",
+    "settings": "Settings",
+    "collapse": "Collapse sidebar",
+    "expand": "Expand sidebar"
+  },
   "settings": {
+    "title": "Settings",
     "appearance": "Appearance",
+    "preferences": "Preferences",
     "docker": "Docker",
     "updates": "Updates",
     "data": "Data",
     "theme": "Theme",
+    "themeDescription": "Select the color theme for the application.",
     "language": "Language",
+    "languageDescription": "Choose the display language.",
     "tray": "System Tray",
-    "autostart": "Start at Login"
+    "trayDescription": "Keep Orcker in the system tray when closed.",
+    "autostart": "Start at Login",
+    "autostartDescription": "Launch Orcker automatically on system startup.",
+    "dockerSocket": "Docker Socket Path",
+    "dockerSocketDescription": "Custom path to the Docker socket (leave empty for default).",
+    "exportConfig": "Export Configuration",
+    "exportConfigDescription": "Save your Orcker settings to a JSON file for backup or migration.",
+    "exportButton": "Export Config",
+    "importConfig": "Import Configuration",
+    "importConfigDescription": "Load settings from a previously exported JSON file.",
+    "importButton": "Import Config",
+    "currentVersion": "Current Version",
+    "checkUpdates": "Check for Updates",
+    "updatesAutomatic": "Updates are checked automatically on startup."
+  },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "projects": {
+    "title": "Projects",
+    "newProject": "+ New Project",
+    "emptyTitle": "No projects yet.",
+    "emptyAction": "Add your first project",
+    "badge": "Project",
+    "path": "Path",
+    "viteAuto": "Vite auto",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "notFound": "Project not found",
+    "backToProjects": "Back to Projects",
+    "back": "← Back",
+    "openTerminal": "Open Terminal",
+    "editEnv": "Edit .env",
+    "editPhpIni": "Edit php.ini",
+    "showSupervisor": "Show Supervisor",
+    "hideSupervisor": "Hide Supervisor",
+    "status": {
+      "running": "Running",
+      "partial": "Partial",
+      "unhealthy": "Unhealthy",
+      "stopped": "Stopped"
+    },
+    "actions": {
+      "start": "Start",
+      "stop": "Stop",
+      "starting": "Starting…",
+      "stopping": "Stopping…",
+      "opening": "Opening…",
+      "terminal": "Terminal",
+      "database": "Database",
+      "editCompose": "Edit Compose"
+    },
+    "toast": {
+      "started": "Project started",
+      "stopped": "Project stopped"
+    }
+  },
+  "newProject": {
+    "title": "New Project",
+    "tabImport": "Import",
+    "tabScaffold": "Scaffold",
+    "folder": "Folder",
+    "selectFolder": "Select a folder...",
+    "name": "Project Name",
+    "namePlaceholder": "my-app",
+    "laravelAppPlaceholder": "my-laravel-app",
+    "destination": "Destination Folder",
+    "template": "Template",
+    "progress": "Progress",
+    "running": "Running...",
+    "cancel": "Cancel",
+    "register": "Register Project",
+    "registering": "Registering...",
+    "scaffold": "Scaffold Project",
+    "scaffolding": "Scaffolding...",
+    "networkWarning": "Requires network access — may take several minutes"
+  },
+  "logs": {
+    "title": "Logs",
+    "selectProject": "Select project...",
+    "noProjectSelected": "Select a project to start streaming logs",
+    "loading": "Loading logs…",
+    "empty": "No log lines yet.",
+    "allLevels": "All levels",
+    "filterKeyword": "Filter by keyword...",
+    "clearFilter": "Clear",
+    "sources": {
+      "all": "All",
+      "docker": "Docker",
+      "laravel": "Laravel",
+      "nginx": "Nginx",
+      "supervisor": "Supervisor"
+    }
+  },
+  "global": {
+    "title": "Global Stack",
+    "description": "Shared services for all Laravel projects",
+    "status": {
+      "running": "Running",
+      "stopped": "Stopped",
+      "starting": "Starting...",
+      "stopping": "Stopping...",
+      "unhealthy": "Unhealthy",
+      "error": "Error"
+    },
+    "configure": "Configure",
+    "hideConfig": "Hide config",
+    "restartRequired": "Restart required to apply changes"
+  },
+  "infra": {
+    "title": "Infrastructure",
+    "description": "Manage Docker volumes, images, and templates",
+    "tabs": {
+      "volumes": "Volumes",
+      "images": "Images",
+      "templates": "Templates"
+    }
+  },
+  "volumes": {
+    "title": "Volumes",
+    "name": "Name",
+    "driver": "Driver",
+    "mountpoint": "Mountpoint",
+    "size": "Size",
+    "prune": "Prune Dangling",
+    "pruneConfirm": "Remove all unused volumes. Continue?",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "empty": "No volumes found"
+  },
+  "images": {
+    "title": "Images",
+    "repository": "Repository",
+    "id": "ID",
+    "size": "Size (MB)",
+    "pullPlaceholder": "image:tag",
+    "pull": "Pull",
+    "pulling": "Pulling…",
+    "remove": "Remove",
+    "prune": "Prune Unused",
+    "pruneConfirm": "Remove all unused images. Continue?",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "empty": "No images found"
+  },
+  "templates": {
+    "title": "Templates",
+    "search": "Search templates…",
+    "empty": "No templates found.",
+    "install": "Install",
+    "installing": "Installing…",
+    "installed": "Installed"
+  },
+  "terminal": {
+    "title": "Terminal",
+    "cancel": "Cancel",
+    "empty": "Run a command to see output here."
+  },
+  "destructive": {
+    "title": "Confirm destructive action",
+    "description": "This action cannot be undone. Type {name} to confirm.",
+    "cancel": "Cancel",
+    "run": "Run {label}"
+  },
+  "envEditor": {
+    "title": "Edit .env",
+    "save": "Save .env",
+    "saving": "Saving…",
+    "loading": "Loading .env…",
+    "colKey": "Key",
+    "colValue": ".env value",
+    "colExample": ".env.example",
+    "empty": "(empty)",
+    "missingKeys": "Missing keys from .env.example"
+  },
+  "supervisor": {
+    "title": "Supervisor Workers",
+    "refresh": "Refresh",
+    "refreshing": "Loading…",
+    "loading": "Loading workers…",
+    "empty": "No workers found. Is the supervisor container running?",
+    "restart": "Restart",
+    "restarting": "Restarting…"
+  },
+  "phpini": {
+    "title": "php.ini Editor",
+    "structured": "Structured",
+    "raw": "Raw",
+    "save": "Save php.ini",
+    "saving": "Saving…",
+    "loading": "Loading…"
+  },
+  "database": {
+    "testingDb": "Testing DB:",
+    "createReset": "Create / Reset",
+    "creating": "Creating…",
+    "dump": "Dump",
+    "dumping": "Dumping…",
+    "restore": "Restore",
+    "restoring": "Restoring…",
+    "openCli": "Open CLI",
+    "connecting": "Connecting…",
+    "connectingToPsql": "Connecting to psql…",
+    "noOutput": "No output yet."
+  },
+  "docker": {
+    "info": "Docker Info",
+    "version": "Version",
+    "socket": "Socket",
+    "containers": "Containers",
+    "latency": "Latency",
+    "connected": "Docker",
+    "disconnected": "Disconnected",
+    "connecting": "Connecting…"
+  },
+  "error": {
+    "dockerUnavailable": "Docker is not running",
+    "dockerPermission": "Permission denied",
+    "connectionError": "Connection error",
+    "unexpectedError": "An unexpected error occurred while connecting to Docker.",
+    "reconnecting": "Reconnecting…",
+    "showRaw": "Show raw error"
+  },
+  "commandPalette": {
+    "placeholder": "Search commands...",
+    "noCommands": "No commands found.",
+    "navigate": "navigate",
+    "execute": "execute",
+    "close": "close"
+  },
+  "containerTable": {
+    "name": "Name",
+    "status": "Status",
+    "image": "Image",
+    "ports": "Ports",
+    "empty": "No containers running",
+    "statuses": {
+      "running": "Running",
+      "paused": "Paused",
+      "stopped": "Stopped",
+      "dead": "Dead"
+    }
+  },
+  "composeEditor": {
+    "title": "Edit Compose File",
+    "save": "Save",
+    "saving": "Saving…",
+    "savedToast": "Saved — restart to apply changes?",
+    "configChanges": "Config Changes",
+    "viewHistory": "View History",
+    "loadingDiff": "Loading diff...",
+    "noVersion": "No previous version to compare. Save the file again to start tracking changes.",
+    "versionSoon": "Version history coming soon",
+    "actions": {
+      "restart": "Restart"
+    }
   }
 }

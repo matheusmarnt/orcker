@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { toast } from 'vue-sonner'
+import { useI18n } from 'vue-i18n'
 import { useProjectsStore } from '@/stores/useProjectsStore'
 import { commands } from '@/ipc/bindings'
 import { Button } from '@/components/ui/button'
@@ -8,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import ProjectCard from '@/components/projects/ProjectCard.vue'
 import NewProjectModal from '@/components/projects/NewProjectModal.vue'
 
+const { t } = useI18n()
 const store = useProjectsStore()
 const showModal = ref(false)
 const openingProjectId = ref<string | null>(null)
@@ -37,7 +39,7 @@ async function startProject(projectId: string) {
     if (result.status === 'error') {
       toast.error(result.error.message ?? JSON.stringify(result.error))
     } else {
-      toast.success('Project started')
+      toast.success(t('projects.toast.started'))
     }
   } catch (e) {
     toast.error(e instanceof Error ? e.message : String(e))
@@ -53,7 +55,7 @@ async function stopProject(projectId: string) {
     if (result.status === 'error') {
       toast.error(result.error.message ?? JSON.stringify(result.error))
     } else {
-      toast.success('Project stopped')
+      toast.success(t('projects.toast.stopped'))
     }
   } catch (e) {
     toast.error(e instanceof Error ? e.message : String(e))
@@ -67,9 +69,9 @@ async function stopProject(projectId: string) {
   <div class="p-6">
     <!-- Header -->
     <div class="flex items-center justify-between mb-6">
-      <h1 class="text-2xl font-semibold">Projects</h1>
+      <h1 class="text-2xl font-semibold">{{ t('projects.title') }}</h1>
       <Button v-if="!store.loading && store.projects.length > 0" @click="showModal = true">
-        + New Project
+        {{ t('projects.newProject') }}
       </Button>
     </div>
 
@@ -92,11 +94,11 @@ async function stopProject(projectId: string) {
       class="flex flex-col items-center justify-center py-24 gap-4 text-center"
     >
       <p class="text-4xl">🗂</p>
-      <p class="text-lg font-medium">No projects yet</p>
+      <p class="text-lg font-medium">{{ t('projects.emptyTitle') }}</p>
       <p class="text-sm text-muted-foreground max-w-xs">
-        Import an existing Laravel project or scaffold a new one.
+        {{ t('projects.emptyAction') }}
       </p>
-      <Button @click="showModal = true">+ New Project</Button>
+      <Button @click="showModal = true">{{ t('projects.newProject') }}</Button>
     </div>
 
     <!-- Projects grid -->

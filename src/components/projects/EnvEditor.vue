@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { commands } from '@/ipc/bindings'
 import type { EnvEntry } from '@/ipc/bindings'
 import { Button } from '@/components/ui/button'
@@ -9,6 +10,7 @@ const props = defineProps<{
   projectId: string
 }>()
 
+const { t } = useI18n()
 const envEntries = ref<EnvEntry[]>([])
 const exampleEntries = ref<EnvEntry[]>([])
 const loading = ref(true)
@@ -85,15 +87,15 @@ function addMissingKey(key: string) {
 <template>
   <div class="rounded-md border p-4 space-y-4">
     <div class="flex items-center justify-between mb-2">
-      <h3 class="text-sm font-semibold">Edit .env</h3>
+      <h3 class="text-sm font-semibold">{{ t('envEditor.title') }}</h3>
       <Button size="sm" :disabled="saving" @click="save">
-        {{ saving ? 'Saving…' : 'Save .env' }}
+        {{ saving ? t('envEditor.saving') : t('envEditor.save') }}
       </Button>
     </div>
 
     <!-- Loading state -->
     <div v-if="loading" class="text-sm text-muted-foreground py-4 text-center">
-      Loading .env…
+      {{ t('envEditor.loading') }}
     </div>
 
     <!-- Error state -->
@@ -105,7 +107,7 @@ function addMissingKey(key: string) {
       <!-- Missing keys banner -->
       <div v-if="missingKeys.size > 0" class="rounded border border-yellow-400 bg-yellow-50 dark:bg-yellow-950 p-3 space-y-1">
         <p class="text-xs font-semibold text-yellow-700 dark:text-yellow-300">
-          Keys in .env.example but missing from .env:
+          {{ t('envEditor.missingKeys') }}
         </p>
         <div class="flex flex-wrap gap-2">
           <button
@@ -124,9 +126,9 @@ function addMissingKey(key: string) {
         <table class="w-full text-sm border-collapse">
           <thead>
             <tr class="border-b">
-              <th class="text-left py-1 px-2 text-muted-foreground font-medium w-2/5">Key</th>
-              <th class="text-left py-1 px-2 text-muted-foreground font-medium w-2/5">.env value</th>
-              <th class="text-left py-1 px-2 text-muted-foreground font-medium w-1/5">.env.example</th>
+              <th class="text-left py-1 px-2 text-muted-foreground font-medium w-2/5">{{ t('envEditor.colKey') }}</th>
+              <th class="text-left py-1 px-2 text-muted-foreground font-medium w-2/5">{{ t('envEditor.colValue') }}</th>
+              <th class="text-left py-1 px-2 text-muted-foreground font-medium w-1/5">{{ t('envEditor.colExample') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -159,7 +161,7 @@ function addMissingKey(key: string) {
                     class="text-xs font-mono text-muted-foreground"
                     :title="exampleValueMap.get(entry.key)"
                   >
-                    {{ exampleValueMap.get(entry.key) || '(empty)' }}
+                    {{ exampleValueMap.get(entry.key) || t('envEditor.empty') }}
                   </span>
                   <span v-else class="text-xs text-muted-foreground italic">—</span>
                 </td>

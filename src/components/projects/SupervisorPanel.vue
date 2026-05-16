@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { commands } from '@/ipc/bindings'
 import type { SupervisorWorker } from '@/ipc/bindings'
 import { Button } from '@/components/ui/button'
@@ -11,6 +12,7 @@ const props = defineProps<{
   supervisorContainer: string
 }>()
 
+const { t } = useI18n()
 const workers = ref<SupervisorWorker[]>([])
 const loading = ref(false)
 const restarting = ref<Set<string>>(new Set())
@@ -51,18 +53,18 @@ onMounted(load)
 <template>
   <div class="rounded-md border p-4 space-y-4">
     <div class="flex items-center justify-between">
-      <h3 class="text-sm font-semibold">Supervisor Workers</h3>
+      <h3 class="text-sm font-semibold">{{ t('supervisor.title') }}</h3>
       <Button variant="outline" size="sm" :disabled="loading" @click="load">
-        {{ loading ? 'Loading…' : 'Refresh' }}
+        {{ loading ? t('supervisor.refreshing') : t('supervisor.refresh') }}
       </Button>
     </div>
 
     <div v-if="loading && workers.length === 0" class="text-sm text-muted-foreground py-4 text-center">
-      Loading workers…
+      {{ t('supervisor.loading') }}
     </div>
 
     <div v-else-if="workers.length === 0" class="text-sm text-muted-foreground py-4 text-center">
-      No workers found. Is the supervisor container running?
+      {{ t('supervisor.empty') }}
     </div>
 
     <ul v-else class="space-y-2">
@@ -81,7 +83,7 @@ onMounted(load)
           :disabled="restarting.has(worker.name)"
           @click="restart(worker.name)"
         >
-          {{ restarting.has(worker.name) ? 'Restarting…' : 'Restart' }}
+          {{ restarting.has(worker.name) ? t('supervisor.restarting') : t('supervisor.restart') }}
         </Button>
       </li>
     </ul>

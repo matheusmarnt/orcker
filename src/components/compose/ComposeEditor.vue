@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import MonacoEditor from 'monaco-editor-vue3'
 import { configureMonacoYaml } from 'monaco-yaml'
 import * as monaco from 'monaco-editor'
@@ -7,6 +8,8 @@ import { commands } from '@/ipc/bindings'
 import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
 import ComposeErrorPanel from './ComposeErrorPanel.vue'
+
+const { t } = useI18n()
 
 // Configure monaco-yaml once at module scope (not in setup())
 // This avoids re-configuring on every component mount
@@ -83,9 +86,9 @@ async function handleSave() {
         props.projectStatus,
       )
       if (isRunning) {
-        toast('Saved — restart to apply changes?', {
+        toast(t('composeEditor.savedToast'), {
           action: {
-            label: 'Restart',
+            label: t('composeEditor.actions.restart'),
             onClick: () => emit('restart'),
           },
         })
@@ -110,7 +113,7 @@ async function handleSave() {
     <div class="relative z-10 flex h-full w-full max-w-2xl flex-col bg-background shadow-xl">
       <!-- Header -->
       <div class="flex items-center justify-between border-b border-border px-4 py-3">
-        <h2 class="text-base font-semibold">Edit Compose File</h2>
+        <h2 class="text-base font-semibold">{{ t('composeEditor.title') }}</h2>
         <Button variant="ghost" size="sm" @click="emit('close')">✕</Button>
       </div>
 
@@ -136,7 +139,7 @@ async function handleSave() {
 
         <!-- Footer actions -->
         <div class="flex items-center justify-end gap-2 border-t border-border px-4 py-3">
-          <Button variant="outline" size="sm" @click="emit('close')">Cancel</Button>
+          <Button variant="outline" size="sm" @click="emit('close')">{{ t('common.cancel') }}</Button>
           <Button
             size="sm"
             :disabled="hasErrors || isSaving"
@@ -147,7 +150,7 @@ async function handleSave() {
               v-if="isSaving"
               class="mr-1.5 h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent"
             />
-            {{ isSaving ? 'Saving…' : 'Save' }}
+            {{ isSaving ? t('composeEditor.saving') : t('composeEditor.save') }}
           </Button>
         </div>
       </template>

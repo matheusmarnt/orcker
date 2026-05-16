@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { X } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
 import AppearanceSection from './AppearanceSection.vue'
 import DockerSection from './DockerSection.vue'
 import PreferencesSection from './PreferencesSection.vue'
@@ -10,16 +11,18 @@ import DataSection from './DataSection.vue'
 defineProps<{ open: boolean }>()
 const emit = defineEmits<{ close: [] }>()
 
+const { t } = useI18n()
+
 type Section = 'appearance' | 'preferences' | 'docker' | 'updates' | 'data'
 
 const activeSection = ref<Section>('appearance')
 
-const sections: { key: Section; label: string }[] = [
-  { key: 'appearance', label: 'Appearance' },
-  { key: 'preferences', label: 'Preferences' },
-  { key: 'docker', label: 'Docker' },
-  { key: 'updates', label: 'Updates' },
-  { key: 'data', label: 'Data' },
+const sections: { key: Section; i18nKey: string }[] = [
+  { key: 'appearance', i18nKey: 'settings.appearance' },
+  { key: 'preferences', i18nKey: 'settings.preferences' },
+  { key: 'docker', i18nKey: 'settings.docker' },
+  { key: 'updates', i18nKey: 'settings.updates' },
+  { key: 'data', i18nKey: 'settings.data' },
 ]
 
 const sectionComponents = {
@@ -42,7 +45,7 @@ const sectionComponents = {
         <!-- Left sidebar -->
         <nav class="flex w-44 flex-shrink-0 flex-col border-r border-border bg-background p-2">
           <p class="mb-2 px-3 pt-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Settings
+            {{ t('settings.title') }}
           </p>
           <button
             v-for="section in sections"
@@ -55,14 +58,14 @@ const sectionComponents = {
             ]"
             @click="activeSection = section.key"
           >
-            {{ section.label }}
+            {{ t(section.i18nKey) }}
           </button>
         </nav>
 
         <!-- Right panel -->
         <div class="flex flex-1 flex-col overflow-hidden">
           <div class="flex items-center justify-between border-b border-border px-6 py-4">
-            <h2 class="text-base font-semibold capitalize">{{ activeSection }}</h2>
+            <h2 class="text-base font-semibold capitalize">{{ t('settings.' + activeSection) }}</h2>
             <button
               class="rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
               @click="emit('close')"
