@@ -93,6 +93,10 @@ pub fn diff_last_two(repo: &Repository) -> Result<String, AppError> {
     let mut output = String::new();
     diff.print(git2::DiffFormat::Patch, |_, _, line| {
         use std::fmt::Write;
+        let origin = line.origin();
+        if ['+', '-', ' '].contains(&origin) {
+            let _ = write!(output, "{}", origin);
+        }
         let _ = write!(
             output,
             "{}",
