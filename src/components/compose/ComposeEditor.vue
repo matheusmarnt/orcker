@@ -70,7 +70,7 @@ onMounted(async () => {
   if (result.status === 'ok') {
     content.value = result.data
   } else {
-    toast.error(`Failed to load compose file: ${(result.error as any).message ?? result.error}`)
+    toast.error(`Failed to load compose file: ${String(result.error)}`)
   }
   isLoading.value = false
 })
@@ -95,7 +95,7 @@ async function handleSave() {
       }
       emit('close')
     } else {
-      toast.error(`Save failed: ${(result.error as any).message ?? result.error}`)
+      toast.error(`Save failed: ${String(result.error)}`)
     }
   } finally {
     isSaving.value = false

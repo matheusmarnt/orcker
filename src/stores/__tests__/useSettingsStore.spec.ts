@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 
 // Mock @vueuse/core useColorMode to avoid DOM dependency in Node test env
-vi.mock('@vueuse/core', () => {
-  const { ref } = require('vue')
+vi.mock('@vueuse/core', async () => {
+  const { ref } = await import('vue')
   const mode = ref('auto')
   return {
     useColorMode: () => mode,
