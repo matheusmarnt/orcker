@@ -1,10 +1,11 @@
 name: Release
 
+# Inherited from Yerd and disabled in the Orcker fork: this pipeline signs with
+# Yerd's minisign key, uploads to Yerd's Bunny CDN and announces on Yerd's Discord.
+# Firing it from an Orcker tag would publish into someone else's infrastructure, so
+# the tag trigger is removed until Orcker has its own release channel.
 on:
-  push:
-    tags:
-      - "v[0-9]+.[0-9]+.[0-9]+" # finals,    e.g. v2.0.2
-      - "v[0-9]+.[0-9]+.[0-9]+-*" # prereleases, e.g. v2.0.2-rc.1
+  workflow_dispatch:
 
 # Every job may need to read/write releases; set it once at the top.
 permissions:

@@ -1,13 +1,11 @@
 name: SonarQube
 
-# Submit analysis to SonarQube on every PR targeting main and on every push to
-# main. PR runs let SonarQube decorate the PR / evaluate the new-code quality
-# gate; main runs keep the project's overall measures current.
+# Inherited from Yerd and disabled in the Orcker fork: the SONAR_HOST_URL /
+# SONAR_PROJECT_KEY / SONAR_TOKEN secrets point at Yerd's SonarQube project and do
+# not exist here, so the automatic triggers only produced red runs. Manual dispatch
+# is kept so the job can be re-enabled once Orcker has its own Sonar project.
 on:
-  pull_request:
-    branches: [main]
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 # One Sonar run per ref; newer events cancel older in-progress runs.
 concurrency:

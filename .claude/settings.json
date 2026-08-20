@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cargo *)",
+      "Bash(rustup *)",
+      "Bash(npm --prefix apps/orcker-gui *)",
+      "Bash(rg *)",
+      "Bash(scripts/gate.sh*)",
+      "Bash(scripts/surface-check.sh*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git checkout -b *)",
+      "Bash(docker compose *)",
+      "Bash(docker *)"
+    ],
+    "deny": [
+      "Bash(git push*)",
+      "Bash(gh release *)",
+      "Bash(cargo publish*)",
+      "Read(./.env*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=$(jq -r '.tool_input.file_path // empty'); [[ \"$f\" == *.rs ]] && cargo fmt -- \"$f\" 2>/dev/null; true"
+          }
+        ]
+      }
+    ]
+  }
+}

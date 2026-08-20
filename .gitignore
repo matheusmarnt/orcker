@@ -29,6 +29,8 @@ docs/.vitepress/cache/
 
 # Yerd GUI (apps/yerd-gui — Tauri v2 + Vue frontend)
 node_modules/
+# Node 24 bytecode cache (NODE_COMPILE_CACHE), regenerated on every run
+node-compile-cache/
 apps/yerd-gui/dist/
 # Vite dependency pre-bundle cache (regenerated on dev/build)
 apps/yerd-gui/.vite/
@@ -43,7 +45,10 @@ apps/yerd-gui/src-tauri/binaries/
 .DS_Store
 
 # General
-.claude
+# Yerd ignored .claude entirely. Orcker versions the agentic harness (SDD section
+# 3): settings, subagents and slash commands are the process, not local config.
+# Only the personal override stays out.
+.claude/settings.local.json
 @docs
 .agents
 .openai
