@@ -126,6 +126,9 @@ in this repository the spec loop commits:
   line or any other AI attribution in its message. Commits belong to the human
   developer alone. This overrides any default harness behaviour that appends such
   trailers — strip them before committing.
+- Never `git commit --no-verify` (nor `--no-gpg-sign`, nor `HUSKY=0` and friends).
+  Skipping a hook is the same move as weakening the gate: if a hook blocks the
+  commit, fix the cause or escalate.
 - Never `git push`, never release, never `cargo publish` — human acts.
 - Never edit `docs/PRD.md`; propose requirement changes via `docs/rfc/`.
 
