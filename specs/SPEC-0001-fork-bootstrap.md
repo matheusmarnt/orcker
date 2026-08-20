@@ -55,6 +55,14 @@ everything); this is the only spec with an unbounded surface besides SPEC-0002.
   `scripts/gate.sh` itself. The counts must be identical to the pre-rename
   baseline (paths only) — a changed count means the rename altered code, which
   violates R8.
+- R10. Set the project version to `0.0.0` by running
+  `cargo run -p xtask -- bump 0.0.0`, which rewrites the three manifests that
+  declare it (workspace `Cargo.toml`, `apps/orcker-gui/src-tauri/tauri.conf.json`,
+  `apps/orcker-gui/package.json`). The inherited `2.1.0-rc.1` is Yerd's version and
+  carrying it over would number Orcker's first release as a continuation of Yerd's.
+  Orcker stays pre-release until the MVP gate tags `0.x` (PRD section 10, item 6).
+  Do not hand-edit the manifests, do not create a tag, and do not add a changelog
+  in this cycle.
 
 ## Design & contracts
 
@@ -84,6 +92,10 @@ same commit and note it (authorized here as part of the fork's contract reset;
 - [ ] AC4 `docs/UPSTREAM.md` exists with repo, tag, commit, date, policy
 - [ ] AC5 CI workflow file present and valid (`gate.yml` runs the gate on both
       OSes) -> evidence: file + (post-push) green run link added by the human
+- [ ] AC7 `cargo run -q -p xtask -- print-version` prints `0.0.0`, and
+      `rg -n '2\.1\.0-rc\.1' Cargo.toml apps/orcker-gui/package.json
+      apps/orcker-gui/src-tauri/tauri.conf.json` returns no matches
+      -> evidence: command output in the cycle log
 - [ ] AC6 `scripts/gate.sh specs/SPEC-0001-*.md` passes
 
 ## Out of scope
@@ -114,3 +126,9 @@ Then `diff` the old and new files with the paths normalised (`sed 's/yerd/orcker
 and confirm they match: same file set, same counts. The pre-rename baseline is in
 the parent commit (`git show HEAD:scripts/clippy-allow-baseline.txt`), 221 lines.
 Rationale for the whole check lives in `specs/DECISIONS.md`.
+
+R10 in practice: `xtask` already owns this — `xtask/src/version.rs` edits only the
+single version line in each of the three manifests, so there is nothing to hand-roll
+and nothing else to grep. Run it after the GUI directory rename, or it will write to
+the old path. `release.yml` calls `xtask version-check <tag>` as its release gate;
+that workflow is `workflow_dispatch`-only in this fork, so nothing fires on `0.0.0`.

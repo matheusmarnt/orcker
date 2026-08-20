@@ -12,6 +12,20 @@ Deviations, clarifications and trade-offs recorded by implementation cycles
 
 ## 2026-08-20 · bootstrap (pre-cycle, no spec)
 
+- Decision: the project version becomes `0.0.0` and stays there until the MVP gate.
+  Added to SPEC-0001 as R10 (with AC7), executed via `cargo xtask bump 0.0.0`.
+- Why: the workspace inherited Yerd's `2.1.0-rc.1`, and no spec touched it. Shipping
+  from there would number Orcker's first release as a continuation of Yerd's, while
+  PRD section 10 item 6 releases the MVP as `0.x` — a lower number, which every
+  semver tool reads as a downgrade. `0.0.0` says "nothing released yet" honestly.
+- Impact: Phases 0 and 1 carry no tags at all; the first tag is the MVP `0.x` with a
+  changelog (PRD section 10.6, FR-130). `release.yml` gates on
+  `xtask version-check <tag>` and is `workflow_dispatch`-only here, so nothing fires.
+  Folded into SPEC-0001 rather than a separate spec because that cycle already
+  rewrites every `Cargo.toml`; a second pass over the same files would be waste.
+
+## 2026-08-20 · bootstrap (pre-cycle, no spec)
+
 - Decision: replace `scripts/gate.sh` step 5/6. It grepped `crates` and `bin` for
   `.unwrap()` / `.expect(` / `panic!(` / `todo!(` / `dbg!(`, assuming all test code
   lives in `tests/` or `*_test.rs`. The inherited codebase puts tests in inline
