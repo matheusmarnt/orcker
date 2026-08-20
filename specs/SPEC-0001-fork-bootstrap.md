@@ -6,7 +6,7 @@ covers: [FR-001]
 depends_on: []
 surface:
   - ./
-status: draft
+status: approved
 attempts: 0
 ---
 
