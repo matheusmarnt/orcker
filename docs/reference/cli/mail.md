@@ -1,7 +1,7 @@
 # Mail
 
-The `yerd mail` commands inspect emails captured by Yerd's built-in mail-capture
-SMTP server. The server runs inside the [`yerdd` daemon](../../guide/daemon),
+The `orcker mail` commands inspect emails captured by Orcker's built-in mail-capture
+SMTP server. The server runs inside the [`orckerd` daemon](../../guide/daemon),
 enabled by default on `127.0.0.1:2525`; point an app's mailer at it and every
 message it sends is stored locally for inspection. The [Mail Capture
 guide](../../guide/mail) covers the model and how to wire an app up; this page is
@@ -17,23 +17,23 @@ regardless of whether the listener is currently bound.
 
 | Command | Description |
 | --- | --- |
-| `yerd mail list` | List captured emails (newest first). |
-| `yerd mail show <ID>` | Show one captured email's headers and body. |
-| `yerd mail clear` | Delete every captured email. |
+| `orcker mail list` | List captured emails (newest first). |
+| `orcker mail show <ID>` | Show one captured email's headers and body. |
+| `orcker mail clear` | Delete every captured email. |
 
 ```sh
-yerd mail list
-yerd mail show 000003
-yerd mail clear
+orcker mail list
+orcker mail show 000003
+orcker mail clear
 ```
 
-## `yerd mail list`
+## `orcker mail list`
 
 Prints a tab-separated table of every captured email, **newest first**, with three
 columns: `ID`, `FROM`, and `SUBJECT`.
 
 ```sh
-yerd mail list
+orcker mail list
 # ID      FROM                        SUBJECT
 # 000003  Example <hi@example.com>    Password Reset
 # 000002  shop@acme.test              Your order shipped
@@ -48,13 +48,13 @@ yerd mail list
   folded or multi-line header can't break the table.
 - When nothing has been captured, the command prints `no captured emails`.
 
-## `yerd mail show <ID>`
+## `orcker mail show <ID>`
 
 Shows one captured email by id. The `<ID>` is the value from the `ID` column of
-`yerd mail list`.
+`orcker mail list`.
 
 ```sh
-yerd mail show 000003
+orcker mail show 000003
 # From:    Example <hi@example.com>
 # To:      you@app.test
 # Subject: Password Reset
@@ -78,19 +78,19 @@ inline images and all - open it in the **Mail** view of the [desktop
 app](../../guide/desktop-app), which renders it in a sandboxed viewer.
 :::
 
-## `yerd mail clear`
+## `orcker mail clear`
 
 Deletes **every** captured email and prints `ok`.
 
 ```sh
-yerd mail clear
+orcker mail clear
 ```
 
 This removes all stored `.eml` files. The id counter is **not** reset, so a later
 capture never reuses the id of a cleared message.
 
 ::: warning No per-message delete from the CLI
-`yerd mail clear` is all-or-nothing. To remove individual messages, use the
+`orcker mail clear` is all-or-nothing. To remove individual messages, use the
 **Mail** view in the [desktop app](../../guide/desktop-app).
 :::
 
@@ -99,13 +99,13 @@ capture never reuses the id of a cleared message.
 Every command accepts the global `--json` flag for machine-readable output:
 
 ```sh
-yerd mail list --json          # {"type":"mails","mails":[ ... ]}
-yerd mail show 000003 --json   # {"type":"mail","mail":{ ... }}
+orcker mail list --json          # {"type":"mails","mails":[ ... ]}
+orcker mail show 000003 --json   # {"type":"mail","mail":{ ... }}
 ```
 
-`yerd mail list --json` prints the IPC response envelope
+`orcker mail list --json` prints the IPC response envelope
 `{"type":"mails","mails":[ ... ]}`, where each element of `mails` is one captured
-email's metadata (`id`, `from`, `to`, `subject`, `date_epoch`, `read`). `yerd mail
+email's metadata (`id`, `from`, `to`, `subject`, `date_epoch`, `read`). `orcker mail
 show <id> --json` prints `{"type":"mail","mail":{ ... }}`, where `mail` is the full
 decoded message, including all `headers`, both the `html_body` and `text_body`
 (whichever the message carries), and `attachments` when the message has
@@ -116,4 +116,4 @@ as Unix epoch seconds, or `0` when absent/unparseable.
 
 - [Mail Capture guide](../../guide/mail) - what capture is and how to point an app at it
 - [Configuration Reference](../configuration) - the `[mail]` table (`enabled`, `port`)
-- [yerd-mail](../../developer/crates/yerd-mail) - the crate behind these commands
+- [orcker-mail](../../developer/crates/orcker-mail) - the crate behind these commands

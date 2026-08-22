@@ -15,21 +15,21 @@ Two shapes, one mechanism:
 
 | Command | Description | Example |
 | --- | --- | --- |
-| `yerd route add <SITE> <PREFIX> <TARGET>` | Add a rule: URIs under `<PREFIX>` with no real file are handled by `<TARGET>`. | `yerd route add portal /api api/index.php` |
-| `yerd route remove <SITE> <PREFIX>` | Remove a rule by its path prefix. | `yerd route remove portal /api` |
-| `yerd route list [SITE]` | List routing rules, optionally for one site. | `yerd route list portal` |
+| `orcker route add <SITE> <PREFIX> <TARGET>` | Add a rule: URIs under `<PREFIX>` with no real file are handled by `<TARGET>`. | `orcker route add portal /api api/index.php` |
+| `orcker route remove <SITE> <PREFIX>` | Remove a rule by its path prefix. | `orcker route remove portal /api` |
+| `orcker route list [SITE]` | List routing rules, optionally for one site. | `orcker route list portal` |
 
 ```sh
 # A legacy portal with a Yii API mounted at /api
-yerd route add portal /api api/index.php
+orcker route add portal /api api/index.php
 curl -X POST http://portal.test/api/user/login   # → api/index.php
 
 # A Vite/Vue/React build: deep links serve the app shell
-yerd route add dashboard / index.html
+orcker route add dashboard / index.html
 curl http://dashboard.test/settings/profile      # → index.html
 
-yerd route list
-yerd route remove portal /api
+orcker route list
+orcker route remove portal /api
 ```
 
 ## How a rule is applied
@@ -78,9 +78,9 @@ stray `index.html`.
 
 | | What it does |
 | --- | --- |
-| `yerd route` | Unmatched URIs under a prefix → **a file inside the site**. |
-| [`yerd proxy`](./proxies) | A whole host or a path prefix → **a separate running service** over HTTP. |
-| `yerd front-controller <site> on\|off` | Whether requests may execute a named `.php` directly, or must funnel through the site's single `index.php`. |
+| `orcker route` | Unmatched URIs under a prefix → **a file inside the site**. |
+| [`orcker proxy`](./proxies) | A whole host or a path prefix → **a separate running service** over HTTP. |
+| `orcker front-controller <site> on\|off` | Whether requests may execute a named `.php` directly, or must funnel through the site's single `index.php`. |
 
 Routing rules work in both front-controller modes. When a site has both a proxy
 path rule and a routing rule on the same prefix, the proxy rule wins: it
@@ -88,7 +88,7 @@ intercepts before PHP resolution runs at all.
 
 ## Where rules are stored
 
-In `yerd.toml`'s `[route_rules]` table (schema v21+), keyed by site name for
+In `orcker.toml`'s `[route_rules]` table (schema v21+), keyed by site name for
 linked sites and by document root for parked ones - the same split
 [`[proxy_rules]`](./proxies) and `[domains]` use. Rules survive a site being
 linked or unlinked, and are dropped when its parked root is un-parked. Changes

@@ -9,13 +9,13 @@ const { Layout } = DefaultTheme
 
 <template>
   <Layout>
-    <!-- Social-card-style hero lockup: logo + "Yerd" wordmark, then the headline
+    <!-- Social-card-style hero lockup: logo + "Orcker" wordmark, then the headline
          with a blue accent on "without the friction." -->
     <template #home-hero-info>
       <h1 class="heading">
         <span class="hero-brand">
           <img class="hero-logo" src="/logo.svg" alt="" />
-          <span class="name">Yerd</span>
+          <span class="name">Orcker</span>
         </span>
         <span class="text"
           >Local PHP, <span class="accent">without the friction.</span></span
@@ -32,12 +32,12 @@ const { Layout } = DefaultTheme
       <img
         class="hero-shot hero-shot--light"
         src="/images/overview-light.png"
-        alt="The Yerd desktop app"
+        alt="The Orcker desktop app"
       />
       <img
         class="hero-shot hero-shot--dark"
         src="/images/overview-dark.png"
-        alt="The Yerd desktop app"
+        alt="The Orcker desktop app"
       />
     </template>
     <template #layout-bottom>

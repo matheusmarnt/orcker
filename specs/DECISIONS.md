@@ -69,3 +69,61 @@ Deviations, clarifications and trade-offs recorded by implementation cycles
   subagents and slash commands ARE the process — ignoring them means the harness
   lives on one machine and the SDD loop is unreproducible for anyone else.
 - Impact: `.gitignore`; the baseline commit now carries the six `.claude/` files.
+
+## 2026-08-22 · SPEC-0001 (cycle)
+
+- Decision: amend AC3's exclusion set mid-cycle, adding `CLAUDE.md`,
+  `docs/PRD.md`, `docs/SDD.md`, `specs/**` and `**/package-lock.json` to the
+  three files it already exempted. Approved by the human during the cycle.
+- Why: as written, AC3 was unsatisfiable. Meeting it required editing
+  `docs/PRD.md`, which `CLAUDE.md` forbids outright, and rewriting the fork's own
+  lineage and process documents, which name Yerd deliberately, to the point of
+  retitling SPEC-0001 itself "Rebrand the Orcker fork". The two `package-lock.json`
+  hits are the substring `YerD` inside the npm integrity hash
+  `sha512-NxnomyxYerDh5n4i...`, editable only by corrupting the lockfile. The
+  amendment removes an impossible clause; the product outcome is unchanged, and
+  the supervisor verified nothing in `crates/`, `bin/`, `apps/`, `xtask/`,
+  `scripts/`, `packaging/`, `.github/` or the docs site still carries the brand.
+- Impact: AC3 in `specs/SPEC-0001-fork-bootstrap.md` now carries the wider glob set
+  and its own rationale inline. The canonical check is `git grep`, not `rg`: two
+  `rg` runs of the same query deadlocked in `unix_stream_data_wait` at 0s CPU in
+  this environment.
+
+- Decision: delete `.github/workflows/sonarqube.yml` alongside the
+  `sonar-project.properties` that R5 names.
+- Why: the workflow consumes only that file. Keeping it would leave a permanently
+  red CI job pointed at a deleted config.
+- Impact: one workflow removed beyond R5's literal list.
+
+- Decision: rewrite upstream URLs mechanically and leave them pointing at Orcker
+  paths that do not exist yet.
+- Why: AC3 forces the brand out of `release.yml`, `build-cdn.yml`, `cdn-sync.yml`,
+  `xtask/src/cdn.rs`, `scripts/release.sh` and `packaging/arch/*`; choosing the real
+  hosts and repositories is a product decision outside a rename spec. Every one of
+  those workflows is `workflow_dispatch`-only, so nothing fires meanwhile.
+- Impact: queued as `specs/SPEC-0031-repoint-release-and-cdn-automation.md`
+  (`draft`). The first release attempt fails until that spec lands.
+
+- Decision: leave the binary GUI icons as the inherited "Y" artwork.
+- Why: they carry no `yerd` string, so AC3 passes, and new visual assets are
+  explicitly out of scope for SPEC-0001. Replacing `.icns` / `.ico` / the
+  `Square*Logo` and Android mipmap sets with "text placeholders" is not possible
+  in those formats.
+- Impact: the four `.svg` source marks became text placeholders; the rendered
+  binaries did not. Queued as
+  `specs/SPEC-0029-replace-binary-brand-icons.md` (`draft`).
+
+- Decision: repair two tests rather than the code they cover.
+- Why: `dns_probe::tests::query_encodes_probe_name_and_a_question` hard-coded DNS
+  wire offsets that shifted by 2 bytes when `PROBE_LABEL` grew from
+  `yerd-resolver-probe` to `orcker-resolver-probe`; `compose_query` is
+  length-driven and was already correct. `self_update::tests::current_version_parses`
+  asserted `current_version() != 0.0.0`, but `0.0.0` is that function's
+  "unparseable semver" fallback sentinel and, after R10, also the real pinned
+  version, so the guard could no longer express its own intent.
+- Impact: no production code changed. The supervisor confirmed neither test is
+  weakened: the DNS test still pins the exact byte layout, and
+  `assert!(declared.is_ok())` is exactly what the `!=` sentinel was a proxy for.
+  The `directories` qualifier also moved `io/yerd/Yerd` -> `io/orcker/Orcker`, so
+  pre-existing local Yerd state is orphaned rather than migrated. Intended for a
+  fork; no migration path exists or was tested.

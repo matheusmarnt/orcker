@@ -1,18 +1,18 @@
 # Mail Capture
 
-Yerd ships a built-in **mail-capture SMTP server** - a local sink that catches
+Orcker ships a built-in **mail-capture SMTP server** - a local sink that catches
 every email your apps "send" and keeps it for you to inspect, Herd-style. Point
 your app's mailer at it and password resets, order confirmations, and queued
-notifications land in Yerd instead of a real inbox. Nothing is ever relayed:
+notifications land in Orcker instead of a real inbox. Nothing is ever relayed:
 **captured mail never leaves your machine**.
 
 It's the local-dev counterpart to Mailpit / MailHog / Mailtrap, except there's
-nothing to install or run - it's part of the [`yerdd` daemon](./daemon) that
+nothing to install or run - it's part of the [`orckerd` daemon](./daemon) that
 already runs your sites, PHP, HTTPS, and DNS.
 
 ## In the desktop app
 
-<ThemedImage light="/images/mail-light.png" dark="/images/mail-dark.png" alt="The Mail page in the Yerd desktop app" />
+<ThemedImage light="/images/mail-light.png" dark="/images/mail-dark.png" alt="The Mail page in the Orcker desktop app" />
 
 The [desktop app](./desktop-app) surfaces mail capture on its own **Mail** page,
 under the **Developer** group in the sidebar. It's the richest way to drive
@@ -43,9 +43,9 @@ haven't looked at yet.
 # Mail capture is already on (loopback SMTP on 127.0.0.1:2525).
 # Point your app's mailer at it, send a mail, then:
 
-yerd mail list          # newest-first table of captured emails
-yerd mail show 000003   # one email's headers + body
-yerd mail clear         # delete everything captured so far
+orcker mail list          # newest-first table of captured emails
+orcker mail show 000003   # one email's headers + body
+orcker mail clear         # delete everything captured so far
 ```
 
 ## On by default
@@ -66,10 +66,10 @@ person.
 ::: tip Bind failure is non-fatal
 If port `2525` is already in use (another capture tool, say), the daemon logs a
 warning and runs with capture *not listening* - your sites are never taken down by
-a busy mail port. `yerd status` reports whether the listener actually bound.
+a busy mail port. `orcker status` reports whether the listener actually bound.
 :::
 
-## Pointing an app at Yerd
+## Pointing an app at Orcker
 
 Configure your app's mailer to talk plain SMTP to `127.0.0.1:2525` with no
 authentication and no encryption. For a Laravel app, that's a four-line change to
@@ -99,18 +99,18 @@ Three subcommands cover the common loop. See the
 [Mail CLI reference](../reference/cli/mail) for the precise output shapes.
 
 ```sh
-yerd mail list
+orcker mail list
 # ID      FROM                        SUBJECT
 # 000003  Example <hi@example.com>    Password Reset
 # 000002  shop@acme.test              Your order shipped
 # 000001  no-reply@acme.test          Welcome
 ```
 
-`yerd mail list` prints a newest-first table of `ID`, `FROM`, and `SUBJECT`. Pass
-an id to `yerd mail show` to read one message:
+`orcker mail list` prints a newest-first table of `ID`, `FROM`, and `SUBJECT`. Pass
+an id to `orcker mail show` to read one message:
 
 ```sh
-yerd mail show 000003
+orcker mail show 000003
 # From:    Example <hi@example.com>
 # To:      you@app.test
 # Subject: Password Reset
@@ -120,12 +120,12 @@ yerd mail show 000003
 
 `show` prints the headers and the **text body**. A message that carries only an
 HTML body (no plain-text part) shows a short note pointing you at the GUI viewer,
-which can render it. `yerd mail clear` deletes every captured email.
+which can render it. `orcker mail clear` deletes every captured email.
 
 ::: tip Machine-readable output
-Like every `yerd` command, the mail commands accept the global `--json` flag for
-scripting: `yerd mail list --json` emits the captured-email metadata as JSON, and
-`yerd mail show <id> --json` emits the full decoded message (headers and both
+Like every `orcker` command, the mail commands accept the global `--json` flag for
+scripting: `orcker mail list --json` emits the captured-email metadata as JSON, and
+`orcker mail show <id> --json` emits the full decoded message (headers and both
 bodies).
 :::
 
@@ -138,7 +138,7 @@ messages, clear everything, open **file attachments**, and follow **http(s) /
 mailto / tel** links in both HTML and plain-text bodies (they open in your OS
 browser / handler).
 
-<ThemedImage light="/images/mails-light.png" dark="/images/mails-dark.png" alt="A captured email open in the Yerd Mails viewer" />
+<ThemedImage light="/images/mails-light.png" dark="/images/mails-dark.png" alt="A captured email open in the Orcker Mails viewer" />
 
 The HTML body is sanitized with **DOMPurify** and rendered in a **Shadow DOM**
 in the Mails window (so link clicks work reliably on macOS WKWebView). Openable
@@ -169,7 +169,7 @@ which keeps the config in sync.
 ::: warning Changes apply on the next daemon restart
 Changing the port or toggling capture on/off is saved immediately but takes effect
 on the **next daemon start/restart** - there's no hot rebind. Run
-`yerd restart daemon` to apply a change right away.
+`orcker restart daemon` to apply a change right away.
 :::
 
 Captured mail is stored under the daemon's data directory at `<data>/mail`, one
@@ -183,5 +183,5 @@ capture is turned off.
 - [Mail CLI reference](../reference/cli/mail) - `list`, `show`, `clear` in detail
 - [The Desktop App](./desktop-app) - where the Mail view and Mails viewer live
 - [Configuration Reference](../reference/configuration) - the `[mail]` table
-- [The Daemon](./daemon) - how `yerdd` binds the capture server
-- Developer deep-dive: [yerd-mail](../developer/crates/yerd-mail)
+- [The Daemon](./daemon) - how `orckerd` binds the capture server
+- Developer deep-dive: [orcker-mail](../developer/crates/orcker-mail)

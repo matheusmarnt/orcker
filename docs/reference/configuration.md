@@ -1,26 +1,26 @@
 # Configuration Reference
 
-Yerd stores all of its persistent state in a single TOML file: `yerd.toml`. This page documents where that file lives, every field in the schema, the defaults, how schema versioning and migration work, and how saves stay safe. Everything here is grounded in the [`yerd-config`](../developer/crates/yerd-config) crate.
+Orcker stores all of its persistent state in a single TOML file: `orcker.toml`. This page documents where that file lives, every field in the schema, the defaults, how schema versioning and migration work, and how saves stay safe. Everything here is grounded in the [`orcker-config`](../developer/crates/orcker-config) crate.
 
 ::: tip You rarely edit this by hand
-The daemon (`yerdd`) owns `yerd.toml`. Day to day you change it through the [CLI](./cli/) or the [desktop app](../guide/desktop-app), and the daemon rewrites the file atomically. Hand-editing works too - Yerd parses and re-validates the file on every load - but the CLI is the safer path.
+The daemon (`orckerd`) owns `orcker.toml`. Day to day you change it through the [CLI](./cli/) or the [desktop app](../guide/desktop-app), and the daemon rewrites the file atomically. Hand-editing works too - Orcker parses and re-validates the file on every load - but the CLI is the safer path.
 :::
 
 ## Where the config file lives
 
-The file is always named `yerd.toml` and sits in your per-OS, user-owned config directory:
+The file is always named `orcker.toml` and sits in your per-OS, user-owned config directory:
 
 | OS    | Config directory                          | Full path                                              |
 | ----- | ----------------------------------------- | ------------------------------------------------------ |
-| macOS | `~/Library/Application Support/io.yerd.Yerd` | `~/Library/Application Support/io.yerd.Yerd/yerd.toml` |
-| Linux | `$XDG_CONFIG_HOME/yerd` (default `~/.config/yerd`) | `~/.config/yerd/yerd.toml`                       |
+| macOS | `~/Library/Application Support/io.orcker.Orcker` | `~/Library/Application Support/io.orcker.Orcker/orcker.toml` |
+| Linux | `$XDG_CONFIG_HOME/orcker` (default `~/.config/orcker`) | `~/.config/orcker/orcker.toml`                       |
 
-These paths come from [`yerd-platform`](../developer/crates/yerd-platform)'s directory resolver, which uses the `directories` crate with the qualifier `io` / `yerd` / `Yerd`. The directory is created on demand the first time the daemon saves; it is not guaranteed to exist before then.
+These paths come from [`orcker-platform`](../developer/crates/orcker-platform)'s directory resolver, which uses the `directories` crate with the qualifier `io` / `orcker` / `Orcker`. The directory is created on demand the first time the daemon saves; it is not guaranteed to exist before then.
 
-The daemon resolves the path once at startup and falls back to `<config dir>/yerd.toml` unless an explicit path was passed on the `yerdd serve` command line. If the file is absent, the daemon starts from the built-in defaults and writes the file on the first change.
+The daemon resolves the path once at startup and falls back to `<config dir>/orcker.toml` unless an explicit path was passed on the `orckerd serve` command line. If the file is absent, the daemon starts from the built-in defaults and writes the file on the first change.
 
 ::: info Config vs. data vs. runtime
-`yerd.toml` is the only file in the *config* directory. Certificates live in the *data* directory, logs in the *cache* directory, and the IPC socket in the *runtime* directory. See [Architecture](../developer/architecture) and [The Daemon](../guide/daemon) for the full layout.
+`orcker.toml` is the only file in the *config* directory. Certificates live in the *data* directory, logs in the *cache* directory, and the IPC socket in the *runtime* directory. See [Architecture](../developer/architecture) and [The Daemon](../guide/daemon) for the full layout.
 :::
 
 ## Top-level schema
@@ -30,12 +30,12 @@ Every field below maps one-to-one to a field in `schema.rs`. The on-disk shape a
 | Key         | TOML type            | Meaning                                                            | Default        |
 | ----------- | -------------------- | ----------------------------------------------------------------- | -------------- |
 | `version`   | integer              | On-disk schema version. **Mandatory**; written as `23` by this release. | `n/a (required)` |
-| `tld`       | string               | TLD served by Yerd's resolver.                                    | `"test"`       |
+| `tld`       | string               | TLD served by Orcker's resolver.                                    | `"test"`       |
 | `dns_port`  | integer (u16)        | Loopback port for the embedded `.test` DNS responder.             | `1053`         |
 | `update_channel` | string          | Self-update channel: `"stable"` or `"edge"`.                      | `"stable"`     |
 | `symlink_protection` | boolean     | Refuse to serve assets/scripts reached via a symlink resolving outside a site's document root. | `true` |
-| `mcp_enabled` | boolean            | Serve Yerd's tools to local AI agents over MCP (`yerd mcp`).       | `false`        |
-| `lan_enabled` | boolean            | Expose `.test` sites to other devices on the LAN ([`yerd lan`](cli/lan)). | `false`   |
+| `mcp_enabled` | boolean            | Serve Orcker's tools to local AI agents over MCP (`orcker mcp`).       | `false`        |
+| `lan_enabled` | boolean            | Expose `.test` sites to other devices on the LAN ([`orcker lan`](cli/lan)). | `false`   |
 | `lan_setup_port` | integer (u16)   | Port for the LAN remote-device bootstrap endpoint.                 | `7073`         |
 | `ports`     | table                | HTTP / HTTPS listen ports.                                        | `80` / `443`   |
 | `php`       | table                | PHP defaults, global ini settings, per-version overrides and pool settings. | see below |
@@ -60,18 +60,18 @@ The free-form maps are the exception, because their keys *are* the data. `[servi
 
 ### `version`
 
-The schema version. This key is **required** - a missing `version` is a hard error (`MissingVersion`), and a non-integer or negative value is rejected (`NonIntegerVersion`). The current schema version is `23`, and Yerd always writes `version = 23`. Older `version = 1` through `version = 22` files are migrated forward automatically on load. See [Schema versioning](#schema-versioning-and-migration) below.
+The schema version. This key is **required** - a missing `version` is a hard error (`MissingVersion`), and a non-integer or negative value is rejected (`NonIntegerVersion`). The current schema version is `23`, and Orcker always writes `version = 23`. Older `version = 1` through `version = 22` files are migrated forward automatically on load. See [Schema versioning](#schema-versioning-and-migration) below.
 
 ### `tld`
 
-The top-level domain Yerd's resolver answers for, without a leading dot. The default is `test`, giving you `myapp.test`. The value is validated by `yerd-core`: whitespace is rejected, and a trailing dot is silently stripped (`"test."` becomes `"test"`). See [DNS & .test Domains](../guide/dns).
+The top-level domain Orcker's resolver answers for, without a leading dot. The default is `test`, giving you `myapp.test`. The value is validated by `orcker-core`: whitespace is rejected, and a trailing dot is silently stripped (`"test."` becomes `"test"`). See [DNS & .test Domains](../guide/dns).
 
 ### `dns_port`
 
-The loopback UDP/TCP port the embedded `.test` DNS responder binds to. The default is `1053`. A fixed (non-ephemeral) port keeps the resolver configuration installed by `yerd elevate resolver` valid across daemon restarts. A value of `0` means "ephemeral" and is intended for development and tests only - it is not durable across restarts.
+The loopback UDP/TCP port the embedded `.test` DNS responder binds to. The default is `1053`. A fixed (non-ephemeral) port keeps the resolver configuration installed by `orcker elevate resolver` valid across daemon restarts. A value of `0` means "ephemeral" and is intended for development and tests only - it is not durable across restarts.
 
 ::: tip Port already in use?
-If another process holds `dns_port`, the daemon fails to bind and tells you to change `dns_port` in `yerd.toml` or free the port.
+If another process holds `dns_port`, the daemon fails to bind and tells you to change `dns_port` in `orcker.toml` or free the port.
 :::
 
 ### `symlink_protection`
@@ -81,17 +81,17 @@ By default (`true`) the proxy refuses to serve a static asset - or resolve a scr
 Set it to `false` to allow those symlinks. The motivating case is a shared parent/child WordPress theme kept in its own directory beside your sites and symlinked into `wp-content/themes/`: with protection on, its assets 403; with protection off, they are served. The setting is global (all sites) and can be toggled from the desktop app under **Settings › Security**; the change takes effect immediately, without restarting the daemon.
 
 ::: warning Off trusts every in-tree symlink
-While off, a symlink is followed wherever it resolves, not only within the parked folder. Combined with a public tunnel (`yerd-tunnel`), that can expose files beyond a site's root. Leave it on unless you specifically need a cross-directory symlink like the shared-theme layout above.
+While off, a symlink is followed wherever it resolves, not only within the parked folder. Combined with a public tunnel (`orcker-tunnel`), that can expose files beyond a site's root. Leave it on unless you specifically need a cross-directory symlink like the shared-theme layout above.
 :::
 
 ### `mcp_enabled`
 
-Whether `yerd mcp` serves Yerd's tools to local AI agents over the Model Context Protocol. Defaults to `false`: exposing Yerd to agents is an explicit opt-in, toggled from the desktop app under **Settings › General › AI Agents**.
+Whether `orcker mcp` serves Orcker's tools to local AI agents over the Model Context Protocol. Defaults to `false`: exposing Orcker to agents is an explicit opt-in, toggled from the desktop app under **Settings › General › AI Agents**.
 
-The daemon runs no MCP server of its own - it stores this flag and reports it in its status. Each agent session runs a short-lived `yerd mcp` process that reads it, so turning it **on** reaches agent sessions already running (on their next tool call), while turning it **off** applies to sessions started afterwards. See the [AI Agents guide](../guide/ai-agents).
+The daemon runs no MCP server of its own - it stores this flag and reports it in its status. Each agent session runs a short-lived `orcker mcp` process that reads it, so turning it **on** reaches agent sessions already running (on their next tool call), while turning it **off** applies to sessions started afterwards. See the [AI Agents guide](../guide/ai-agents).
 
 ::: warning Not a security boundary
-The flag gates tool *discovery*, not access. Any process running as your user can already talk to Yerd's daemon through its socket - that is how the `yerd` CLI works - so turning this off does not isolate Yerd from local software.
+The flag gates tool *discovery*, not access. Any process running as your user can already talk to Orcker's daemon through its socket - that is how the `orcker` CLI works - so turning this off does not isolate Orcker from local software.
 :::
 
 ### `[ports]`
@@ -130,7 +130,7 @@ PHP defaults applied across sites.
 | `pool`             | table     | Per-version FPM pool settings, keyed by PHP version.         | empty   |
 | `extensions`       | table     | Custom `.so` extensions to load, keyed by PHP version.       | empty   |
 
-`default` is a `MAJOR.MINOR` version string validated by `yerd-core`'s `PhpVersion`; an out-of-range minor or a non-numeric value is rejected. See [PHP Versions](../guide/php-versions).
+`default` is a `MAJOR.MINOR` version string validated by `orcker-core`'s `PhpVersion`; an out-of-range minor or a non-numeric value is rejected. See [PHP Versions](../guide/php-versions).
 
 `[php.settings]` is a string-to-string map of PHP ini directives written into **every** installed version's FPM pool. An empty map means "use PHP's defaults" and the table is omitted from the file entirely. Only an allowlisted set of directives is accepted, and every value is validated as a security boundary (no control characters, none of the FPM/ini metacharacters `[ ] = ; #`, length ≤ 256 bytes). The supported directives are:
 
@@ -167,7 +167,7 @@ per version - typically extension settings the allowlist doesn't cover
 (`xdebug.mode`, `opcache.*`, …). Names must start with a letter or `_` and use
 only letters, digits, `.`, `_`, `-`; values follow the same injection rules as
 `[php.settings]` (no control characters or `[ ] = ; #`, ≤ 256 bytes).
-Directives Yerd manages through typed paths are reserved: the eight allowlisted
+Directives Orcker manages through typed paths are reserved: the eight allowlisted
 settings, `extension` / `zend_extension`, and `openssl.cafile` / `curl.cainfo`.
 
 `[php.pool."<version>"]` (schema v20) holds **FPM pool settings** for that
@@ -198,7 +198,7 @@ Setting values through the CLI/GUI still validates strictly. A malformed
 *version key* (e.g. `"eight"`) is still a hard error.
 :::
 
-Manage these with [`yerd set php --only <version>`, `yerd php ini`, and `yerd php pool`](cli/php#custom-ini-directives) or the desktop app's **Per-version configuration** card.
+Manage these with [`orcker set php --only <version>`, `orcker php ini`, and `orcker php pool`](cli/php#custom-ini-directives) or the desktop app's **Per-version configuration** card.
 
 `[php.extensions]` maps a **PHP version string** to an array of custom extensions to load into both that version's FPM pool and its CLI. It is written as an array-of-tables per version and omitted entirely when empty. Because a native `.so` is ABI-bound to a PHP minor, an entry only applies to the version it is keyed under.
 
@@ -215,7 +215,7 @@ path = "/opt/homebrew/lib/php/pecl/20250925/scrypt.so"
 zend = false
 ```
 
-Manage this with [`yerd php ext`](cli/php#custom-extensions) or the Extensions section of the desktop app's **Per-version configuration** card rather than editing by hand - the CLI/daemon **load-probe** each `.so` before saving. Names must be unique within a version; a duplicate or an invalid path makes the whole config invalid.
+Manage this with [`orcker php ext`](cli/php#custom-extensions) or the Extensions section of the desktop app's **Per-version configuration** card rather than editing by hand - the CLI/daemon **load-probe** each `.so` before saving. Names must be unique within a version; a duplicate or an invalid path makes the whole config invalid.
 
 ### `[parked]`
 
@@ -245,9 +245,9 @@ Explicitly registered sites, each as its own array-of-tables entry. Order is pre
 | `secure`        | boolean   | Whether HTTPS is enabled for this site.            |
 | `kind`          | string    | `"linked"` or `"parked"`.                          |
 
-`name`, `document_root`, `php`, `secure`, and `kind` are required per entry. `name`, `php`, and `kind` are validated by `yerd-core`; for example an invalid site name like `"FOO.BAR"` is rejected. Linked site names must be unique - a duplicate produces `DuplicateLinkedSite`.
+`name`, `document_root`, `php`, `secure`, and `kind` are required per entry. `name`, `php`, and `kind` are validated by `orcker-core`; for example an invalid site name like `"FOO.BAR"` is rejected. Linked site names must be unique - a duplicate produces `DuplicateLinkedSite`.
 
-`web_subpath` is the directory actually served, relative to `document_root` (e.g. `"public"` for Laravel; empty/absent means "serve the document root itself"). It is **optional and omitted from the file when empty**, so a site served from its project root has no `web_subpath` line. It must be a plain relative path - an absolute path or one containing `..` is rejected (`WebRootEscapes`) so a hand-edited value can never escape the project. Yerd normally sets this for you via framework detection; see [Web root](../guide/sites#web-root-the-served-directory).
+`web_subpath` is the directory actually served, relative to `document_root` (e.g. `"public"` for Laravel; empty/absent means "serve the document root itself"). It is **optional and omitted from the file when empty**, so a site served from its project root has no `web_subpath` line. It must be a plain relative path - an absolute path or one containing `..` is rejected (`WebRootEscapes`) so a hand-edited value can never escape the project. Orcker normally sets this for you via framework detection; see [Web root](../guide/sites#web-root-the-served-directory).
 
 ```toml
 [[linked]]
@@ -271,7 +271,7 @@ Per-site overrides for **parked** sites, each its own array-of-tables entry. A p
 | `web_root` | string    | Pinned web root, relative to `path`. Omit to auto-detect.     |
 | `front_controller` | boolean | Pinned front-controller mode. Omit to auto-derive from detection. |
 
-`php`, `secure`, `web_root`, and `front_controller` are all optional - omitting a key means "inherit" (or, for `web_root`/`front_controller`, "auto-derive on every scan"). An entry may pin one, several, or (uselessly) none. The serialiser skips omitted keys, so a partial override stays tidy on disk. Like `web_subpath` on a linked site, `web_root` must be a plain relative path inside the project (`WebRootEscapes` otherwise). Setting `web_root` is what `yerd root <parked-site> <path>` does; setting `front_controller` is what `yerd front-controller <parked-site> on|off` does.
+`php`, `secure`, `web_root`, and `front_controller` are all optional - omitting a key means "inherit" (or, for `web_root`/`front_controller`, "auto-derive on every scan"). An entry may pin one, several, or (uselessly) none. The serialiser skips omitted keys, so a partial override stays tidy on disk. Like `web_subpath` on a linked site, `web_root` must be a plain relative path inside the project (`WebRootEscapes` otherwise). Setting `web_root` is what `orcker root <parked-site> <path>` does; setting `front_controller` is what `orcker front-controller <parked-site> on|off` does.
 
 `front_controller = true` funnels every request through the site-root `index.php` (the right behaviour for a single-front-controller framework such as Laravel or Symfony); `false` executes a named `.php` under the served root directly (classic multi-page PHP). When omitted, the mode is auto-derived: a framework served from a subdirectory (non-empty `web_root`/`web_subpath`) defaults to front-controller mode, while WordPress (any layout) and plain root-served sites default to direct execution. The same key is accepted inside a `[[linked]]` entry.
 
@@ -328,12 +328,12 @@ port = 6379
 enabled = true
 ```
 
-You normally manage these through the [`yerd service`](../reference/cli/services) commands rather than by hand.
+You normally manage these through the [`orcker service`](../reference/cli/services) commands rather than by hand.
 
 `[services.<id>.overrides]` (schema v22) is a string-to-string map of **free-form
-directives for the engine's own config file**. On every start Yerd renders them
-into that service's `conf.d/10-yerd.<ext>` sidecar, which the Yerd-owned config
-includes *after* its own settings - so an override wins over Yerd's default for
+directives for the engine's own config file**. On every start Orcker renders them
+into that service's `conf.d/10-orcker.<ext>` sidecar, which the Orcker-owned config
+includes *after* its own settings - so an override wins over Orcker's default for
 the same directive. Empty by default, and omitted from the file entirely when
 empty. Setting one never restarts anything: it reaches the engine on the next
 start/restart, exactly like `port`.
@@ -346,7 +346,7 @@ Names must start with a letter or `_` and use only letters, digits, `.`, `_`,
 `-`. Values are ≤ 512 bytes with no control characters, `;`, or `#` (and, outside
 PostgreSQL, no quote characters - an unbalanced quote aborts the whole config
 load). Validation is **shape only**: whether the engine accepts a directive is
-the engine's business. Directives Yerd manages through typed paths are reserved -
+the engine's business. Directives Orcker manages through typed paths are reserved -
 the port, the data directory, the socket, the pid file, logging, the
 MySQL/MariaDB bootstrap `init-file`, the loopback binding, and the engines' own
 `include` directives. Matching is case-insensitive in every dialect, and the
@@ -373,7 +373,7 @@ through the CLI or desktop app still validates strictly, and refuses a reserved
 directive with a hint naming the command that manages it.
 :::
 
-Manage these with [`yerd service set` / `unset` / `overrides`](cli/services#configuration)
+Manage these with [`orcker service set` / `unset` / `overrides`](cli/services#configuration)
 or the desktop app's **Override settings** dialog. Hand edits that must survive
 untouched belong in the service's own `conf.d/50-local.<ext>` file rather than
 here - see [Service configuration overrides](../guide/services#service-configuration-overrides).
@@ -399,7 +399,7 @@ port = 2525
 
 ### `[dumps]`
 
-Telemetry settings for the Laravel ▸ Dumps feature. The dump server buffers per-request telemetry frames from the `yerd-php-ext` extension; this section is the durable source of truth (the daemon writes a runtime mirror the extension reads each request). **Disabled by default.**
+Telemetry settings for the Laravel ▸ Dumps feature. The dump server buffers per-request telemetry frames from the `orcker-php-ext` extension; this section is the durable source of truth (the daemon writes a runtime mirror the extension reads each request). **Disabled by default.**
 
 | Key       | TOML type     | Meaning                                                              | Default |
 | --------- | ------------- | ------------------------------------------------------------------- | ------- |
@@ -464,7 +464,7 @@ api = "Blog"
 
 ### `[domains]`
 
-Domain customization for a site **or a whole-host proxy**: the primary (canonical) domain plus any additional aliases, subdomains, and wildcards it answers for. **Empty by default** - the whole `[domains]` table is omitted until you customise something with [`yerd domain`](./cli/domains). An uncustomised site or proxy answers only its default apex `<name>.<tld>`; subdomains do **not** resolve implicitly.
+Domain customization for a site **or a whole-host proxy**: the primary (canonical) domain plus any additional aliases, subdomains, and wildcards it answers for. **Empty by default** - the whole `[domains]` table is omitted until you customise something with [`orcker domain`](./cli/domains). An uncustomised site or proxy answers only its default apex `<name>.<tld>`; subdomains do **not** resolve implicitly.
 
 The table is split by claimant class, the first two mirroring `[[overrides]]`:
 
@@ -502,14 +502,14 @@ added = ["shop-staging"]
 
 Whole-host reverse proxies - a `<name>.<tld>` host forwarded wholesale to a
 running service, with no PHP or document root. **Empty by default** (the array
-is omitted from the file) until you add one with [`yerd proxy`](./cli/proxies).
+is omitted from the file) until you add one with [`orcker proxy`](./cli/proxies).
 Order is preserved on round-trip.
 
 | Field    | TOML type | Meaning                                                         |
 | -------- | --------- | --------------------------------------------------------------- |
 | `name`   | string    | One or more dot-separated DNS labels (`reverb`, `api.account`). `<name>.<tld>` is its **default** domain; [`[domains.proxy]`](#domains) can add more and, once another exact domain exists, replace or suppress the default. |
 | `target` | string    | The upstream URL, `http://host:port` or `https://host:port`.    |
-| `secure` | bool      | Whether the proxy is served over HTTPS (toggled by `yerd secure`). |
+| `secure` | bool      | Whether the proxy is served over HTTPS (toggled by `orcker secure`). |
 
 ```toml
 [[proxies]]
@@ -589,7 +589,7 @@ to a file inside the site's own tree. When a site has both on the same prefix,
 the proxy rule wins - it intercepts before PHP resolution runs at all.
 :::
 
-Manage these with [`yerd route`](cli/routes), or the **Routing** tab of the
+Manage these with [`orcker route`](cli/routes), or the **Routing** tab of the
 desktop app's site details sidebar. A site whose web root holds an `index.html`
 and no `index.php` gets SPA routing automatically, with no rule stored here.
 
@@ -600,12 +600,12 @@ Every config file **must** carry a top-level `version = N` key - it is the singl
 When the daemon loads a file, it routes on the version it finds:
 
 ```text
-found  > CURRENT (18)   →  error (UnsupportedVersion) - a newer Yerd wrote this file
+found  > CURRENT (18)   →  error (UnsupportedVersion) - a newer Orcker wrote this file
 found == CURRENT (18)   →  parse directly
 found  < CURRENT (18)   →  walk forward migration steps, then parse
 ```
 
-A file written by a *newer* Yerd than you are running is refused rather than misread. Older files are migrated forward in place, one version at a time, before the normal wire-deserialisation and validation run:
+A file written by a *newer* Orcker than you are running is refused rather than misread. Older files are migrated forward in place, one version at a time, before the normal wire-deserialisation and validation run:
 
 - **`v1 → v2`** is a bare version bump: v2 only **added** the optional `web_subpath` (`[[linked]]`) and `web_root` (`[[overrides]]`) keys, which default when absent, so a v1 file needs no structural rewrite.
 - **`v2 → v3`** is the first *structural* migration: it rewrites the old `[services]` shape (a flat `enabled = ["redis", ...]` array of identifiers) into per-service `[services.<id>]` tables, carrying each previously-enabled id forward as an `enabled = true` instance.
@@ -620,7 +620,7 @@ A file written by a *newer* Yerd than you are running is refused rather than mis
 - **`v11 → v12`** is a bare version bump: v12 only **added** the top-level `symlink_protection` scalar (defaults to `true` when absent).
 - **`v12 → v13`** is a bare version bump: v13 only **added** the optional per-site `front_controller` key (inside `[[linked]]` and `[[overrides]]`), which defaults to auto when absent.
 - **`v13 → v14`** is a bare version bump: v14 only **added** the optional `[[proxies]]` array and `[proxy_rules]` table (reverse proxies and per-site path rules), both of which default to empty when absent. Same rationale - the bump lets an older binary refuse a proxy-bearing file cleanly rather than tripping `deny_unknown_fields`.
-- **`v14 → v15`** is the multi-instance services rework: v15 **added** the optional per-instance `site` field and the `"{type}:{site}"` wire ids (both additive), and made the `enabled` flag actually gate boot autostart. The migration marks every existing single-instance engine `enabled = true` so previously-installed engines keep starting with Yerd across the upgrade.
+- **`v14 → v15`** is the multi-instance services rework: v15 **added** the optional per-instance `site` field and the `"{type}:{site}"` wire ids (both additive), and made the `enabled` flag actually gate boot autostart. The migration marks every existing single-instance engine `enabled = true` so previously-installed engines keep starting with Orcker across the upgrade.
 - **`v15 → v16`** is a bare version bump: v16 only **added** the optional `[php.version_settings]` table (per-version overrides of the global PHP settings), which defaults to empty when absent.
 - **`v16 → v17`** is a bare version bump: v17 only **added** the top-level `mcp_enabled` scalar (defaults to `false` when absent).
 - **`v17 → v18`** is a bare version bump: v18 only **added** the optional `[php.directives]` table (free-form per-version ini directives), which defaults to empty when absent.
@@ -642,17 +642,17 @@ The parser tolerates older shapes: a v1 file written before `web_subpath`/`web_r
 
 ## Atomic saves
 
-Saves are atomic. The daemon serialises the config, writes it to a temporary file in the same directory, then `rename`s it over `yerd.toml`. Because the temp file lives on the same filesystem as the destination, the rename is atomic on Unix - a reader never sees a half-written file, and a crash mid-save leaves the previous config intact. On failure the temp file is cleaned up automatically, so no orphan files are left behind.
+Saves are atomic. The daemon serialises the config, writes it to a temporary file in the same directory, then `rename`s it over `orcker.toml`. Because the temp file lives on the same filesystem as the destination, the rename is atomic on Unix - a reader never sees a half-written file, and a crash mid-save leaves the previous config intact. On failure the temp file is cleaned up automatically, so no orphan files are left behind.
 
 On Unix the file is created with mode `0600` (owner read/write only): the daemon is the only intended writer. Intermediate parent directories are created as needed.
 
 ::: info Durability trade-off
-Yerd does not `fsync` the file or its parent directory after a save. For a developer-only config file the portability cost outweighs the durability gain, so a loss under sudden power loss is accepted by design.
+Orcker does not `fsync` the file or its parent directory after a save. For a developer-only config file the portability cost outweighs the durability gain, so a loss under sudden power loss is accepted by design.
 :::
 
 ## A complete annotated example
 
-This is a valid `yerd.toml` covering the core fields (see the sections above for the newer optional tables - `update_channel`, `[tunnel]`, `[groups]`, `[php.extensions]`, `[php.pool]`, `[domains]`, `[[proxies]]`, `[proxy_rules]`, `[route_rules]`, `[services.<id>.overrides]`, `wp_auto_login` - omitted here for brevity):
+This is a valid `orcker.toml` covering the core fields (see the sections above for the newer optional tables - `update_channel`, `[tunnel]`, `[groups]`, `[php.extensions]`, `[php.pool]`, `[domains]`, `[[proxies]]`, `[proxy_rules]`, `[route_rules]`, `[services.<id>.overrides]`, `wp_auto_login` - omitted here for brevity):
 
 ```toml
 # Schema version - mandatory, always written as 23 by this release.
@@ -706,7 +706,7 @@ secure = true
 web_root = "public"
 
 # Installed services, one table per engine.
-# Known ids: mysql, mariadb, postgres, redis, meilisearch. Usually managed via `yerd service`.
+# Known ids: mysql, mariadb, postgres, redis, meilisearch. Usually managed via `orcker service`.
 [services.redis]
 version = "8"
 port = 6379
@@ -738,4 +738,4 @@ queries = false
 - [HTTPS & Certificates](../guide/https) - what `secure` turns on
 - [DNS & .test Domains](../guide/dns) - how `tld` and `dns_port` are used
 - [CLI Reference](./cli/) - the commands that edit this file for you
-- [yerd-config crate](../developer/crates/yerd-config) - the implementation behind this schema
+- [orcker-config crate](../developer/crates/orcker-config) - the implementation behind this schema

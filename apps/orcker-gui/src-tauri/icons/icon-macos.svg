@@ -1,0 +1,11 @@
+<!--
+  macOS app-icon (Dock) source, placeholder. Apple's icon grid insets the
+  rounded "squircle" to ~824/1024 of the canvas (~80%) on a transparent ground.
+  The inherited artwork was the upstream project's "Y" logo and was removed with the fork;
+  Orcker's real logo is a later spec.
+-->
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Orcker">
+  <title>Orcker</title>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="#6366F1"/>
+  <text x="512" y="512" fill="#FFFFFF" font-family="system-ui, sans-serif" font-size="452" font-weight="700" text-anchor="middle" dominant-baseline="central">O</text>
+</svg>

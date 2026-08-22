@@ -67,7 +67,7 @@ jobs:
       - name: Test
         run: cargo test --workspace
 
-      # The Arch package builds the daemon with `--features yerdd/pacman`, which
+      # The Arch package builds the daemon with `--features orckerd/pacman`, which
       # default `--workspace` never exercises — so lint + test that path too
       # (the `PkgFormat::Pacman` selection arm + the cfg-gated stage_update
       # fixtures). Linux-only: it's where the Arch package ships, and the arm64
@@ -76,30 +76,30 @@ jobs:
       - name: Clippy + test (pacman feature)
         if: runner.os == 'Linux'
         run: |
-          cargo clippy -p yerdd -p yerd-update --features yerdd/pacman \
+          cargo clippy -p orckerd -p orcker-update --features orckerd/pacman \
             --all-targets -- -D warnings
-          cargo test -p yerdd -p yerd-update --features yerdd/pacman
+          cargo test -p orckerd -p orcker-update --features orckerd/pacman
 
-      # The Fedora package builds the daemon with `--features yerdd/rpm`, which
+      # The Fedora package builds the daemon with `--features orckerd/rpm`, which
       # default `--workspace` never exercises (the `PkgFormat::Rpm` selection arm +
       # the cfg-gated stage_update fixtures). Mirrors the pacman step above; both
       # matrix arches run it, so the aarch64 selection arm is covered too.
       - name: Clippy + test (rpm feature)
         if: runner.os == 'Linux'
         run: |
-          cargo clippy -p yerdd -p yerd-update --features yerdd/rpm \
+          cargo clippy -p orckerd -p orcker-update --features orckerd/rpm \
             --all-targets -- -D warnings
-          cargo test -p yerdd -p yerd-update --features yerdd/rpm
+          cargo test -p orckerd -p orcker-update --features orckerd/rpm
 
       # The `pacman` and `rpm` self-update features are mutually exclusive; enabling
-      # both must fail to compile (the `compile_error!` guard in yerd-update). An
+      # both must fail to compile (the `compile_error!` guard in orcker-update). An
       # explicit guard, not a bare `! cargo build` (which `set -e` ignores unless it
       # is the block's terminal command).
       - name: Assert pacman + rpm features are mutually exclusive
         if: runner.os == 'Linux'
         run: |
-          if cargo build -p yerdd --features yerdd/pacman,yerdd/rpm 2>/dev/null; then
-            echo "::error::yerdd with both pacman and rpm features must not compile"
+          if cargo build -p orckerd --features orckerd/pacman,orckerd/rpm 2>/dev/null; then
+            echo "::error::orckerd with both pacman and rpm features must not compile"
             exit 1
           fi
           echo "OK: pacman+rpm correctly refuses to compile"
@@ -117,7 +117,7 @@ jobs:
     runs-on: ubuntu-22.04
     defaults:
       run:
-        working-directory: apps/yerd-gui
+        working-directory: apps/orcker-gui
     steps:
       - uses: actions/checkout@v4
 
@@ -125,7 +125,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: apps/yerd-gui/package-lock.json
+          cache-dependency-path: apps/orcker-gui/package-lock.json
 
       - name: Install deps
         run: npm ci

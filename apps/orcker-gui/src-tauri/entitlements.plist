@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  Empty entitlements = Hardened Runtime with NO exceptions, for BOTH the GUI
+	  app and the embedded orcker/orckerd/orcker-helper sidecars (Tauri signs them with
+	  this same file). Tauri v2's WKWebView runs JavaScript out of process, so the
+	  host app does not need allow-jit or allow-unsigned-executable-memory (the GUI
+	  does no in-process eval / WASM), and the sidecars must stay free of those
+	  broad entitlements (CI gate B5).
+
+	  Intentionally NOT set:
+	  - com.apple.security.cs.allow-jit / allow-unsigned-executable-memory
+	  - com.apple.security.get-task-allow  (debug-only; notarytool rejects it)
+	  - com.apple.security.cs.disable-library-validation
+	-->
+</dict>
+</plist>

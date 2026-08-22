@@ -1,7 +1,7 @@
 # Exec and Which
 
-`yerd exec` runs a CLI tool under the PHP version a **site** uses, rather than
-the [global default](../../guide/php-versions#the-global-default). `yerd which`
+`orcker exec` runs a CLI tool under the PHP version a **site** uses, rather than
+the [global default](../../guide/php-versions#the-global-default). `orcker which`
 reports which binary that would be, without running anything.
 
 A site's version governs how it is **served**, but the bare `php` and `composer`
@@ -17,17 +17,17 @@ either over IPC is an explicit usage error.) The one daemon round-trip is the
 site lookup behind the scenes.
 
 ```sh
-yerd exec [--site <NAME>] <php|composer> [ARGS...]
-yerd which [--json] [--site <NAME>] php
+orcker exec [--site <NAME>] <php|composer> [ARGS...]
+orcker which [--json] [--site <NAME>] php
 ```
 
 | Command | Description |
 | --- | --- |
-| `yerd exec php [ARGS...]` | Run the site's PHP CLI, passing `ARGS` to PHP. |
-| `yerd exec composer [ARGS...]` | Run the bundled Composer phar under the site's PHP. |
-| `yerd exec --site <NAME> …` | Use the named site's version instead of the current directory's. |
-| `yerd which php` | Print the absolute path of the PHP binary `yerd exec` would use. |
-| `yerd which --json php` | Print `{path, version, site, source}` for that binary. |
+| `orcker exec php [ARGS...]` | Run the site's PHP CLI, passing `ARGS` to PHP. |
+| `orcker exec composer [ARGS...]` | Run the bundled Composer phar under the site's PHP. |
+| `orcker exec --site <NAME> …` | Use the named site's version instead of the current directory's. |
+| `orcker which php` | Print the absolute path of the PHP binary `orcker exec` would use. |
+| `orcker which --json php` | Print `{path, version, site, source}` for that binary. |
 
 | Flag | Description |
 | --- | --- |
@@ -36,13 +36,13 @@ yerd which [--json] [--site <NAME>] php
 
 ```sh
 cd ~/Sites/my-app                # served on 8.3
-yerd exec php -v                 # PHP 8.3.x
-yerd exec php artisan migrate
-yerd exec composer install       # the bundled phar, under 8.3
-yerd exec --site blog php -v     # blog's version, from anywhere
+orcker exec php -v                 # PHP 8.3.x
+orcker exec php artisan migrate
+orcker exec composer install       # the bundled phar, under 8.3
+orcker exec --site blog php -v     # blog's version, from anywhere
 
-yerd which php                   # /…/php/php-8.3/bin/php
-yerd --json which php            # {"path":"…","version":"8.3","site":"my-app","source":"site"}
+orcker which php                   # /…/php/php-8.3/bin/php
+orcker --json which php            # {"path":"…","version":"8.3","site":"my-app","source":"site"}
 ```
 
 `which` shares `exec`'s resolution path exactly, so it can never print a path
@@ -66,7 +66,7 @@ for a site you never explicitly pinned - there is no "unpinned" state. A
 **linked** site snapshots the global default at link time and does **not** move
 when you change the default afterwards; a **parked** site follows the current
 default unless pinned. See
-[Site-aware CLI](../../guide/php-versions#site-aware-cli-yerd-exec-and-yerd-which)
+[Site-aware CLI](../../guide/php-versions#site-aware-cli-orcker-exec-and-orcker-which)
 for why, and how to move a site's version deliberately.
 
 In `--json` mode, `source` is `site` when the version came from a site and
@@ -75,26 +75,26 @@ In `--json` mode, `source` is `site` when the version came from a site and
 ## Passthrough behaviour
 
 Everything after the tool is handed straight to that tool, so no `--` separator
-is needed - and yerd's own flags must come **before** it:
+is needed - and orcker's own flags must come **before** it:
 
 ```sh
-yerd exec --site blog php -v     # --site is yerd's
-yerd exec composer show --json   # --json is Composer's
-yerd exec php -r 'echo PHP_VERSION;'
+orcker exec --site blog php -v     # --site is orcker's
+orcker exec composer show --json   # --json is Composer's
+orcker exec php -r 'echo PHP_VERSION;'
 ```
 
-- **`-h` / `--help` go to the tool**, so `yerd exec composer --help` prints
-  Composer's help, not yerd's. Use `yerd help exec` for this command's own help.
-  This differs from [`coverage`](./coverage), where a leading `--help` is yerd's.
-- The global `--json` is **not** interpreted by `yerd exec` - it reaches the
-  tool, since `yerd exec composer show --json` has to produce Composer's JSON.
+- **`-h` / `--help` go to the tool**, so `orcker exec composer --help` prints
+  Composer's help, not orcker's. Use `orcker help exec` for this command's own help.
+  This differs from [`coverage`](./coverage), where a leading `--help` is orcker's.
+- The global `--json` is **not** interpreted by `orcker exec` - it reaches the
+  tool, since `orcker exec composer show --json` has to produce Composer's JSON.
   Along with `coverage`, this is an exception to the "`--json` on every command"
-  note in the [overview](./). `yerd which --json` is unaffected: `which` runs
-  nothing, so `--json` is yerd's there.
-- `yerd exec` exits with the tool's own exit code, so it composes in CI exactly
+  note in the [overview](./). `orcker which --json` is unaffected: `which` runs
+  nothing, so `--json` is orcker's there.
+- `orcker exec` exits with the tool's own exit code, so it composes in CI exactly
   like the interpreter it wraps.
 
-`yerd exec composer` runs the same bundled phar the `composer` shim does, just
+`orcker exec composer` runs the same bundled phar the `composer` shim does, just
 under the site's PHP - and additionally points `PHPRC` at that version's
 generated CLI ini.
 
@@ -104,7 +104,7 @@ Both commands fail rather than quietly running the wrong PHP:
 
 - **A stored-but-uninstalled version is an error** (exit `2`), not a silent
   fallback to the default - that silent mismatch is what these commands exist to
-  prevent. Install it (`yerd install php 8.3`) and retry.
+  prevent. Install it (`orcker install php 8.3`) and retry.
 - **`--site` never falls back.** An unknown name is a usage error (exit `2`);
   a daemon that isn't running to resolve it exits `69`. Naming a site is an
   instruction, not a hint.
@@ -117,7 +117,7 @@ See [Exit codes](./#exit-codes) for the full table.
 
 ## See also
 
-- [PHP versions guide](../../guide/php-versions#site-aware-cli-yerd-exec-and-yerd-which) - the narrative version of this page.
+- [PHP versions guide](../../guide/php-versions#site-aware-cli-orcker-exec-and-orcker-which) - the narrative version of this page.
 - [PHP](./php) - installing versions, the global default, and pinning a site.
 - [Tooling](./tooling) - the `composer` shim and the rest of the shim directory.
 - [Coverage](./coverage) - the other passthrough command.

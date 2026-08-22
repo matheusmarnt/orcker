@@ -1,6 +1,6 @@
 # Tooling
 
-Yerd installs developer tools - **Composer**, **Node.js** (`node`/`npm`/`npx`),
+Orcker installs developer tools - **Composer**, **Node.js** (`node`/`npm`/`npx`),
 **Bun** (`bun`/`bunx`), the **Laravel installer** (`laravel`), and **WP-CLI**
 (`wp`) - as self-contained binaries on your `PATH`. Each is identified by a
 short `id`: `composer`, `node`, `bun`, `laravel`, or `wp-cli`. The
@@ -8,22 +8,22 @@ short `id`: `composer`, `node`, `bun`, `laravel`, or `wp-cli`. The
 command reference.
 
 ::: info Latest only
-Yerd installs the latest stable release of each tool (latest **LTS** for Node).
+Orcker installs the latest stable release of each tool (latest **LTS** for Node).
 There is no per-version selection - installing again updates to the current
-latest. Installing your first tool from the CLI **automatically adds** Yerd's bin
+latest. Installing your first tool from the CLI **automatically adds** Orcker's bin
 directory to your `PATH`; you can also manage it yourself with
-[`yerd path install`](#path-setup). If the bin directory isn't on your `PATH`,
-[`yerd doctor`](./diagnostics) flags it with the one-line fix.
+[`orcker path install`](#path-setup). If the bin directory isn't on your `PATH`,
+[`orcker doctor`](./diagnostics) flags it with the one-line fix.
 :::
 
 ## Listing
 
 | Command | Description |
 | --- | --- |
-| `yerd tools` | List every tool: install status, installed version, and the commands it provides. |
+| `orcker tools` | List every tool: install status, installed version, and the commands it provides. |
 
 ```sh
-yerd tools
+orcker tools
 ```
 
 ```text
@@ -34,7 +34,7 @@ bun       not installed   bun,bunx       -
 ```
 
 `LOCATION` is only populated for `external` tools - ones already on your
-`PATH` from somewhere other than Yerd (Homebrew, `nvm`/`fnm`, a global
+`PATH` from somewhere other than Orcker (Homebrew, `nvm`/`fnm`, a global
 Composer, …). See the [Tooling guide](../../guide/tooling#external-tools) for
 what that means and why there's no install/update action for them.
 
@@ -44,48 +44,48 @@ Add `--json` for machine-readable output.
 
 | Command | Description | Example |
 | --- | --- | --- |
-| `yerd install tool <ID>` | Install the tool's latest version, then expose its commands on `PATH` - a **verified release download** for `node` / `bun` / `composer`, or a **Composer build** (`create-project`) for `laravel` / `wp-cli`. **Idempotent** - run again to update to the current latest. | `yerd install tool node` |
-| `yerd uninstall tool <ID>` | Remove the tool's files and its `PATH` commands. | `yerd uninstall tool bun` |
+| `orcker install tool <ID>` | Install the tool's latest version, then expose its commands on `PATH` - a **verified release download** for `node` / `bun` / `composer`, or a **Composer build** (`create-project`) for `laravel` / `wp-cli`. **Idempotent** - run again to update to the current latest. | `orcker install tool node` |
+| `orcker uninstall tool <ID>` | Remove the tool's files and its `PATH` commands. | `orcker uninstall tool bun` |
 
 ```sh
-yerd install tool composer    # PHP dependency manager (needs a PHP version)
-yerd install tool node        # latest Node LTS - node, npm, npx
-yerd install tool bun         # bun + bunx
-yerd install tool laravel     # the laravel new installer (needs Composer)
-yerd install tool wp-cli      # the wp command for WordPress (needs Composer)
-yerd install tool node        # run again to update to the newest LTS
-yerd uninstall tool bun       # remove bun and prune its shims
+orcker install tool composer    # PHP dependency manager (needs a PHP version)
+orcker install tool node        # latest Node LTS - node, npm, npx
+orcker install tool bun         # bun + bunx
+orcker install tool laravel     # the laravel new installer (needs Composer)
+orcker install tool wp-cli      # the wp command for WordPress (needs Composer)
+orcker install tool node        # run again to update to the newest LTS
+orcker uninstall tool bun       # remove bun and prune its shims
 ```
 
 `<ID>` is one of `composer`, `node`, `bun`, `laravel`, or `wp-cli`. An unknown
 id returns a `not_found` error.
 
 ::: warning Composer requires PHP
-`composer` runs under Yerd's managed PHP, so install at least one
+`composer` runs under Orcker's managed PHP, so install at least one
 [PHP version](./php) first. Node and Bun are standalone. The Laravel installer
-and WP-CLI are Composer packages, so they also need Yerd's own Composer
+and WP-CLI are Composer packages, so they also need Orcker's own Composer
 installed first.
 :::
 
 ::: tip WP-CLI has no phar self-update
-Yerd's `wp-cli` is a Composer install, so WP-CLI's own `wp cli update`
-subcommand isn't applicable and will error - run `yerd install tool wp-cli`
+Orcker's `wp-cli` is a Composer install, so WP-CLI's own `wp cli update`
+subcommand isn't applicable and will error - run `orcker install tool wp-cli`
 again instead to update.
 :::
 
 ## PATH setup
 
-The tool commands live in Yerd's `{data}/bin` directory. Manage your shell's
-`PATH` entry for it with `yerd path`:
+The tool commands live in Orcker's `{data}/bin` directory. Manage your shell's
+`PATH` entry for it with `orcker path`:
 
 | Command | Description |
 | --- | --- |
-| `yerd path install` | Add `{data}/bin` to your shell startup file (idempotent; covers zsh, bash, and fish). |
-| `yerd path uninstall` | Remove the Yerd `PATH` block from your shell startup file. |
-| `yerd path print` | Print the shell snippet without modifying any file (for `eval` / manual use). |
+| `orcker path install` | Add `{data}/bin` to your shell startup file (idempotent; covers zsh, bash, and fish). |
+| `orcker path uninstall` | Remove the Orcker `PATH` block from your shell startup file. |
+| `orcker path print` | Print the shell snippet without modifying any file (for `eval` / manual use). |
 
 ```sh
-yerd path install     # then open a new terminal
+orcker path install     # then open a new terminal
 ```
 
 ## Exit codes

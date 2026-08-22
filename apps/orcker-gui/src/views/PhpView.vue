@@ -1,0 +1,931 @@
+<script setup lang="ts">
+import { computed, nextTick, onUnmounted, ref, watch } from "vue";
+import {
+  CheckCircle2,
+  Download,
+  Info,
+  MoreHorizontal,
+  RefreshCw,
+  RotateCw,
+  Star,
+  Trash2,
+  TriangleAlert,
+} from "lucide-vue-next";
+
+import PageHeader from "@/components/PageHeader.vue";
+import StatusPill from "@/components/StatusPill.vue";
+import Badge from "@/components/ui/Badge.vue";
+import Button from "@/components/ui/Button.vue";
+import Card from "@/components/ui/Card.vue";
+import CardContent from "@/components/ui/CardContent.vue";
+import CardDescription from "@/components/ui/CardDescription.vue";
+import CardHeader from "@/components/ui/CardHeader.vue";
+import CardTitle from "@/components/ui/CardTitle.vue";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import Input from "@/components/ui/Input.vue";
+import Modal from "@/components/ui/Modal.vue";
+import Select from "@/components/ui/Select.vue";
+import Spinner from "@/components/ui/Spinner.vue";
+import Switch from "@/components/ui/Switch.vue";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { registerViewActions } from "@/lib/shortcuts/useViewActions";
+import { useDaemon } from "@/composables/useDaemon";
+import { useOperations } from "@/composables/useOperations";
+import { useResource } from "@/composables/useResource";
+import { useToast } from "@/composables/useToast";
+import {
+  availablePhp,
+  checkPhpUpdates,
+  installPhpWithProgress,
+  IpcError,
+  listPhp,
+  listPhpExtensions,
+  type PhpExtensionsMap,
+  restartAllPhp,
+  restartPhp,
+  setDefaultPhp,
+  setPhpSettings,
+  uninstallPhp,
+  updatePhp,
+} from "@/ipc/client";
+import type { PhpPoolStatus, PhpUpdate, PhpVersion, PhpVersionsResponse } from "@/ipc/types";
+import AddExtensionModal from "@/components/AddExtensionModal.vue";
+import PhpVersionPanel from "@/components/PhpVersionPanel.vue";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  DISPLAY_ERRORS_HINT,
+  DISPLAY_ERRORS_OPTIONS,
+  overrideCount,
+  TEXT_SETTINGS,
+} from "@/lib/phpSettings";
+import { isLegacyVersion } from "@/lib/phpVersion";
+import { humaniseBytes, poolStateLabel, poolStateTone } from "@/lib/utils";
+
+const toast = useToast();
+const { report, refresh } = useDaemon();
+const operations = useOperations();
+
+// Cached SWR resource: revisits render the installed-versions table instantly
+// and revalidate underneath instead of flashing a spinner each time.
+const { data, loading, error, refresh: reloadPhp, mutate } = useResource("php", listPhp);
+const installed = computed<PhpVersion[]>(() => data.value?.installed ?? []);
+const defaultVersion = computed<PhpVersion | null>(() => data.value?.default ?? null);
+const updates = computed<PhpUpdate[]>(() => data.value?.updates ?? []);
+const busy = ref<string | null>(null); // a key naming the in-flight long op
+
+// Surface a cold-load failure as a toast (no AsyncState here), masked once
+// there's cached data so a background revalidation stays silent.
+watch(error, (e) => {
+  if (e && !data.value) toast.error("Couldn't load PHP versions", e.message);
+});
+
+// An install is tracked in the global operations registry so it persists and
+// stays visible (here and in the SideNav) across navigation.
+const installing = computed(() => operations.active.value.some((o) => o.kind === "php-install"));
+const installDetail = computed(
+  () => operations.active.value.find((o) => o.kind === "php-install")?.detail ?? "",
+);
+
+// Live FPM state, keyed by version, from the shared status poll.
+const poolByVersion = computed<Record<string, PhpPoolStatus>>(() => {
+  const map: Record<string, PhpPoolStatus> = {};
+  for (const p of report.value?.php ?? []) map[p.version] = p;
+  return map;
+});
+
+const updateByVersion = computed<Record<string, PhpUpdate>>(() => {
+  const map: Record<string, PhpUpdate> = {};
+  for (const u of updates.value) map[u.version] = u;
+  return map;
+});
+
+const hasUpdates = computed(() => updates.value.length > 0);
+
+// ── global PHP ini settings ──
+// Text fields plus an On/Off select for display_errors (field metadata shared
+// with the per-version panels via lib/phpSettings). A blank field means "use
+// PHP's default" (the daemon removes the key).
+const settingsForm = ref<Record<string, string>>({});
+// Snapshot of the values last seeded from the server, so we can tell whether the
+// user has edited the form since (and thus whether a fresh server value may
+// safely replace it).
+let lastSeeded: Record<string, string> = {};
+
+function applySettings(settings: Record<string, string> | undefined): void {
+  const next: Record<string, string> = {};
+  for (const s of TEXT_SETTINGS) next[s.key] = settings?.[s.key] ?? "";
+  next.display_errors = settings?.display_errors ?? "";
+  settingsForm.value = next;
+  lastSeeded = { ...next };
+}
+
+/** True when the form still matches what we last seeded (i.e. no unsaved edits). */
+function settingsPristine(): boolean {
+  const form = settingsForm.value;
+  const keys = new Set([...Object.keys(form), ...Object.keys(lastSeeded)]);
+  for (const k of keys) {
+    if ((form[k] ?? "") !== (lastSeeded[k] ?? "")) return false;
+  }
+  return true;
+}
+
+// Seed the settings form from the server: on first load, and on later
+// revalidations *only while the form is pristine* - so an out-of-band ini change
+// (e.g. via the CLI) self-corrects, but the user's unsaved edits are never
+// clobbered by an optimistic write or a background refresh. `immediate:true`
+// seeds synchronously on a warm-cache revisit so the inputs never flash empty.
+watch(
+  data,
+  (d) => {
+    if (d && settingsPristine()) applySettings(d.settings);
+  },
+  { immediate: true },
+);
+
+async function saveSettings(): Promise<void> {
+  busy.value = "settings";
+  try {
+    // Send every field; blank values reset (remove) that setting.
+    const payload: Record<string, string> = { ...settingsForm.value };
+    const r = await setPhpSettings(payload);
+    applySettings(r.settings);
+    toast.success("PHP settings updated", "Pools restart to apply the changes.");
+    await reloadPhp({ force: true });
+  } catch (e) {
+    toast.error("Couldn't update PHP settings", (e as IpcError).message);
+  } finally {
+    busy.value = null;
+  }
+}
+
+// ── per-version configuration ──────────────────────────────────────────────
+// One tab per version, each holding that version's setting overrides, custom
+// extensions and free-form ini directives. Panels do their own saves and hand
+// back the daemon's refreshed state.
+function onVersionConfigUpdated(r: PhpVersionsResponse): void {
+  mutate(() => r);
+  void reloadPhp({ force: true });
+}
+
+const {
+  data: extData,
+  loading: extLoading,
+  error: extError,
+  mutate: mutateExts,
+} = useResource("php-extensions", listPhpExtensions);
+
+watch(extError, (e) => {
+  if (e && !extData.value) toast.error("Couldn't load extensions", e.message);
+});
+
+/** Compare `major.minor` version strings numerically (so 8.9 sorts before 8.10). */
+function compareVersions(a: string, b: string): number {
+  const [am, an] = a.split(".").map(Number);
+  const [bm, bn] = b.split(".").map(Number);
+  return am - bm || an - bn;
+}
+
+// Newest first: the current version is what you reach for, and it stays put at
+// the top of the rail as older ones accumulate below.
+//
+// Uninstalling leaves a version's registrations in place, so a version can hold
+// extensions without being installed. Those get a row too - the daemon still
+// allows removing them, which would otherwise be unreachable from the GUI.
+const tabVersions = computed<PhpVersion[]>(() => {
+  const seen = new Set<PhpVersion>(installed.value);
+  for (const v of Object.keys(extData.value ?? {})) seen.add(v);
+  return [...seen].sort((a, b) => compareVersions(b, a));
+});
+
+const activeVersion = ref<PhpVersion>("");
+const dirtyByVersion = ref<Record<string, boolean>>({});
+const addExtOpen = ref(false);
+
+// Seed once and re-point only if the active tab disappears; anything wider
+// would yank the user's tab away when an unrelated refresh lands.
+watch(
+  tabVersions,
+  (vs) => {
+    if (vs.includes(activeVersion.value)) return;
+    const preferred = defaultVersion.value;
+    activeVersion.value = preferred && vs.includes(preferred) ? preferred : (vs[0] ?? "");
+  },
+  { immediate: true },
+);
+
+function extensionsFor(v: PhpVersion) {
+  return extData.value?.[v] ?? [];
+}
+
+/**
+ * How much this version has configured, for the tab's count badge.
+ *
+ * An uninstalled version counts only its extensions: the daemon refuses to
+ * change its overrides and directives, so the panel hides them, and the badge
+ * must not advertise what the panel won't show.
+ */
+function tabCount(v: PhpVersion): number {
+  const exts = extensionsFor(v).length;
+  if (!installed.value.includes(v)) return exts;
+  return (
+    overrideCount(data.value?.version_settings?.[v] ?? {}) +
+    Object.keys(data.value?.directives?.[v] ?? {}).length +
+    Object.keys(data.value?.pool?.[v] ?? {}).length +
+    exts
+  );
+}
+
+function onExtensionsUpdated(map: PhpExtensionsMap): void {
+  mutateExts(() => map);
+}
+
+async function refreshUpdates(): Promise<void> {
+  busy.value = "refresh";
+  try {
+    const r = await checkPhpUpdates();
+    mutate((cur) =>
+      cur
+        ? { ...cur, installed: r.installed, default: r.default, updates: r.updates ?? [] }
+        : { ...r, updates: r.updates ?? [] },
+    );
+    toast.success(
+      "Update check complete",
+      r.updates?.length ? `${r.updates.length} update(s) available` : "All up to date",
+    );
+  } catch (e) {
+    toast.error("Update check failed", (e as IpcError).message);
+  } finally {
+    busy.value = null;
+  }
+}
+
+async function makeDefault(v: PhpVersion): Promise<void> {
+  busy.value = `default:${v}`;
+  try {
+    await setDefaultPhp(v);
+    mutate((cur) => (cur ? { ...cur, default: v } : cur));
+    toast.success(`PHP ${v} is now the default`);
+  } catch (e) {
+    toast.error("Couldn't set default", (e as IpcError).message);
+  } finally {
+    busy.value = null;
+  }
+}
+
+async function doUpdate(v: PhpVersion | null): Promise<void> {
+  busy.value = v ? `update:${v}` : "update:all";
+  try {
+    await updatePhp(v);
+    toast.success(v ? `Updated PHP ${v}` : "Updated all PHP versions");
+    // Refresh the status poll too so the new patch shows without the 4s lag.
+    await Promise.all([reloadPhp({ force: true }), refresh()]);
+  } catch (e) {
+    toast.error("Update failed", (e as IpcError).message);
+  } finally {
+    busy.value = null;
+  }
+}
+
+// ── process actions ──
+// Restart applies to a pool that is up or crashed; an idle/stopped pool has
+// nothing to restart (it spawns fresh on the next request).
+function canRestart(v: PhpVersion): boolean {
+  const s = poolByVersion.value[v]?.state;
+  return s === "running" || s === "failed";
+}
+
+const anyRunning = computed(() =>
+  (report.value?.php ?? []).some((p) => p.state === "running" || p.state === "failed"),
+);
+
+async function doRestart(v: PhpVersion): Promise<void> {
+  busy.value = `restart:${v}`;
+  try {
+    await restartPhp(v);
+    toast.success(`Restarted PHP ${v}`);
+    await refresh();
+  } catch (e) {
+    toast.error(`Couldn't restart PHP ${v}`, (e as IpcError).message);
+  } finally {
+    busy.value = null;
+  }
+}
+
+async function doRestartAll(): Promise<void> {
+  if (!anyRunning.value) {
+    toast.info("No running pools to restart");
+    return;
+  }
+  busy.value = "restart:all";
+  try {
+    await restartAllPhp();
+    toast.success("Restarted all running pools");
+    await refresh();
+  } catch (e) {
+    toast.error("Couldn't restart pools", (e as IpcError).message);
+  } finally {
+    busy.value = null;
+  }
+}
+
+// ── uninstall confirm ──
+const uninstallOpen = ref(false);
+const uninstallTarget = ref<PhpVersion | null>(null);
+
+// Defer opening past the dropdown's close so reka-ui's focus-restore doesn't
+// steal focus from the modal.
+function openUninstall(v: PhpVersion): void {
+  uninstallTarget.value = v;
+  void nextTick(() => {
+    uninstallOpen.value = true;
+  });
+}
+
+async function confirmUninstall(close: () => void): Promise<void> {
+  const v = uninstallTarget.value;
+  if (!v) return;
+  busy.value = `uninstall:${v}`;
+  close();
+  try {
+    await uninstallPhp(v);
+    toast.success(`Uninstalled PHP ${v}`);
+    await reloadPhp({ force: true });
+  } catch (e) {
+    toast.error(`Couldn't uninstall PHP ${v}`, (e as IpcError).message);
+  } finally {
+    busy.value = null;
+    uninstallTarget.value = null;
+  }
+}
+
+// ── install modal ──
+const installOpen = ref(false);
+const installLoading = ref(false);
+const installOptions = ref<{ value: PhpVersion; label: string }[]>([]);
+const selectedVersion = ref<PhpVersion>("");
+// Legacy (< 8.2) versions are offered behind an explicit, warned opt-in: the
+// toggle swaps the version picker over rather than adding a second install path.
+const legacyOptions = ref<{ value: PhpVersion; label: string }[]>([]);
+const selectedLegacy = ref<PhpVersion>("");
+const showLegacy = ref(false);
+const confirmLegacy = ref(false);
+const canInstall = computed(() =>
+  showLegacy.value
+    ? !!selectedLegacy.value && confirmLegacy.value
+    : !!selectedVersion.value,
+);
+
+// Re-arming the opt-in every time the toggle flips keeps the confirmation an
+// active choice rather than something left ticked from an earlier glance.
+watch(showLegacy, () => {
+  confirmLegacy.value = false;
+});
+
+// Flip between the stable and legacy pickers. Refused when there is no stable
+// version left to install, which would swap in an empty, unsubmittable Select.
+function toggleLegacyMode(): void {
+  if (!installOptions.value.length) return;
+  showLegacy.value = !showLegacy.value;
+}
+
+// ── install-progress dialog ──
+// A blocking, non-dismissible dialog owns the install's status (spinner + the
+// latest streamed line). It stays up until the install finishes, at which point
+// its "Close" button becomes available - the only way to dismiss it.
+const installProgressOpen = ref(false);
+const installPhase = ref<"running" | "done" | "error">("running");
+const installError = ref("");
+const installTarget = ref<PhpVersion>("");
+
+// Open the modal and fetch the distribution's installable versions, hiding any
+// already installed. Both pickers pre-select the LATEST of their own list (the
+// daemon returns them ascending, so the last entry is newest) so whichever one
+// the legacy toggle shows is valid without a placeholder. The toggle starts off,
+// unless every stable version is already installed, in which case it starts on
+// and stays there because legacy is all that is left to offer.
+async function openInstall(): Promise<void> {
+  installOpen.value = true;
+  installLoading.value = true;
+  installOptions.value = [];
+  legacyOptions.value = [];
+  selectedVersion.value = "";
+  selectedLegacy.value = "";
+  showLegacy.value = false;
+  confirmLegacy.value = false;
+  try {
+    const r = await availablePhp();
+    const installedSet = new Set(r.installed);
+    installOptions.value = r.available
+      .filter((v) => !installedSet.has(v))
+      .map((v) => ({ value: v, label: `PHP ${v}` }));
+    legacyOptions.value = (r.legacy ?? [])
+      .filter((v) => !installedSet.has(v))
+      .map((v) => ({ value: v, label: `PHP ${v}` }));
+    const opts = installOptions.value;
+    selectedVersion.value = opts[opts.length - 1]?.value ?? "";
+    const legacyOpts = legacyOptions.value;
+    selectedLegacy.value = legacyOpts[legacyOpts.length - 1]?.value ?? "";
+    if (!opts.length && legacyOpts.length) showLegacy.value = true;
+  } catch (e) {
+    toast.error("Couldn't load installable versions", (e as IpcError).message);
+  } finally {
+    installLoading.value = false;
+  }
+}
+
+/**
+ * Install the selected PHP version with live progress, surfaced in the blocking
+ * install-progress dialog. Only one PHP install runs at a time, so this no-ops
+ * while any `php-install` operation is active (covering a double-submit or a
+ * second version picked from a still-open modal). On success it refreshes the
+ * version list AND the status poll so the new row shows its patch + "idle" state
+ * immediately rather than on the next 4s tick.
+ */
+async function confirmInstall(): Promise<void> {
+  const legacy = showLegacy.value;
+  const v = legacy ? selectedLegacy.value : selectedVersion.value;
+  if (!v || installing.value) return;
+  if (legacy && !confirmLegacy.value) return;
+  const opId = `php-install:${v}`;
+  installTarget.value = v;
+  installPhase.value = "running";
+  installError.value = "";
+  operations.begin({ id: opId, kind: "php-install", label: `Installing PHP ${v}` });
+  installOpen.value = false;
+  installProgressOpen.value = true;
+  try {
+    await installPhpWithProgress(
+      v,
+      (lines) => {
+        const latest = lines[lines.length - 1];
+        if (latest) operations.update(opId, { detail: latest });
+      },
+      legacy,
+    );
+    installPhase.value = "done";
+    toast.success(`Installed PHP ${v}`);
+    await Promise.all([reloadPhp({ force: true }), refresh()]);
+  } catch (e) {
+    installPhase.value = "error";
+    installError.value = (e as IpcError).message;
+    toast.error(`Install of PHP ${v} failed`, (e as IpcError).message);
+  } finally {
+    operations.end(opId);
+  }
+}
+
+// Dismiss the install-progress dialog. Guarded so it can only close once the
+// install has finished (success or failure), never mid-run.
+function closeInstallProgress(): void {
+  if (installPhase.value === "running") return;
+  installProgressOpen.value = false;
+}
+
+onUnmounted(
+  registerViewActions({
+    create: () => void openInstall(),
+    refresh: () => void reloadPhp(),
+  }),
+);
+</script>
+
+<template>
+  <div class="flex h-full flex-col">
+    <PageHeader
+      title="PHP"
+      subtitle="Installed versions, updates, and the global default"
+      docs="/guide/php-versions"
+    />
+
+    <div class="flex-1 overflow-y-auto p-6">
+      <!-- Installed versions -->
+      <Card>
+        <CardHeader class="flex-row items-center justify-between space-y-0">
+          <div class="space-y-1.5">
+            <CardTitle>Installed versions</CardTitle>
+            <CardDescription>Versions, updates, and the global default.</CardDescription>
+          </div>
+          <div class="flex min-w-0 items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              :disabled="busy === 'refresh'"
+              @click="refreshUpdates"
+            >
+              <Spinner v-if="busy === 'refresh'" class="size-4" />
+              <RefreshCw v-else class="size-4" />
+              Refresh
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              :disabled="!hasUpdates || busy === 'update:all'"
+              @click="doUpdate(null)"
+            >
+              <Spinner v-if="busy === 'update:all'" class="size-4" />
+              Update all
+            </Button>
+            <Button size="sm" :disabled="installing" @click="openInstall">
+              <Spinner v-if="installing" class="size-4" />
+              <Download v-else class="size-4" />
+              Install
+            </Button>
+          </div>
+        </CardHeader>
+
+        <CardContent>
+          <div v-if="loading" class="flex justify-center py-12"><Spinner class="size-6" /></div>
+
+          <div
+            v-else-if="installed.length === 0"
+            class="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground"
+          >
+            No PHP versions installed yet. Use <strong>Install</strong> to add one.
+          </div>
+
+          <table v-else class="w-full text-sm">
+        <thead>
+          <tr class="border-b text-left text-xs uppercase text-muted-foreground">
+            <th class="py-2 pr-4 font-medium">Version</th>
+            <th class="py-2 pr-4 font-medium">FPM</th>
+            <th class="py-2 pr-4 font-medium">Patch</th>
+            <th class="py-2 pr-4 font-medium">Memory</th>
+            <th class="py-2 pr-4 font-medium">Update</th>
+            <th class="py-2 pl-4 text-right font-medium">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="v in installed" :key="v" class="border-b last:border-0">
+            <td class="py-3 pr-4">
+              <div class="flex items-center gap-2">
+                <span class="font-mono font-medium">PHP {{ v }}</span>
+                <Badge v-if="v === defaultVersion" variant="secondary">
+                  <Star class="size-3" /> default
+                </Badge>
+                <Badge v-if="isLegacyVersion(v)" variant="warning">legacy</Badge>
+              </div>
+            </td>
+            <td class="py-3 pr-4">
+              <StatusPill
+                :tone="poolStateTone(poolByVersion[v]?.state)"
+                :label="poolStateLabel(poolByVersion[v]?.state)"
+              />
+            </td>
+            <td class="py-3 pr-4 font-mono text-xs text-muted-foreground">
+              {{ poolByVersion[v]?.installed_patch ?? "-" }}
+            </td>
+            <td class="py-3 pr-4 text-xs text-muted-foreground">
+              {{ humaniseBytes(poolByVersion[v]?.rss_bytes) }}
+            </td>
+            <td class="py-3 pr-4">
+              <Badge v-if="updateByVersion[v]" variant="warning">
+                {{ updateByVersion[v].installed }} → {{ updateByVersion[v].latest }}
+              </Badge>
+              <span v-else class="text-xs text-muted-foreground">up to date</span>
+            </td>
+            <td class="py-3 pl-4">
+              <div class="flex items-center justify-end">
+                <Spinner v-if="busy?.endsWith(`:${v}`)" class="size-4" />
+                <DropdownMenu>
+                  <DropdownMenuTrigger as-child>
+                    <Button variant="ghost" size="icon" :aria-label="`Actions for PHP ${v}`">
+                      <MoreHorizontal class="size-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem :disabled="!canRestart(v)" @select="doRestart(v)">
+                      <RotateCw class="size-4" /> Restart
+                    </DropdownMenuItem>
+                    <DropdownMenuItem :disabled="!updateByVersion[v]" @select="doUpdate(v)">
+                      <Download class="size-4" /> Update
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      :disabled="v === defaultVersion || isLegacyVersion(v)"
+                      @select="makeDefault(v)"
+                    >
+                      <Star class="size-4" /> Set default
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      class="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                      @select="openUninstall(v)"
+                    >
+                      <Trash2 class="size-4" /> Uninstall
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </td>
+          </tr>
+            </tbody>
+          </table>
+
+          <div class="mt-4 flex items-center justify-between gap-2">
+          <span class="text-xs text-muted-foreground">
+            Updates are notify-only; nothing installs without your action.
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            :disabled="!anyRunning || busy === 'restart:all'"
+            @click="doRestartAll"
+          >
+            <Spinner v-if="busy === 'restart:all'" class="size-4" />
+            <RotateCw v-else class="size-4" />
+            Restart all
+          </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <!-- Global PHP ini defaults, applied to every installed version. -->
+      <Card v-if="!loading" class="mt-8">
+        <CardHeader>
+          <CardTitle>Default settings</CardTitle>
+          <CardDescription>
+            Applied to every installed PHP version. Leave a field blank to use
+            PHP's built-in default. Saving restarts the running pools.
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent>
+          <TooltipProvider :delay-duration="0">
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div v-for="s in TEXT_SETTINGS" :key="s.key">
+              <div class="flex items-center gap-1">
+                <label class="text-xs font-medium" :for="`set-${s.key}`">{{ s.label }}</label>
+                <Tooltip>
+                  <TooltipTrigger as-child>
+                    <span class="inline-flex cursor-help text-muted-foreground">
+                      <Info class="size-3.5" />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">{{ s.hint }}</TooltipContent>
+                </Tooltip>
+              </div>
+              <Input
+                :id="`set-${s.key}`"
+                v-model="settingsForm[s.key]"
+                :placeholder="s.placeholder"
+                class="mt-1"
+              />
+            </div>
+            <div>
+              <div class="flex items-center gap-1">
+                <span class="text-xs font-medium">Display errors</span>
+                <Tooltip>
+                  <TooltipTrigger as-child>
+                    <span class="inline-flex cursor-help text-muted-foreground">
+                      <Info class="size-3.5" />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">{{ DISPLAY_ERRORS_HINT }}</TooltipContent>
+                </Tooltip>
+              </div>
+              <div class="mt-1">
+                <Select
+                  class="w-full"
+                  :model-value="settingsForm.display_errors ?? ''"
+                  :options="DISPLAY_ERRORS_OPTIONS"
+                  aria-label="display_errors"
+                  @update:model-value="(v: string) => (settingsForm.display_errors = v)"
+                />
+              </div>
+            </div>
+          </div>
+          </TooltipProvider>
+
+          <div class="mt-5 flex justify-end">
+            <Button size="sm" :disabled="busy === 'settings'" @click="saveSettings">
+              <Spinner v-if="busy === 'settings'" class="size-4" />
+              {{ busy === "settings" ? "Applying…" : "Save" }}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <!-- Per-version overrides, custom extensions and free-form ini directives. -->
+      <Card v-if="!loading && tabVersions.length" class="mt-8">
+        <CardHeader>
+          <CardTitle>Per-version configuration</CardTitle>
+          <CardDescription>
+            Configure a single PHP version: override the defaults above, load
+            extra extensions (.so files, into both the web and CLI runtimes),
+            and add custom ini directives. Saving restarts only that version's
+            pool.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <!-- A rail rather than a tab strip: the version list grows by one
+               every release (plus the legacy versions), and a horizontal strip
+               reflows as soon as the active row's markers change its width. -->
+          <Tabs
+            :model-value="activeVersion"
+            orientation="vertical"
+            :unmount-on-hide="false"
+            @update:model-value="(v: string | number) => (activeVersion = String(v))"
+          >
+            <div class="flex gap-5">
+              <TabsList aria-label="PHP version" class="w-32 shrink-0 pr-1">
+                <TabsTrigger v-for="v in tabVersions" :key="v" :value="v">
+                  <span class="font-mono">{{ v }}</span>
+                  <span class="ml-auto flex items-center gap-1.5">
+                    <span v-if="dirtyByVersion[v]" class="flex items-center">
+                      <span class="size-1.5 rounded-full bg-primary" />
+                      <span class="sr-only">unsaved changes</span>
+                    </span>
+                    <Badge v-if="tabCount(v)" variant="secondary">
+                      {{ tabCount(v) }}
+                      <span class="sr-only">
+                        configured item{{ tabCount(v) === 1 ? "" : "s" }}
+                      </span>
+                    </Badge>
+                    <TriangleAlert
+                      v-if="!installed.includes(v)"
+                      class="size-3.5 text-destructive"
+                    />
+                    <span v-if="!installed.includes(v)" class="sr-only">
+                      not installed
+                    </span>
+                  </span>
+                </TabsTrigger>
+              </TabsList>
+
+              <div class="min-w-0 flex-1">
+                <TabsContent v-for="v in tabVersions" :key="v" :value="v">
+                  <PhpVersionPanel
+                    :version="v"
+                    :global-settings="data?.settings ?? {}"
+                    :overrides="data?.version_settings?.[v] ?? {}"
+                    :directives="data?.directives?.[v] ?? {}"
+                    :pool="data?.pool?.[v] ?? {}"
+                    :extensions="extensionsFor(v)"
+                    :installed-version="installed.includes(v)"
+                    :extensions-loading="extLoading"
+                    @updated="onVersionConfigUpdated"
+                    @extensions-updated="onExtensionsUpdated"
+                    @request-add-extension="addExtOpen = true"
+                    @dirty="(d: boolean) => (dirtyByVersion[v] = d)"
+                  />
+                </TabsContent>
+              </div>
+            </div>
+          </Tabs>
+        </CardContent>
+      </Card>
+
+    </div>
+
+    <AddExtensionModal
+      v-model:open="addExtOpen"
+      :version="activeVersion"
+      @added="onExtensionsUpdated"
+    />
+
+    <Modal v-model:open="installOpen" title="Install a PHP version">
+      <div v-if="installLoading" class="flex justify-center py-6">
+        <Spinner class="size-5" />
+      </div>
+      <template v-else-if="installOptions.length || legacyOptions.length">
+        <div v-if="legacyOptions.length">
+          <span class="text-sm font-medium">Stable vs Legacy</span>
+          <div class="mt-2 flex items-center gap-2 text-sm">
+            <Switch
+              :model-value="showLegacy"
+              :disabled="!installOptions.length"
+              aria-labelledby="legacy-mode-label"
+              data-testid="toggle-legacy"
+              @update:model-value="toggleLegacyMode"
+            />
+            <span
+              id="legacy-mode-label"
+              :class="installOptions.length ? 'cursor-pointer' : 'opacity-50'"
+              data-testid="toggle-legacy-label"
+              @click="toggleLegacyMode"
+            >
+              Install a legacy version (7.4 / 8.0 / 8.1)
+            </span>
+          </div>
+          <p v-if="!installOptions.length" class="mt-2 text-xs text-muted-foreground">
+            Legacy is all that's left to offer - every other version is already
+            installed, or the rest of the list couldn't be reached.
+          </p>
+        </div>
+
+        <div :class="legacyOptions.length ? 'mt-4 border-t pt-4' : ''">
+          <span class="text-sm font-medium">Version</span>
+          <div class="mt-2">
+            <Select
+              v-if="showLegacy"
+              class="w-full"
+              :model-value="selectedLegacy"
+              :options="legacyOptions"
+              aria-label="Legacy PHP version to install"
+              @update:model-value="(v: PhpVersion) => (selectedLegacy = v)"
+            />
+            <Select
+              v-else
+              class="w-full"
+              :model-value="selectedVersion"
+              :options="installOptions"
+              aria-label="PHP version to install"
+              @update:model-value="(v: PhpVersion) => (selectedVersion = v)"
+            />
+          </div>
+          <p class="mt-2 text-xs text-muted-foreground">
+            Downloads a prebuilt static build; this can take a few minutes. A
+            dialog shows live progress and can be closed once it finishes.
+          </p>
+
+          <template v-if="showLegacy">
+            <div
+              class="mt-3 flex gap-2 rounded-md border border-warning/40 bg-warning/10 p-3 text-xs"
+              data-testid="legacy-warning"
+            >
+              <TriangleAlert class="mt-0.5 size-4 shrink-0 text-warning" />
+              <span>
+                Legacy PHP versions are out of support and may contain unpatched security
+                vulnerabilities. They have no code coverage (phpcover), no orcker-dumps capture, and
+                cannot be set as the default PHP version. Use only for maintaining old projects.
+              </span>
+            </div>
+            <label class="mt-3 flex items-center gap-2 text-sm">
+              <Switch v-model="confirmLegacy" aria-label="Confirm legacy install" />
+              I understand and want to install this legacy version anyway.
+            </label>
+          </template>
+        </div>
+      </template>
+      <p v-else class="py-2 text-sm text-muted-foreground">
+        No installable versions to add - every version offered by the
+        distribution is already installed, or it couldn't be reached.
+      </p>
+      <template #footer="{ close }">
+        <Button variant="ghost" @click="close">Cancel</Button>
+        <Button
+          v-if="installOptions.length || legacyOptions.length"
+          :disabled="!canInstall || installing"
+          data-testid="install-submit"
+          @click="confirmInstall()"
+        >
+          Install
+        </Button>
+      </template>
+    </Modal>
+
+    <Modal
+      v-model:open="installProgressOpen"
+      :dismissible="false"
+      :title="
+        installPhase === 'error'
+          ? `Couldn't install PHP ${installTarget}`
+          : installPhase === 'done'
+            ? `PHP ${installTarget} installed`
+            : `Installing PHP ${installTarget}`
+      "
+    >
+      <div class="flex flex-col items-center gap-4 py-4 text-center">
+        <Spinner v-if="installPhase === 'running'" class="size-8" />
+        <CheckCircle2 v-else-if="installPhase === 'done'" class="size-8 text-success" />
+        <TriangleAlert v-else class="size-8 text-destructive" />
+        <p class="min-h-[2.5rem] max-w-sm text-sm text-muted-foreground">
+          <template v-if="installPhase === 'running'">
+            {{ installDetail || "Preparing the download…" }}
+          </template>
+          <template v-else-if="installPhase === 'done'">
+            PHP {{ installTarget }} is ready to use.
+          </template>
+          <template v-else>{{ installError }}</template>
+        </p>
+      </div>
+      <template #footer>
+        <Button :disabled="installPhase === 'running'" @click="closeInstallProgress">
+          Close
+        </Button>
+      </template>
+    </Modal>
+
+    <Modal v-model:open="uninstallOpen" title="Uninstall PHP version">
+      <p class="text-sm text-muted-foreground">
+        Remove <strong class="font-mono text-foreground">PHP {{ uninstallTarget }}</strong>
+        and its files? This stops its pool. Sites using it, or removing your last
+        version, will be blocked.
+      </p>
+      <template #footer="{ close }">
+        <Button variant="ghost" @click="close">Cancel</Button>
+        <Button variant="destructive" @click="confirmUninstall(close)">Uninstall</Button>
+      </template>
+    </Modal>
+  </div>
+</template>

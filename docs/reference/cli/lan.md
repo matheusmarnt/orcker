@@ -2,31 +2,31 @@
 
 ::: info Beta feature
 LAN sharing is new and still settling. If you hit a problem, please
-[report it on GitHub](https://github.com/forjedio/yerd/issues/new) - include your
-OS, `yerd lan status` output, and what you expected.
+[report it on GitHub](https://github.com/forjedio/orcker/issues/new) - include your
+OS, `orcker lan status` output, and what you expected.
 :::
 
-By default Yerd serves your `.test` sites only to the machine they run on -
-every listener binds `127.0.0.1`. `yerd lan` opts into exposing them to **other
+By default Orcker serves your `.test` sites only to the machine they run on -
+every listener binds `127.0.0.1`. `orcker lan` opts into exposing them to **other
 devices on your local network** (a phone, a tablet, another laptop) over the same
-ports 80/443, and `yerd remote-setup` provisions a device so it trusts Yerd's CA
+ports 80/443, and `orcker remote-setup` provisions a device so it trusts Orcker's CA
 and resolves `.test`.
 
 ::: warning This exposes your dev sites to the network
 LAN sharing binds the web proxy and DNS responder to `0.0.0.0`, so anything that
 can route to your machine can reach your sites (subject to the peer filter and
 your host firewall). It is opt-in and off by default. Turn it off with
-`yerd lan disable` when you're done. Don't enable it on an untrusted network.
+`orcker lan disable` when you're done. Don't enable it on an untrusted network.
 :::
 
 ## Commands
 
 | Command | Description |
 | --- | --- |
-| `yerd lan enable` | Expose `.test` sites to the LAN, then restart the daemon to re-bind. |
-| `yerd lan disable` | Return to loopback-only, then restart the daemon. |
-| `yerd lan status` | Show configured-vs-effective state, the LAN IP, and the next step. |
-| `yerd remote-setup` | Mint a one-time command to provision another device. |
+| `orcker lan enable` | Expose `.test` sites to the LAN, then restart the daemon to re-bind. |
+| `orcker lan disable` | Return to loopback-only, then restart the daemon. |
+| `orcker lan status` | Show configured-vs-effective state, the LAN IP, and the next step. |
+| `orcker remote-setup` | Mint a one-time command to provision another device. |
 
 ## How it works
 
@@ -45,20 +45,20 @@ your host firewall). It is opt-in and off by default. Turn it off with
 ## Privileged setup for ports 80/443
 
 LAN devices expect the well-known ports. Binding them needs a one-time,
-per-machine privileged step - the same mechanism as ordinary Yerd use:
+per-machine privileged step - the same mechanism as ordinary Orcker use:
 
-- **macOS:** run `sudo yerd elevate ports` (if you haven't already) **and**
-  `sudo yerd elevate lan`. The first installs the loopback redirect for on-host
+- **macOS:** run `sudo orcker elevate ports` (if you haven't already) **and**
+  `sudo orcker elevate lan`. The first installs the loopback redirect for on-host
   access; the second installs a `pf` redirect that carries inbound LAN 80/443 to
-  Yerd on your LAN IP. Remove the LAN rule later with `sudo yerd unelevate lan`.
-- **Linux:** run `sudo yerd elevate ports` once (it grants
+  Orcker on your LAN IP. Remove the LAN rule later with `sudo orcker unelevate lan`.
+- **Linux:** run `sudo orcker elevate ports` once (it grants
   `cap_net_bind_service`, which covers the `0.0.0.0` bind). No separate LAN step.
 
-`yerd lan status` tells you whether these are in place.
+`orcker lan status` tells you whether these are in place.
 
 ## Firewall
 
-Yerd does not configure your firewall. Allow these from your LAN subnet only:
+Orcker does not configure your firewall. Allow these from your LAN subnet only:
 
 | Port | Protocol | Purpose |
 | --- | --- | --- |
@@ -74,26 +74,26 @@ sudo ufw allow from 192.168.1.0/24 to any port 1053
 ```
 
 ::: info IPv6
-Yerd binds only IPv4 (`0.0.0.0`) listeners, so there is nothing to reach over
+Orcker binds only IPv4 (`0.0.0.0`) listeners, so there is nothing to reach over
 IPv6 today. Note only that IPv4 firewall rules don't cover IPv6 in general.
 :::
 
-## Provisioning a device — `yerd remote-setup`
+## Provisioning a device — `orcker remote-setup`
 
 A remote device needs two things to use your `.test` sites: it must **trust
-Yerd's CA** (for HTTPS) and **resolve `.test`** to your machine. `yerd
+Orcker's CA** (for HTTPS) and **resolve `.test`** to your machine. `orcker
 remote-setup` prints a command that does both. It only works while LAN mode is
 up.
 
 ```sh
-$ yerd remote-setup
+$ orcker remote-setup
 Run this on the OTHER device (needs sudo, curl, and openssl):
 
-  curl -fsS --retry 3 -o yerd-setup.sh 'http://192.168.1.42:7073/remote-setup?code=…' && [ "$(openssl dgst -sha256 -r yerd-setup.sh | cut -d' ' -f1)" = "<sha256>" ] && sudo bash yerd-setup.sh
+  curl -fsS --retry 3 -o orcker-setup.sh 'http://192.168.1.42:7073/remote-setup?code=…' && [ "$(openssl dgst -sha256 -r orcker-setup.sh | cut -d' ' -f1)" = "<sha256>" ] && sudo bash orcker-setup.sh
 ```
 
 It is a single line: download the self-contained installer, check its SHA-256
-matches, then run it. The installer embeds Yerd's CA, so there is nothing else to
+matches, then run it. The installer embeds Orcker's CA, so there is nothing else to
 fetch.
 
 ::: danger The hash is the trust anchor - verify it
@@ -115,24 +115,24 @@ databases, so Firefox, Chromium and Brave trust it too (best-effort, when
 **Windows devices are not supported.** Windows has no built-in way to forward a
 single domain to a nameserver on a non-standard port - its NRPT rules
 (`Add-DnsClientNrptRule`) take a server address but no port, and the `hosts`
-file can't express a wildcard. Pointing a Windows box at Yerd needs a local DNS
+file can't express a wildcard. Pointing a Windows box at Orcker needs a local DNS
 proxy (such as Acrylic) configured by hand, so there is no bootstrap script for
 it.
 
 ### Undoing it on a device
 
-Yerd can't revert a device it doesn't control. On each provisioned device, run
+Orcker can't revert a device it doesn't control. On each provisioned device, run
 the installer's uninstall mode to remove the CA (system store and browser NSS
 databases) and the resolver entry:
 
 ```sh
-sudo bash yerd-setup.sh uninstall
+sudo bash orcker-setup.sh uninstall
 ```
 
 ## Headless / always-on hosts
 
 If you share from a machine you don't stay logged into, enable a persistent user
-session so `yerdd` keeps running (Linux):
+session so `orckerd` keeps running (Linux):
 
 ```sh
 sudo loginctl enable-linger "$(whoami)"
@@ -143,9 +143,9 @@ See the [daemon guide](./daemon) for details.
 ## Turning it off
 
 ```sh
-yerd lan disable
+orcker lan disable
 ```
 
 This restarts the daemon back onto loopback. On macOS the `pf` LAN redirect is
-separate privileged state - `yerd lan status` flags it as residual until you run
-`sudo yerd unelevate lan`. A full `yerd uninstall` removes it too.
+separate privileged state - `orcker lan status` flags it as residual until you run
+`sudo orcker unelevate lan`. A full `orcker uninstall` removes it too.

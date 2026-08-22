@@ -11,13 +11,13 @@ live in `version.rs`; the I/O glue lives in `main.rs`.
 
 Packaging is **not** an xtask concern: the single GUI bundle (`.dmg` on macOS,
 `.deb` on Linux) has the three binaries embedded via `externalBin`
-(per-platform overlays in `apps/yerd-gui/src-tauri/`). Tauri builds the `.app`
+(per-platform overlays in `apps/orcker-gui/src-tauri/`). Tauri builds the `.app`
 (macOS) and `.deb` (Linux) directly; the macOS `.dmg` is packaged as a
-separate headless step (`apps/yerd-gui/scripts/build-macos-dmg.sh`, via
+separate headless step (`apps/orcker-gui/scripts/build-macos-dmg.sh`, via
 `appdmg`) rather than by Tauri's own dmg bundler, which drives Finder via
 AppleScript and isn't reliable outside an interactive session. The Linux
 `.deb`'s `setcap`/symlink `postinst` lives in
-`apps/yerd-gui/src-tauri/deb/postinst.sh`, not here. (xtask used to build a
+`apps/orcker-gui/src-tauri/deb/postinst.sh`, not here. (xtask used to build a
 standalone `.deb`; that subcommand and its `deb.rs`/`pack.rs`/`assets/` were
 removed.)
 
@@ -33,8 +33,8 @@ manifest edits together.
   in each manifest, preserving indentation, key, trailing comma, and trailing
   newline. Never reformat the whole document.
 - The three manifests that must never drift: `Cargo.toml`
-  (`[workspace.package].version`), `apps/yerd-gui/src-tauri/tauri.conf.json`, and
-  `apps/yerd-gui/package.json`.
+  (`[workspace.package].version`), `apps/orcker-gui/src-tauri/tauri.conf.json`, and
+  `apps/orcker-gui/package.json`.
 
 ## Must not
 

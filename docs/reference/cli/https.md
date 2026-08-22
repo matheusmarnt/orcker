@@ -4,14 +4,14 @@
 
 | Command | Description | Example |
 | --- | --- | --- |
-| `yerd secure <NAME>` | Serve a site over HTTPS (promotes a parked site to a linked entry). | `yerd secure blog` |
-| `yerd unsecure <NAME>` | Stop serving a site over HTTPS. | `yerd unsecure blog` |
+| `orcker secure <NAME>` | Serve a site over HTTPS (promotes a parked site to a linked entry). | `orcker secure blog` |
+| `orcker unsecure <NAME>` | Stop serving a site over HTTPS. | `orcker unsecure blog` |
 
 ```sh
-yerd secure blog      # https://blog.test is now served with a trusted cert
-yerd unsecure blog    # back to http only
+orcker secure blog      # https://blog.test is now served with a trusted cert
+orcker unsecure blog    # back to http only
 ```
 
 ::: tip
-For the browser to trust the certificate, the local CA must be installed in your OS trust store. Run `sudo yerd elevate trust` once (see [Elevation](./elevation)).
+For the browser to trust the certificate, the local CA must be installed in your OS trust store. Run `sudo orcker elevate trust` once (see [Elevation](./elevation)).
 :::

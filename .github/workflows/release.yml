@@ -1,7 +1,7 @@
 name: Release
 
-# Inherited from Yerd and disabled in the Orcker fork: this pipeline signs with
-# Yerd's minisign key, uploads to Yerd's Bunny CDN and announces on Yerd's Discord.
+# Inherited from Orcker and disabled in the Orcker fork: this pipeline signs with
+# Orcker's minisign key, uploads to Orcker's Bunny CDN and announces on Orcker's Discord.
 # Firing it from an Orcker tag would publish into someone else's infrastructure, so
 # the tag trigger is removed until Orcker has its own release channel.
 on:
@@ -89,11 +89,11 @@ jobs:
           # Proves every Requires resolves against Fedora repos, and runs %post.
           dnf install -y "$pkg"
           # Blocking: the shipped daemon must self-update via rpm.
-          fmt=$(yerdd --pkg-format)
+          fmt=$(orckerd --pkg-format)
           [ "$fmt" = "rpm" ] \
-            || { echo "::error::installed yerdd --pkg-format=$fmt (expected rpm)"; exit 1; }
+            || { echo "::error::installed orckerd --pkg-format=$fmt (expected rpm)"; exit 1; }
           # Advisory: file caps often can't persist on a container's overlayfs.
-          getcap /usr/bin/yerdd | grep -q cap_net_bind_service \
+          getcap /usr/bin/orckerd | grep -q cap_net_bind_service \
             || echo "::warning::setcap did not persist in the container (expected on overlayfs)"
           echo "Fedora smoke OK: $pkg installs, deps resolve, pkg-format=rpm"
 
@@ -137,14 +137,14 @@ jobs:
           # Drop the now-redundant nested dirs so `dist/*` is files-only.
           find . -mindepth 1 -type d -exec rm -rf {} +
           # Human-friendly release asset names:
-          #   Yerd_<OS>_<Arch>_v<version>.<ext>   (e.g. Yerd_MacOS_AppleSilicon_v2-0-2-rc-3.dmg)
-          # Tauri emits Yerd_<ver>_<arch>.deb (the macOS .dmg is built by
+          #   Orcker_<OS>_<Arch>_v<version>.<ext>   (e.g. Orcker_MacOS_AppleSilicon_v2-0-2-rc-3.dmg)
+          # Tauri emits Orcker_<ver>_<arch>.deb (the macOS .dmg is built by
           # scripts/build-macos-dmg.sh, matching the same naming); the .app.tar.gz is already
-          # Yerd_MacOS_AppleSilicon.app.tar.gz; the arch job emits
-          # Yerd_<ver>_x86_64.pkg.tar.zst. We relabel OS+arch and dash the version
+          # Orcker_MacOS_AppleSilicon.app.tar.gz; the arch job emits
+          # Orcker_<ver>_x86_64.pkg.tar.zst. We relabel OS+arch and dash the version
           # (dots → dashes) so the Releases page reads cleanly.
           ver="v$(printf '%s' "${GITHUB_REF_NAME#v}" | tr '.' '-')"
-          for f in Yerd_* yerd-gui_* yerd_*; do
+          for f in Orcker_* orcker-gui_* orcker_*; do
             [ -e "$f" ] || continue
             # Compound extensions first (`.app.tar.gz`/`.pkg.tar.zst` would
             # otherwise collapse to `gz`/`zst`).
@@ -161,13 +161,13 @@ jobs:
               *x86_64*|*amd64*)  arch="x86_64" ;;
               *) arch="unknown" ;;
             esac
-            mv -- "$f" "Yerd_${os}_${arch}_${ver}.${ext}"
+            mv -- "$f" "Orcker_${os}_${arch}_${ver}.${ext}"
           done
           echo "Release artifacts:" && ls -1
 
       # Detached minisign signatures over the final-named update artifacts, which
       # the daemon verifies before applying (against the key embedded in
-      # `yerd_update::UPDATE_PUBLIC_KEY`). `-H` = prehashed, which `minisign-verify`
+      # `orcker_update::UPDATE_PUBLIC_KEY`). `-H` = prehashed, which `minisign-verify`
       # requires. PRECONDITION: provision `MINISIGN_SECRET_KEY` (generate an
       # *unencrypted* key with `minisign -G -W` to avoid a CI password prompt) and
       # set `UPDATE_PUBLIC_KEY` to its public half before this is load-bearing.
@@ -225,14 +225,14 @@ jobs:
           fi
 
       # Trust-anchor gate: prove the public key the daemon EMBEDS
-      # (`yerd_update::UPDATE_PUBLIC_KEY`) actually verifies these signatures — so
+      # (`orcker_update::UPDATE_PUBLIC_KEY`) actually verifies these signatures — so
       # a real release can never ship signatures the shipped binary can't check
       # (catches both the placeholder key being left in and a CI secret mismatch).
       - name: Verify signatures against the embedded public key
         working-directory: dist
         run: |
           set -euo pipefail
-          ART="$GITHUB_WORKSPACE/crates/yerd-update/src/artifact.rs"
+          ART="$GITHUB_WORKSPACE/crates/orcker-update/src/artifact.rs"
           KEY=$(grep -oE 'UPDATE_PUBLIC_KEY: &str = "[^"]+"' "$ART" | sed -E 's/.*"([^"]+)".*/\1/')
           [ -n "$KEY" ] || { echo "::error::could not read UPDATE_PUBLIC_KEY from $ART"; exit 1; }
           # Refuse to ship the published minisign-verify test key.
@@ -365,13 +365,13 @@ jobs:
             COLOR=3066993
           fi
           PAYLOAD=$(jq -n \
-            --arg title "Yerd ${TAG} released" \
+            --arg title "Orcker ${TAG} released" \
             --arg url "$URL" \
             --arg notes "$NOTES" \
             --arg footer "$FOOTER" \
             --argjson color "$COLOR" \
             '{
-              username: "Yerd Releases",
+              username: "Orcker Releases",
               embeds: [{
                 title: $title,
                 url: $url,
@@ -400,7 +400,7 @@ jobs:
     # latest.json/releases.json can't be clobbered out of order. release.yml's
     # top-level group is per-tag and does NOT serialize distinct tags.
     concurrency:
-      group: yerd-cdn-writes
+      group: orcker-cdn-writes
       cancel-in-progress: false
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

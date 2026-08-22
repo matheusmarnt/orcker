@@ -1,11 +1,11 @@
 # Sharing Sites
 
-Yerd can **publish a local site to the public internet** over a secure HTTPS URL,
+Orcker can **publish a local site to the public internet** over a secure HTTPS URL,
 so you can share work in progress, test a webhook, or demo from your own machine
 without deploying anything. It works through [Cloudflare
 Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)
 (`cloudflared`): the connection is **outbound-only** - no inbound ports, no
-router config, no `sudo` - which fits Yerd's rootless model.
+router config, no `sudo` - which fits Orcker's rootless model.
 
 Sharing is opt-in and per-site. A site is never reachable from the internet until
 you explicitly share it.
@@ -29,19 +29,19 @@ choose.
 ## Prerequisite: cloudflared
 
 Sharing needs the `cloudflared` binary. If one is already on your `PATH` (version
-2023.3.0 or newer), Yerd detects and uses it automatically - nothing to install.
-Otherwise Yerd **downloads it on demand** (the official Apache-2.0 static build,
+2023.3.0 or newer), Orcker detects and uses it automatically - nothing to install.
+Otherwise Orcker **downloads it on demand** (the official Apache-2.0 static build,
 verified by checksum) and installs it under the daemon's data directory - it
 isn't bundled, and it never touches your system unless you already had one. No
 Cloudflare account is required for quick share.
 
 ```sh
-yerd tunnel install
+orcker tunnel install
 ```
 
 In the desktop app, the **Share** page offers an **Install cloudflared** button
-the first time you visit. If Yerd is using a `cloudflared` it found on your
-`PATH`, the badge is annotated `(system)` and a **Use Yerd's bundled version
+the first time you visit. If Orcker is using a `cloudflared` it found on your
+`PATH`, the badge is annotated `(system)` and a **Use Orcker's bundled version
 instead** button lets you switch to the managed, auto-updating copy.
 
 ## Quick share
@@ -49,12 +49,12 @@ instead** button lets you switch to the managed, auto-updating copy.
 The fastest way to put a site online:
 
 ```sh
-yerd tunnel share app        # -> https://calm-river-1234.trycloudflare.com
-yerd tunnel status           # see live tunnels and their URLs
-yerd tunnel stop app         # take it back offline
+orcker tunnel share app        # -> https://calm-river-1234.trycloudflare.com
+orcker tunnel status           # see live tunnels and their URLs
+orcker tunnel stop app         # take it back offline
 ```
 
-Yerd points `cloudflared` at the site's own loopback listener and rewrites the
+Orcker points `cloudflared` at the site's own loopback listener and rewrites the
 `Host` header to the site's `.test` name, so the request routes through the same
 proxy that serves the site locally - a secure (HTTPS) site is served over HTTPS,
 a plain site over HTTP, transparently. You don't configure any of that.
@@ -65,7 +65,7 @@ quick-tunnel limits (around 200 concurrent requests, and no server-sent events),
 so they're for development, not production traffic.
 
 ::: tip "Server IP address could not be found"?
-That's your machine's DNS resolver, not Yerd - some ISP resolvers don't resolve
+That's your machine's DNS resolver, not Orcker - some ISP resolvers don't resolve
 fresh `*.trycloudflare.com` names. Point your system DNS at `1.1.1.1` or
 `8.8.8.8` and the URL resolves immediately.
 :::
@@ -75,37 +75,37 @@ fresh `*.trycloudflare.com` names. Point your system DNS at `1.1.1.1` or
 Named tunnels publish a site at a **stable hostname on a domain you already manage
 in Cloudflare**. They need a one-time browser login to your Cloudflare account.
 
-Yerd uses a single consolidated tunnel that serves every site you expose (one
+Orcker uses a single consolidated tunnel that serves every site you expose (one
 process, one config), so you create the tunnel once and then just toggle which
 sites are live.
 
 ### 1. Connect your Cloudflare account
 
 ```sh
-yerd tunnel login
+orcker tunnel login
 ```
 
-This opens your browser to authorize Yerd for one of your Cloudflare zones. The
+This opens your browser to authorize Orcker for one of your Cloudflare zones. The
 account certificate is stored in the daemon's data directory and never leaves
-your machine. After login, Yerd resolves and shows the **authorized domain**
+your machine. After login, Orcker resolves and shows the **authorized domain**
 (e.g. `example.com`) so you know which hostnames you can use.
 
 ### 2. Create a tunnel
 
 ```sh
-yerd tunnel create my-tunnel
+orcker tunnel create my-tunnel
 ```
 
-Yerd supports one named tunnel at a time; remove it before creating another.
+Orcker supports one named tunnel at a time; remove it before creating another.
 
 ### 3. Expose a site
 
 Map a site to a public hostname on your authorized domain, then publish:
 
 ```sh
-yerd tunnel set-host app app.example.com   # route DNS + record the mapping
-yerd tunnel publish                        # bring the tunnel up for all exposed sites
-yerd tunnel list                           # show the tunnel, exposed sites, and domain
+orcker tunnel set-host app app.example.com   # route DNS + record the mapping
+orcker tunnel publish                        # bring the tunnel up for all exposed sites
+orcker tunnel list                           # show the tunnel, exposed sites, and domain
 ```
 
 `set-host` creates the proxied DNS record on your Cloudflare zone and remembers
@@ -114,7 +114,7 @@ the mapping. `publish` starts the consolidated tunnel; `unpublish` stops it.
 To stop exposing a site:
 
 ```sh
-yerd tunnel set-host app --clear           # remove the mapping
+orcker tunnel set-host app --clear           # remove the mapping
 ```
 
 ## In the desktop app
@@ -142,7 +142,7 @@ shared, the sidebar item shows a count.
 ## Removing a named tunnel
 
 ```sh
-yerd tunnel delete my-tunnel
+orcker tunnel delete my-tunnel
 ```
 
 This stops the tunnel, deletes it from your Cloudflare account, removes its local
@@ -161,6 +161,6 @@ those in the Cloudflare dashboard if you no longer want them.
 
 ## Command reference
 
-See the [`yerd tunnel` CLI reference](../reference/cli/tunnel) for every command
+See the [`orcker tunnel` CLI reference](../reference/cli/tunnel) for every command
 and flag. The persisted mappings live in the `[tunnel]` section of the [config
 file](../reference/configuration#tunnel).

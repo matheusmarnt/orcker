@@ -1,11 +1,11 @@
 # Desktop App Internals
 
-The Yerd desktop app (`apps/yerd-gui`) is a **Tauri v2** application: a Rust
+The Orcker desktop app (`apps/orcker-gui`) is a **Tauri v2** application: a Rust
 bridge wrapping a system webview that renders a **Vue 3 + TypeScript + Tailwind**
 frontend. Its single architectural rule, shared with the CLI, is that it is a
-**thin `yerd-ipc` client of the `yerdd` daemon** - it contains no business logic
+**thin `orcker-ipc` client of the `orckerd` daemon** - it contains no business logic
 of its own and **never runs as root**. Everything the app does to your machine
-goes through the daemon over a local socket, or through the audited `yerd` CLI
+goes through the daemon over a local socket, or through the audited `orcker` CLI
 under OS elevation.
 
 For the user-facing tour of the app, see the [Features guide](../guide/desktop-app).
@@ -14,7 +14,7 @@ keeps them aligned.
 
 ::: info Two layers, one contract
 The Rust `src-tauri` layer is a **transport bridge**: one Tauri command per
-`yerd-ipc` `Request`. The Vue frontend is a **typed client**: a hand-pinned
+`orcker-ipc` `Request`. The Vue frontend is a **typed client**: a hand-pinned
 TypeScript mirror of the same wire JSON. The whole design exists to keep both
 sides agreeing with the Rust IPC contract while never duplicating daemon logic.
 :::
@@ -22,13 +22,13 @@ sides agreeing with the Rust IPC contract while never duplicating daemon logic.
 ## Module map
 
 ```
-apps/yerd-gui/
-├── package.json            yerd-gui (workspace version) - "a thin IPC client of the yerdd daemon"
+apps/orcker-gui/
+├── package.json            orcker-gui (workspace version) - "a thin IPC client of the orckerd daemon"
 ├── vite.config.ts          Vite + Vitest (one config; vitest/config augments it)
 ├── tailwind.config.js      Tailwind 3 theme
 ├── tsconfig.json           "@/*" -> src/*
 ├── src-tauri/              Rust BRIDGE
-│   ├── Cargo.toml          crate yerd-gui (bin yerd-gui), edition 2024, rustc ≥ 1.85
+│   ├── Cargo.toml          crate orcker-gui (bin orcker-gui), edition 2024, rustc ≥ 1.85
 │   ├── tauri.conf.json     windows (main + dumps + mails), CSP, bundle targets
 │   ├── capabilities/default.json   permission allowlist
 │   └── src/
@@ -36,8 +36,8 @@ apps/yerd-gui/
 │       ├── mail_window.rs  show_mails_window command (show+focus the static `mails` window)
 │       ├── commands.rs     one #[tauri::command] per Request; finish() error mapping
 │       ├── ipc.rs          exchange() - socket transport, mirrors the CLI's
-│       ├── elevate.rs      OS-elevated `yerd <verb> <target>` (pkexec / osascript)
-│       ├── daemon.rs       locate / download-install / start / stop yerdd (host-side)
+│       ├── elevate.rs      OS-elevated `orcker <verb> <target>` (pkexec / osascript)
+│       ├── daemon.rs       locate / download-install / start / stop orckerd (host-side)
 │       ├── autostart.rs    per-user service + autostart plugin + gui-settings.json
 │       └── error.rs        GuiError { code, message }
 └── src/                    Vue FRONTEND
@@ -45,7 +45,7 @@ apps/yerd-gui/
     ├── App.vue             AppShell + Toaster; shared daemon poller; first-run daemon start
     ├── router.ts           hash router: /overview (default) /general /php /sites /tooling /services /proxies /dumps /integrations /mail /doctor /about (+ /dumps-window, /mails-viewer standalone routes)
     ├── ipc/
-    │   ├── types.ts        TypeScript mirror of the yerd-ipc wire JSON
+    │   ├── types.ts        TypeScript mirror of the orcker-ipc wire JSON
     │   ├── client.ts       typed wrappers around invoke() + IpcError
     │   └── client.test.ts  command-mapping + error-categorisation tests
     ├── composables/        useDaemon (singleton poller), usePoll, useToast, useIdes
@@ -62,9 +62,9 @@ apps/yerd-gui/
 ## The Rust bridge (`src-tauri`)
 
 The bridge is a small, deliberately logic-free crate. Its
-[`Cargo.toml`](https://github.com/forjedio/yerd) depends on the same internal
-crates the CLI uses - `yerd-core`, `yerd-ipc` (with the `transport` feature),
-and `yerd-platform` - because the GUI is "a client of the same contract the CLI
+[`Cargo.toml`](https://github.com/forjedio/orcker) depends on the same internal
+crates the CLI uses - `orcker-core`, `orcker-ipc` (with the `transport` feature),
+and `orcker-platform` - because the GUI is "a client of the same contract the CLI
 uses." It bans `unwrap`/`expect`/`panic` in its own code via Clippy lints;
 `unsafe` is allowed only for one documented `geteuid` FFI call in `elevate.rs`.
 
@@ -141,11 +141,11 @@ Three commands are **host-only helpers** with no daemon IPC:
 
 | Command | Returns | Purpose |
 | --- | --- | --- |
-| `protocol_version` | `u32` (`yerd_ipc::PROTOCOL_VERSION`) | the negotiated IPC protocol version, for the About view |
+| `protocol_version` | `u32` (`orcker_ipc::PROTOCOL_VERSION`) | the negotiated IPC protocol version, for the About view |
 | `host_platform` | `&'static str` (`std::env::consts::OS`) | `"linux"` / `"macos"` / `"windows"` to gate platform UI |
-| `elevate` / `unelevate` | `()` | run `yerd elevate <target>` / `yerd unelevate <target>` under OS elevation (see below) |
+| `elevate` / `unelevate` | `()` | run `orcker elevate <target>` / `orcker unelevate <target>` under OS elevation (see below) |
 
-The Settings page (route `/general`) adds further host-only commands (no daemon IPC) for daemon lifecycle and autostart - `daemon_installed`, `start_daemon`, `stop_daemon`, `cli_path_status`, `install_cli_to_path`, `remove_cli_from_path`, `open_login_items`, `get_autostart`, `set_autostart_daemon`, `set_autostart_gui`, `set_gui_minimized`, `daemon_self_repair_busy` - implemented in `daemon.rs` (resolve the bundled binaries, start/stop, install the `yerd` CLI on PATH) and `autostart.rs` (per-user service + run-at-login; macOS uses `smappservice.rs`). The daemon is **bundled** in the app, so there's no download/install command.
+The Settings page (route `/general`) adds further host-only commands (no daemon IPC) for daemon lifecycle and autostart - `daemon_installed`, `start_daemon`, `stop_daemon`, `cli_path_status`, `install_cli_to_path`, `remove_cli_from_path`, `open_login_items`, `get_autostart`, `set_autostart_daemon`, `set_autostart_gui`, `set_gui_minimized`, `daemon_self_repair_busy` - implemented in `daemon.rs` (resolve the bundled binaries, start/stop, install the `orcker` CLI on PATH) and `autostart.rs` (per-user service + run-at-login; macOS uses `smappservice.rs`). The daemon is **bundled** in the app, so there's no download/install command.
 
 On macOS, `autostart.rs` also self-repairs the daemon's SMAppService registration
 on every launch (`ensure_daemon_registration`, run from a background thread in
@@ -160,7 +160,7 @@ up to date but SMAppService reports the registration `.enabled` while
 `launchctl print` shows no job for it - a **phantom registration** (a BTM
 hiccup, a crash, or a manual `bootout`) that a plain kickstart can't recover
 from since there's no job to kick. Every branch logs to
-`{cache}/yerd-gui-repair.log`, which `daemon_diagnostics`/"Copy diagnostics"
+`{cache}/orcker-gui-repair.log`, which `daemon_diagnostics`/"Copy diagnostics"
 surfaces - the first place to check when a daemon doesn't come back after an
 update.
 
@@ -185,24 +185,24 @@ crosses to the webview.
 
 ### The transport: `exchange`
 
-`ipc.rs` is "a near-verbatim mirror of `bin/yerd/src/transport.rs`." It resolves
-the socket path identically to the daemon and CLI - `<runtime>/yerd.sock`, where
-`<runtime>` comes from `yerd_platform`'s `ActivePaths::resolve` - so client and
+`ipc.rs` is "a near-verbatim mirror of `bin/orcker/src/transport.rs`." It resolves
+the socket path identically to the daemon and CLI - `<runtime>/orcker.sock`, where
+`<runtime>` comes from `orcker_platform`'s `ActivePaths::resolve` - so client and
 server always agree on the location:
 
 ```rust
 #[cfg(unix)]
 pub async fn exchange(req: &Request) -> Result<Response, GuiError> {
-    use yerd_platform::{ActivePaths, Paths};
+    use orcker_platform::{ActivePaths, Paths};
     let dirs = ActivePaths::new()
         .resolve()
         .map_err(|e| GuiError::unreachable(format!("cannot resolve runtime dir: {e}")))?;
-    exchange_at(&dirs.runtime.join("yerd.sock"), req).await
+    exchange_at(&dirs.runtime.join("orcker.sock"), req).await
 }
 ```
 
 `exchange_at` connects with `interprocess` local sockets, writes a single framed
-request with `yerd_ipc::write_message` (bounded by `DEFAULT_MAX_FRAME`), and
+request with `orcker_ipc::write_message` (bounded by `DEFAULT_MAX_FRAME`), and
 reads one framed `Response` back with a `FrameDecoder`. It is factored out so
 tests can target a tempdir socket. Failure handling distinguishes categories:
 
@@ -244,7 +244,7 @@ are the only categories the frontend's `IpcError` needs to distinguish.
 - **Launch-time update check** (`tray::spawn_launch_update_check`): fired from
   both `setup_app` and the single-instance callback, so it runs on a cold start
   and on every re-invoke of an already-running app. It asks the daemon for the
-  cached self-update status and, only if `yerd_update::is_check_due` says the
+  cached self-update status and, only if `orcker_update::is_check_due` says the
   last check is stale (the same 4h threshold the daemon's own background poll
   uses), kicks a bounded live check. Silent and non-blocking - an unreachable
   daemon or fetch failure is swallowed exactly like the daemon's own
@@ -252,11 +252,11 @@ are the only categories the frontend's `IpcError` needs to distinguish.
 - `tauri-plugin-opener` and `tauri-plugin-dialog` back the host helpers
   (`openInBrowser`, `openPath`, `pickDirectory`).
 - **Close-to-tray**: `WindowEvent::CloseRequested` hides the window and calls
-  `api.prevent_close()`. The tray's **Quit** item is the real exit; **Open Yerd**
+  `api.prevent_close()`. The tray's **Quit** item is the real exit; **Open Orcker**
   reshows the window. (On Linux AppIndicator, clicks aren't delivered, so the
   menu item is the only way in.)
 - **Dynamic tray menu** (`tray.rs`): the menu is rebuilt from live daemon state,
-  not static. A Rust-side poll over the same `yerd-ipc` socket the commands use
+  not static. A Rust-side poll over the same `orcker-ipc` socket the commands use
   (the frontend poller pauses when the window is hidden to tray) diffs a snapshot
   and `set_menu`s a fresh menu only on change - showing daemon status + ports,
   Start/Restart/Stop, an inline default-PHP switcher, update items, the Mail/Dumps
@@ -272,8 +272,8 @@ are the only categories the frontend's `IpcError` needs to distinguish.
   trip taken by the caller *before* `MENU_LOCK` is acquired (see the module doc
   comment) so it never runs lock-held. Any read failure (no portal, older
   desktop) falls back to light, i.e. today's black glyphs.
-- On **Linux**, before GTK initialises, `glib::set_prgname("yerd-gui")` pins the
-  Wayland `app_id` so the dock matches `yerd-gui.desktop`, and a `with_webview`
+- On **Linux**, before GTK initialises, `glib::set_prgname("orcker-gui")` pins the
+  Wayland `app_id` so the dock matches `orcker-gui.desktop`, and a `with_webview`
   block clamps WebKitGTK's zoom level (the only place that can intercept
   Ctrl+wheel / pinch zoom, which WebKit handles below the DOM).
 
@@ -292,21 +292,21 @@ minimize/maximize-right; Linux Reversed the mirror of that; Windows
 minimize/maximize/close all on the right). The CSP is locked down to
 `default-src 'self'` (plus inline styles and `data:` images). Bundle targets are
 `deb` and `app` - the macOS `.dmg` is **not** a Tauri bundle target; it's built
-as a separate headless step (`apps/yerd-gui/scripts/build-macos-dmg.sh`, via
+as a separate headless step (`apps/orcker-gui/scripts/build-macos-dmg.sh`, via
 `appdmg`) after the `.app` is signed, since Tauri's own dmg bundler drives
 Finder via AppleScript to style the background/icon layout, which isn't
 reliable outside an interactive session. See
 [Packaging and releasing](./building#packaging-and-releasing). For `.deb`, the
 privileged-port capability is **not**
 baked into the artifact: the `postinst` script grants
-`cap_net_bind_service=+ep` on the installed `yerdd` at configure time (and
+`cap_net_bind_service=+ep` on the installed `orckerd` at configure time (and
 re-applies it on every upgrade, since dpkg wipes file capabilities) - falling
 back to ports 8080/8443 if `setcap` is missing or the filesystem can't hold
 caps. There's no AppImage target because its ephemeral mount can't host a
 `postinst` step, so the daemon's `setcap` can't be persisted that way. The native
 Arch package (`.pkg.tar.zst`) is **not** a Tauri bundle target (Tauri has no
 pacman bundler) - it's built separately from
-[`packaging/arch/PKGBUILD`](https://github.com/forjedio/yerd/blob/main/packaging/arch)
+[`packaging/arch/PKGBUILD`](https://github.com/forjedio/orcker/blob/main/packaging/arch)
 in the release workflow's `arch` job, with a `.install` scriptlet doing the same
 `setcap`. The Fedora `.rpm`, by contrast, **is** a Tauri bundle target (Tauri v2
 has an rpm bundler): the `fedora` jobs run `tauri build` with the
@@ -354,7 +354,7 @@ specific `core:window:*` commands the custom titlebar drives
 ## In-app elevation
 
 `elevate.rs` is the only privileged path, and it is careful. The GUI process
-never becomes root; instead it **elevates the audited `yerd` CLI** to run one of
+never becomes root; instead it **elevates the audited `orcker` CLI** to run one of
 a fixed allowlist of verbs against a fixed allowlist of targets:
 
 ```rust
@@ -367,24 +367,24 @@ interpolated into the macOS AppleScript, so both must be validated), resolves th
 trusted CLI, and spawns the blocking, prompt-driven process off the async runtime
 via `spawn_blocking`. The `elevate` command passes `"elevate"`; `unelevate` (the
 Services-tab "Unelevate" buttons) passes `"unelevate"`. The
-invariants (grounded in `bin/yerd/src/elevate.rs`) are:
+invariants (grounded in `bin/orcker/src/elevate.rs`) are:
 
 1. **Elevate the CLI, not the GUI.**
-2. **Resolve `yerd` as a sibling of our own `current_exe`**, never from `PATH`
-   or the daemon - an anti-forgery measure matching the CLI. If no `yerd` sits
+2. **Resolve `orcker` as a sibling of our own `current_exe`**, never from `PATH`
+   or the daemon - an anti-forgery measure matching the CLI. If no `orcker` sits
    beside the app binary, the command fails with an explanatory error.
 3. **Thread the real uid through `env SUDO_UID=<uid>`** because the elevation
-   tool clears the environment, and `yerd elevate` relies on `SUDO_UID` to
+   tool clears the environment, and `orcker elevate` relies on `SUDO_UID` to
    locate the user's socket and owner-check the CA.
 
 Per platform:
 
 ```sh
 # Linux (<verb> is elevate or unelevate)
-pkexec /usr/bin/env SUDO_UID=<uid> <yerd> <verb> <target>
+pkexec /usr/bin/env SUDO_UID=<uid> <orcker> <verb> <target>
 
 # macOS - built on osascript's stdin, with `quoted form of` for shell safety
-osascript:  do shell script "env SUDO_UID=<uid> " & quoted form of "<yerd>" \
+osascript:  do shell script "env SUDO_UID=<uid> " & quoted form of "<orcker>" \
             & " <verb> <target>" with administrator privileges
 ```
 
@@ -394,17 +394,17 @@ does **not** set `SUDO_UID` (that is a `sudo`-ism). Cancellation is detected fro
 exit codes (`pkexec` 126/127) or stderr text (`User canceled` / `-128`), since on
 macOS the exit code alone can't separate "dismissed" from "elevate failed". On
 unsupported platforms the helper returns an error telling the user to run
-`yerd elevate` in a terminal. See [Elevation & Privileges](../guide/elevation).
+`orcker elevate` in a terminal. See [Elevation & Privileges](../guide/elevation).
 
 ## The Vue frontend (`src`)
 
 ### The typed IPC client
 
 `ipc/types.ts` is "a *contract*, pinned by hand to the Rust source." It mirrors
-the `yerd-ipc` wire JSON and documents each type's origin so review catches
-drift; the file's header names `crates/yerd-ipc/src/{request,response,status}.rs`
-and `crates/yerd-core/src/site.rs` as the source of truth, with
-`yerd-ipc`'s `tests/wire_stability.rs` guarding the Rust side. Wire conventions:
+the `orcker-ipc` wire JSON and documents each type's origin so review catches
+drift; the file's header names `crates/orcker-ipc/src/{request,response,status}.rs`
+and `crates/orcker-core/src/site.rs` as the source of truth, with
+`orcker-ipc`'s `tests/wire_stability.rs` guarding the Rust side. Wire conventions:
 enums are internally tagged on `type`, `snake_case`; `PhpVersion` is the bare
 string `"8.5"`; `Option<T>` is `T | null`. It mirrors the additive `SiteEntry`
 domain fields (`primary_domain?`, `domains?`, `apex_shadowed_by?`) and the
@@ -462,7 +462,7 @@ and `elevate` (the `elevate` command above), typed to the
 
 A second group of host-only commands backs the **editor and terminal** launchers
 in the site details sidebar, implemented over
-[`yerd-platform`](./crates/yerd-platform)'s `IdeLauncher` / `SystemOpener` /
+[`orcker-platform`](./crates/orcker-platform)'s `IdeLauncher` / `SystemOpener` /
 `TerminalLauncher` seams rather than any daemon request:
 
 | Wrapper | Command | Purpose |
@@ -540,17 +540,17 @@ alarming wire value `stopped`, reserving red **"failed"** for an actual crash.
 gated control reads as intentional rather than broken. It has a **single** use
 today: on a platform without in-app elevation - i.e. a future Windows build,
 since the GUI ships only on macOS/Linux - the Doctor page's **Environment**
-*Fix* action falls back to a "soon" pill pointing at `yerd elevate`. On the
+*Fix* action falls back to a "soon" pill pointing at `orcker elevate`. On the
 supported platforms every control is fully wired (the earlier Logs / restart
 stubs are gone now that their IPC exists).
 
 ::: warning The GUI is a client of the daemon's state
 When the socket is unreachable, `AppShell.vue` replaces the route view with a
-"Daemon not running" panel offering **Start** (which launches `yerdd` through
+"Daemon not running" panel offering **Start** (which launches `orckerd` through
 the per-user service via the `start_daemon` host command) and **Retry**; the
 Overview, Settings, and About routes stay reachable while down (`DAEMON_FREE`).
 The app can drive the daemon's *lifecycle* but never reimplements its runtime
-logic - the daemon stays the single source of truth - and it expects the `yerd`
+logic - the daemon stays the single source of truth - and it expects the `orcker`
 CLI installed **beside** it for the elevation path.
 :::
 
@@ -581,9 +581,9 @@ type error - including drift between `ipc/types.ts` and how the views consume
 `code_str` renders snake_case for known variants):
 
 ```sh
-cargo test -p yerd-gui    # needs the Linux -dev packages listed in the README
+cargo test -p orcker-gui    # needs the Linux -dev packages listed in the README
 ```
 
 Together, the Vitest command-mapping tests, the `vue-tsc` gate, the bridge unit
-tests, and `yerd-ipc`'s own `wire_stability` tests are what keep the
+tests, and `orcker-ipc`'s own `wire_stability` tests are what keep the
 TypeScript contract pinned to the Rust contract on both sides.

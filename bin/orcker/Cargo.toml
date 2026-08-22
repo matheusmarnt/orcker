@@ -1,0 +1,45 @@
+[package]
+name                   = "orcker"
+version.workspace      = true
+edition.workspace      = true
+rust-version.workspace = true
+license.workspace      = true
+publish.workspace      = true
+description            = "Orcker CLI — a orcker-ipc client for the orckerd daemon."
+
+[[bin]]
+name = "orcker"
+path = "src/main.rs"
+
+[lib]
+name = "orcker"
+path = "src/lib.rs"
+
+[dependencies]
+orcker-core      = { path = "../../crates/orcker-core" }
+orcker-ipc       = { path = "../../crates/orcker-ipc", features = ["transport"] }
+orcker-mcp       = { path = "../../crates/orcker-mcp" }
+orcker-platform  = { path = "../../crates/orcker-platform" }
+orcker-config    = { path = "../../crates/orcker-config" }
+orcker-update    = { path = "../../crates/orcker-update" }
+orcker-service-ctl = { path = "../../crates/orcker-service-ctl" }
+clap           = { workspace = true }
+tokio          = { workspace = true, features = ["rt", "io-util", "net", "time"] }
+interprocess   = { workspace = true }
+serde_json     = { workspace = true }
+thiserror      = { workspace = true }
+tempfile       = { workspace = true }
+
+[target.'cfg(unix)'.dependencies]
+# `user` resolves the invoking user (home/shell) under sudo for the full
+# uninstall (the daemon is reaped via `pkill`, so no `signal` feature is needed
+# here — the workspace already enables it for other crates anyway).
+nix            = { workspace = true, features = ["user"] }
+
+[dev-dependencies]
+orckerd          = { path = "../orckerd" }
+minisign       = { workspace = true }
+tokio          = { workspace = true, features = ["rt-multi-thread", "macros", "net", "io-util", "sync", "time"] }
+
+[lints]
+workspace = true

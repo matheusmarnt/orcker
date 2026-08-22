@@ -1,8 +1,8 @@
 # Reverse Proxies
 
-Yerd can put a `.test` address in front of a service it doesn't run itself - a
+Orcker can put a `.test` address in front of a service it doesn't run itself - a
 Reverb server, a Node or Vite dev server, a Docker container, anything already
-listening on a port. The service gets Yerd's DNS, its trusted HTTPS, and a clean
+listening on a port. The service gets Orcker's DNS, its trusted HTTPS, and a clean
 `.test` hostname, with no extra config on the service's side.
 
 There are two shapes, and you'll usually want the second for Laravel work:
@@ -15,7 +15,7 @@ There are two shapes, and you'll usually want the second for Laravel work:
   Laravel Reverb needs (`wss://myapp.test/app`) so cookies and CORS work without
   a second domain.
 
-Unlike [Herd](https://herd.laravel.com), which writes an nginx vhost, Yerd's
+Unlike [Herd](https://herd.laravel.com), which writes an nginx vhost, Orcker's
 proxy is built into its own request path - there's nothing to configure and no
 web server to reload.
 
@@ -24,47 +24,47 @@ web server to reload.
 Point a new `.test` host at a running service:
 
 ```sh
-yerd proxy add reverb http://localhost:8080
+orcker proxy add reverb http://localhost:8080
 ```
 
 Now `http://reverb.test/` reaches the service. Serve it over HTTPS the same way
 you would a site - a proxy is secured on its own name:
 
 ```sh
-yerd secure reverb
+orcker secure reverb
 # https://reverb.test/  (trusted cert, HTTP redirects to HTTPS)
 ```
 
-Remove it with `yerd proxy remove reverb`.
+Remove it with `orcker proxy remove reverb`.
 
 ### Names and extra domains
 
 A proxy's name may be **dotted**, so its own address can be a subdomain:
 
 ```sh
-yerd proxy add api.account http://127.0.0.1:9011
+orcker proxy add api.account http://127.0.0.1:9011
 # http://api.account.test/
 ```
 
 Beyond that address, a whole-host proxy carries extra domains, subdomains, and
-wildcards exactly as a site does - through the same [`yerd domain`](../reference/cli/domains)
+wildcards exactly as a site does - through the same [`orcker domain`](../reference/cli/domains)
 commands, with the proxy name where a site name would go:
 
 ```sh
-yerd proxy add account-dev http://127.0.0.1:48087
-yerd domain add account-dev custom-domain.test
-yerd domain add account-dev '*.account-dev.test'
-yerd domain primary account-dev custom-domain.test
+orcker proxy add account-dev http://127.0.0.1:48087
+orcker domain add account-dev custom-domain.test
+orcker domain add account-dev '*.account-dev.test'
+orcker domain primary account-dev custom-domain.test
 ```
 
-`yerd proxy list` shows a customised proxy's domains beneath it and marks the
-primary; `yerd domain list` stays site-only. In the desktop app the same controls
+`orcker proxy list` shows a customised proxy's domains beneath it and marks the
+primary; `orcker domain list` stays site-only. In the desktop app the same controls
 are the **Manage domains** button on the Proxies page.
 
 A domain can only be claimed by one site or proxy. If two claim the same one,
 every **site** is considered before any proxy, and a domain added explicitly
 beats a claim on a default apex - a proxy that loses one domain keeps its
-others, and [`yerd doctor`](../reference/cli/diagnostics) reports each contested
+others, and [`orcker doctor`](../reference/cli/diagnostics) reports each contested
 domain with its winner.
 
 ## Path rules (the Reverb case)
@@ -73,7 +73,7 @@ Attach a path to an existing site. Say `myapp` is a Laravel app and Reverb is
 running on `:8080`:
 
 ```sh
-yerd proxy add myapp /app http://127.0.0.1:8080
+orcker proxy add myapp /app http://127.0.0.1:8080
 ```
 
 - `https://myapp.test/` and everything else → **PHP** (Laravel), unchanged.
@@ -84,34 +84,34 @@ too - your JS client connects to `wss://myapp.test/app` on the same origin. The
 full path is passed through to the upstream unchanged (`/app/...` reaches
 Reverb as `/app/...`), which is what Reverb expects.
 
-Remove a rule with `yerd proxy remove myapp /app`.
+Remove a rule with `orcker proxy remove myapp /app`.
 
 ## Upstreams and headers
 
 The upstream is `http://host:port` or `https://host:port`. For an `https://`
-upstream, Yerd verifies the certificate for a genuine public host but **skips
+upstream, Orcker verifies the certificate for a genuine public host but **skips
 verification for a local host** (`localhost`, a loopback/private IP, or a `.test`
 name) - self-signed dev backends are the norm there.
 
-Yerd preserves the original `Host` header (many upstreams key vhosts on it) and
+Orcker preserves the original `Host` header (many upstreams key vhosts on it) and
 adds `X-Forwarded-For`, `X-Forwarded-Proto`, `X-Forwarded-Host`, and `X-Real-IP`.
 Websocket upgrades are tunnelled through. If the upstream is down, a request
 returns **`502 Bad Gateway`** rather than hanging.
 
-::: warning You can't proxy to Yerd itself
-A target that points back into Yerd - a `.test` host, or `localhost` on the port
-Yerd's own proxy is listening on - is rejected, because it would loop forever.
-Point the target at the service's real port instead. In rootless mode Yerd binds
+::: warning You can't proxy to Orcker itself
+A target that points back into Orcker - a `.test` host, or `localhost` on the port
+Orcker's own proxy is listening on - is rejected, because it would loop forever.
+Point the target at the service's real port instead. In rootless mode Orcker binds
 `8080`/`8443`, so a dev server on one of those ports will need to move.
 :::
 
 ## Listing what's configured
 
 ```sh
-yerd proxy list
+orcker proxy list
 ```
 
-shows every whole-host proxy and every per-site path rule. `yerd --json proxy
+shows every whole-host proxy and every per-site path rule. `orcker --json proxy
 list` gives the same data as JSON for scripting or the desktop app.
 
 For the full command surface, flags, and validation rules, see the

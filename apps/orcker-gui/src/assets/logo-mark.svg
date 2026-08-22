@@ -1,0 +1,10 @@
+<!--
+  Placeholder mark in `currentColor`, transparent background - for inline /
+  monochrome use (sidebar, buttons, template tray icons). The inherited "Y"
+  artwork was the upstream project's and was removed with the fork; Orcker's real logo is a
+  later spec.
+-->
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Orcker">
+  <title>Orcker</title>
+  <text x="128" y="128" fill="currentColor" font-family="system-ui, sans-serif" font-size="176" font-weight="700" text-anchor="middle" dominant-baseline="central">O</text>
+</svg>

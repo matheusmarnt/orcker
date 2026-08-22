@@ -1,0 +1,74 @@
+name: Gate
+
+# The deterministic quality gate — the same `scripts/gate.sh` developers run
+# locally, with the diff base pointed at `origin/main` instead of `HEAD` so the
+# GUI step (4/6) sees the whole branch rather than only uncommitted work.
+#
+# No spec file is passed, so the surface check (step 6/6) is skipped here: it is
+# a local discipline about which spec a diff belongs to, and CI has no way to
+# know which spec is in flight.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: gate-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  GATE_BASE: origin/main
+
+jobs:
+  gate:
+    name: gate (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      # Full history: the gate diffs against `origin/main`, which a shallow
+      # clone does not have.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # The GUI crate links GTK/WebKit/etc., so the workspace clippy and test
+      # steps need the -dev packages on Linux. macOS uses system frameworks.
+      - name: Install Linux GUI build deps
+        if: runner.os == 'Linux'
+        uses: ./.github/actions/install-gui-deps
+
+      # Step 5/6 shells out to ripgrep; neither hosted image ships it.
+      - name: Install ripgrep
+        run: |
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            brew install ripgrep
+          else
+            sudo apt-get update
+            sudo apt-get install -y ripgrep
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/orcker-gui/package-lock.json
+
+      - name: Install GUI dependencies
+        run: npm --prefix apps/orcker-gui ci
+
+      # Toolchain comes from rust-toolchain.toml; rustup installs it on first use.
+      - name: Show toolchain
+        run: rustup show active-toolchain
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Gate
+        run: scripts/gate.sh

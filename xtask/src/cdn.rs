@@ -1,6 +1,6 @@
 //! CDN release-manifest generation and reconcile-plan computation.
 //!
-//! Thin I/O glue over the pure [`yerd_release_manifest`] crate: read the GitHub
+//! Thin I/O glue over the pure [`orcker_release_manifest`] crate: read the GitHub
 //! Releases API response and a CDN listing off disk, call the pure transforms,
 //! and write `latest.json` / `releases.json` / `plan.json`. All the decision
 //! logic (URL rewrite gating, stable/rc selection, the CDN<->GitHub diff) lives
@@ -11,8 +11,8 @@ use std::fs;
 use std::path::Path;
 
 use anyhow::{Context, Result};
+use orcker_release_manifest::{build_manifests, reconcile, CdnObject, ExpectedAsset, ReleaseEntry};
 use serde::Deserialize;
-use yerd_release_manifest::{build_manifests, reconcile, CdnObject, ExpectedAsset, ReleaseEntry};
 
 /// One object from a CDN listing (`bunny-list.sh` output). Files only -
 /// directories are filtered out by the lister.
@@ -116,7 +116,7 @@ pub fn run_reconcile_plan(
         for a in &r.assets {
             let sha256 = sums
                 .as_deref()
-                .and_then(|s| yerd_update::sha256_for(s, &a.name))
+                .and_then(|s| orcker_update::sha256_for(s, &a.name))
                 .map(str::to_string);
             expected.push(ExpectedAsset {
                 tag: r.tag_name.clone(),

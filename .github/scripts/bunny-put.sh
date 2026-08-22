@@ -4,7 +4,7 @@
 #
 # Usage: bunny-put.sh <local-file> <remote-path>
 #   <remote-path> is relative to the storage-zone root, e.g.
-#   releases/v2.0.4/Yerd_Linux_x86_64_v2-0-4.deb
+#   releases/v2.0.4/Orcker_Linux_x86_64_v2-0-4.deb
 #
 # Requires: BUNNY_STORAGE_ACCESS_KEY, BUNNY_STORAGE_ZONE, BUNNY_STORAGE_ENDPOINT
 # (the region host, e.g. ny.storage.bunnycdn.com - a wrong/absent region host

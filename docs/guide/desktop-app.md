@@ -1,12 +1,12 @@
 ---
-description: A tour of the Yerd desktop app, screen by screen - the recommended way to install and run Yerd, a fast, rootless, open-source local PHP environment for macOS and Linux.
+description: A tour of the Orcker desktop app, screen by screen - the recommended way to install and run Orcker, a fast, rootless, open-source local PHP environment for macOS and Linux.
 ---
 
 # Features
 
-Yerd is a fast, rootless, open-source local PHP environment for macOS and Linux. It serves projects on `.test` domains over HTTP and HTTPS, runs a different PHP version per site, and manages it all from one small daemon. No Docker, no `sudo` for daily work, no subscription.
+Orcker is a fast, rootless, open-source local PHP environment for macOS and Linux. It serves projects on `.test` domains over HTTP and HTTPS, runs a different PHP version per site, and manages it all from one small daemon. No Docker, no `sudo` for daily work, no subscription.
 
-The **desktop app** is the recommended way to run all of it: a small tray-first window over everything the CLI does. Built with Tauri v2, Vue 3, TypeScript, and Tailwind, it's a thin client of the [daemon](./daemon), just like the `yerd` CLI - every button maps to one IPC request to `yerdd`, so the GUI and CLI can't drift out of sync. This page is a tour of everything it can do, screen by screen; each section links to the full guide for that feature.
+The **desktop app** is the recommended way to run all of it: a small tray-first window over everything the CLI does. Built with Tauri v2, Vue 3, TypeScript, and Tailwind, it's a thin client of the [daemon](./daemon), just like the `orcker` CLI - every button maps to one IPC request to `orckerd`, so the GUI and CLI can't drift out of sync. This page is a tour of everything it can do, screen by screen; each section links to the full guide for that feature.
 
 If you live in the terminal, the [CLI](../reference/cli/) is a first-class alternative. Not installed yet? See [Getting Started](./getting-started).
 
@@ -26,7 +26,7 @@ The sidebar opens on **Overview** and groups the rest:
 
 <ThemedImage light="/images/overview-light.png" dark="/images/overview-dark.png" alt="Overview dashboard" />
 
-The landing dashboard. With the daemon running it shows a **serving** summary - the number of live `.test` sites (each a clickable chip that opens in your browser), stat tiles for PHP versions, sites, services, and captured mail (each links to its page), and a **system-health** strip (Local CA, `.test` resolver, privileged ports). When the daemon is down, the same surface becomes a **Start Yerd** hero. While the daemon is running, this page polls it every 5 seconds, so a change made from the CLI or another window shows up without a manual refresh.
+The landing dashboard. With the daemon running it shows a **serving** summary - the number of live `.test` sites (each a clickable chip that opens in your browser), stat tiles for PHP versions, sites, services, and captured mail (each links to its page), and a **system-health** strip (Local CA, `.test` resolver, privileged ports). When the daemon is down, the same surface becomes a **Start Orcker** hero. While the daemon is running, this page polls it every 5 seconds, so a change made from the CLI or another window shows up without a manual refresh.
 
 ### Settings
 
@@ -34,11 +34,11 @@ The landing dashboard. With the daemon running it shows a **serving** summary - 
 
 App- and daemon-level settings (one of the pages that stays usable when the daemon is down, since it can start or install it):
 
-- **Daemon.** Whether `yerdd` is running (with pid), a Start or Stop button, and a list of the daemon's in-process subsystems - the DNS resolver, the HTTP and HTTPS proxy listeners (with bound ports, including when macOS's `pf` redirect carries `:80`/`:443`), **Mail capture** (by port), and **Dump capture** (by port). The daemon row has a Restart button. Start/Stop/Restart go through your per-user service manager (systemd `--user` on Linux, a launchd LaunchAgent on macOS), with a detached-process fallback where none exists; the same actions are in the tray menu.
+- **Daemon.** Whether `orckerd` is running (with pid), a Start or Stop button, and a list of the daemon's in-process subsystems - the DNS resolver, the HTTP and HTTPS proxy listeners (with bound ports, including when macOS's `pf` redirect carries `:80`/`:443`), **Mail capture** (by port), and **Dump capture** (by port). The daemon row has a Restart button. Start/Stop/Restart go through your per-user service manager (systemd `--user` on Linux, a launchd LaunchAgent on macOS), with a detached-process fallback where none exists; the same actions are in the tray menu.
 - **Application Ports** (while the daemon is running). Editable HTTP/HTTPS (the rootless fallback ports used when 80/443 need elevation), DNS, mail-capture, and dumps ports. If a port is in use elsewhere the page flags it here (site serving or `.test` resolution shows as unbound) so you can pick a free one. Change a value and **Save & restart** validates it, saves, restarts the daemon, and rechecks. HTTP/HTTPS are locked while ports are elevated - un-elevate them on the Doctor page first.
 - **Start at login.** Three toggles - start the daemon at login, start the app at login, and start the app minimized (hidden to the tray). The daemon-at-login toggle is disabled where no per-user service manager is available.
-- **Terminal CLI** (macOS and Linux). Installs `yerd` - and your installed tools (`php`, `composer`, ...) - onto your shell `PATH`. On a packaged Linux install `yerd` itself is already on `PATH`, so this is mainly how Linux users get the PHP/tool shims on `PATH` too.
-- **Appearance.** A System / Light / Dark theme selector; a **Tray icon** selector (Automatic, Light Y, Dark Y, Full icon) for the menu bar / system tray icon; a **Title bar** selector (Automatic, macOS, Linux, Linux (Reversed), Windows) that forces a window-control style regardless of host platform; and a **Preferred editor** selector (macOS and Linux) choosing which editor the Open-in-editor button uses - Auto-detect, any detected editor (VS Code, VSCodium, Cursor, Zed, Sublime Text, PhpStorm, Windsurf), or System default (open folder). Auto-detect picks the highest-ranked editor you have installed, preferring a dedicated PHP IDE over a general editor. **Rescan** re-runs detection if you install an editor while Yerd is open. All apply live and are remembered across launches.
+- **Terminal CLI** (macOS and Linux). Installs `orcker` - and your installed tools (`php`, `composer`, ...) - onto your shell `PATH`. On a packaged Linux install `orcker` itself is already on `PATH`, so this is mainly how Linux users get the PHP/tool shims on `PATH` too.
+- **Appearance.** A System / Light / Dark theme selector; a **Tray icon** selector (Automatic, Light Y, Dark Y, Full icon) for the menu bar / system tray icon; a **Title bar** selector (Automatic, macOS, Linux, Linux (Reversed), Windows) that forces a window-control style regardless of host platform; and a **Preferred editor** selector (macOS and Linux) choosing which editor the Open-in-editor button uses - Auto-detect, any detected editor (VS Code, VSCodium, Cursor, Zed, Sublime Text, PhpStorm, Windsurf), or System default (open folder). Auto-detect picks the highest-ranked editor you have installed, preferring a dedicated PHP IDE over a general editor. **Rescan** re-runs detection if you install an editor while Orcker is open. All apply live and are remembered across launches.
 
 ### PHP
 
@@ -73,7 +73,7 @@ Sites can also be organized into named, reorderable groups shown as collapsible 
 
 #### The site details sidebar
 
-Four tabs, covering everything Yerd knows about one site:
+Four tabs, covering everything Orcker knows about one site:
 
 - **General.** An **Open site** button, then a row of actions - **Terminal** (opens your terminal in the project directory), the **editor** button (macOS and Linux), **Dumps** or **WP Admin** depending on the site, and **Share publicly…** (a [Cloudflare Quick Tunnel](#share)). Below them: PHP version, the **Editor** used for this site, the path (with reveal), the served web root (blank means auto-detect), the URL, the **HTTPS** toggle, **WordPress Auto Admin Login** with an admin picker on WordPress sites, its [group](./sites#site-groups), and - for a linked site only - **Unlink**. Parked sites have no destructive action here; remove them by un-parking their folder, or they'd reappear.
 - **Domains.** Set the primary domain and add or remove aliases, subdomains, and wildcards. See [Domains](../reference/cli/domains).
@@ -90,11 +90,11 @@ If your local CA isn't trusted in the system store, the Sites view shows a banne
 
 <ThemedImage light="/images/tooling-light.png" dark="/images/tooling-dark.png" alt="Tooling page" />
 
-Installs self-contained developer tools - Composer, Node, and Bun - onto your PATH alongside PHP, each managed by Yerd (install / update / uninstall) so they don't collide with system installs. See [Tooling](./tooling).
+Installs self-contained developer tools - Composer, Node, and Bun - onto your PATH alongside PHP, each managed by Orcker (install / update / uninstall) so they don't collide with system installs. See [Tooling](./tooling).
 
 ### Proxies
 
-Puts a `.test` address in front of a service Yerd doesn't run itself. Two cards, matching the two shapes of [reverse proxy](./proxies):
+Puts a `.test` address in front of a service Orcker doesn't run itself. Two cards, matching the two shapes of [reverse proxy](./proxies):
 
 - **Whole-host proxies** - `reverb.test` → an upstream URL. Each row opens in the browser, toggles HTTPS, and has a **Manage domains** button giving the proxy extra domains, subdomains, and wildcards exactly as a site gets them; a customised proxy shows a `N domains · primary …` hint. Proxy names may be **dotted**, so a proxy's own address can be a subdomain (`api.account.test`).
 - **Path rules** - one path on an existing site forwarded to a service (`myapp.test/app` → Reverb), keeping everything same-origin.
@@ -105,7 +105,7 @@ The **Add** menu creates either shape. See [Reverse Proxies](./proxies).
 
 <ThemedImage light="/images/services-light.png" dark="/images/services-dark.png" alt="Services page" />
 
-The database and cache engines Yerd supervises - Redis (Valkey), MySQL, MariaDB, and PostgreSQL. Install a version, then Start / Stop / Restart it. Each installed engine's `⋯` menu also offers **Configuration** (copy the Laravel `.env` for that engine - with a database picker that pre-fills `DB_DATABASE` for SQL engines), Edit port, **Override settings**, View logs, **Manage databases** (create / drop / back up / restore, SQL engines only), Change version, and Uninstall. The daemon **auto-starts every installed engine** on boot. See [Services & Databases](./services).
+The database and cache engines Orcker supervises - Redis (Valkey), MySQL, MariaDB, and PostgreSQL. Install a version, then Start / Stop / Restart it. Each installed engine's `⋯` menu also offers **Configuration** (copy the Laravel `.env` for that engine - with a database picker that pre-fills `DB_DATABASE` for SQL engines), Edit port, **Override settings**, View logs, **Manage databases** (create / drop / back up / restore, SQL engines only), Change version, and Uninstall. The daemon **auto-starts every installed engine** on boot. See [Services & Databases](./services).
 
 **Override settings** opens a dialog listing the engine's stored [configuration overrides](./services#service-configuration-overrides) - free-form directives for its own config file, such as `max_allowed_packet` or `maxmemory-policy` - with an add form and a remove button per entry. Like Edit port, an override takes effect on the **next start or restart**, not immediately. The item only appears for the engines that have a config file to override; Meilisearch and Reverb are argv-driven, so they don't get it.
 
@@ -131,13 +131,13 @@ Publishes a local site to the public internet over Cloudflare Tunnel. A **Cloudf
 
 <ThemedImage light="/images/doctor-light.png" dark="/images/doctor-dark.png" alt="Doctor page" />
 
-Mirrors [`yerd doctor`](./diagnostics):
+Mirrors [`orcker doctor`](./diagnostics):
 
 - **Health.** Lists problems by severity (Healthy / Warning / Problem) with a copyable remedy command. Run safe fixes applies the safe one-click fixes; Re-check re-runs diagnostics. A clean machine shows an "all clear" panel.
 - **Environment.** OS-level state: Local CA trusted, `.test` resolver installed, and Privileged ports (80/443). A Fix (elevate) button runs the privileged action where a row isn't configured; once a row *is* configured, an **Unelevate** button reverts it - behind an in-app confirm dialog and the OS prompt. Unelevating the `.test` resolver restores your previous resolver on macOS; reverting privileged ports is macOS-only (Linux `setcap` has no clean reverse, so no button is shown there).
 
 ::: info "Fix" actions never run the GUI as root
-The Fix buttons run the audited `yerd elevate` helper under an OS prompt; the GUI never runs elevated. On Linux this uses `pkexec`, on macOS an `osascript … with administrator privileges` prompt. You may be asked for your password. See [Elevation & Privileges](./elevation).
+The Fix buttons run the audited `orcker elevate` helper under an OS prompt; the GUI never runs elevated. On Linux this uses `pkexec`, on macOS an `osascript … with administrator privileges` prompt. You may be asked for your password. See [Elevation & Privileges](./elevation).
 :::
 
 ### About
@@ -147,11 +147,11 @@ The Fix buttons run the audited `yerd elevate` helper under an OS prompt; the GU
 Shows the app, daemon, and negotiated IPC protocol versions, plus your local environment: the TLD (`.test`), the DNS responder address, and the local CA certificate path and fingerprint (both copyable, with reveal-in-finder). It also links to the project repository.
 
 - **Updates.** A release-channel selector (Stable / Edge pre-releases), a **Check now** button, and the last-checked status (current version, latest stable/edge, and how long ago it checked). When an update is available, an **Apply update** button downloads, verifies, and installs it, restarting the app.
-- **Troubleshooting.** **Logs** opens a dialog tailing the GUI's own session log (`yerd-gui.log`) alongside the daemon log, tab-switchable, with a copy button. **Diagnostics** gathers a shareable text snapshot of app/daemon state with its own copy button - useful when reporting a problem.
+- **Troubleshooting.** **Logs** opens a dialog tailing the GUI's own session log (`orcker-gui.log`) alongside the daemon log, tab-switchable, with a copy button. **Diagnostics** gathers a shareable text snapshot of app/daemon state with its own copy button - useful when reporting a problem.
 
-<ThemedImage light="/images/yerd-logs-light.png" dark="/images/yerd-logs-dark.png" alt="The Logs dialog, tailing the GUI session log" />
+<ThemedImage light="/images/orcker-logs-light.png" dark="/images/orcker-logs-dark.png" alt="The Logs dialog, tailing the GUI session log" />
 
-<ThemedImage light="/images/yerd-diagnostics-light.png" dark="/images/yerd-diagnostics-dark.png" alt="The Diagnostics dialog, a copyable JSON snapshot of app/daemon state" />
+<ThemedImage light="/images/orcker-diagnostics-light.png" dark="/images/orcker-diagnostics-dark.png" alt="The Diagnostics dialog, a copyable JSON snapshot of app/daemon state" />
 
 ## Keyboard shortcuts
 
@@ -172,7 +172,7 @@ The command palette also lists your sites at the bottom (grouped by domain): **O
 | Find | `⌘F` | `Ctrl+F` | Focus the page's filter box (Sites, Dumps) |
 | New | `⌘N` | `Ctrl+N` | Start the page's primary action (Add site, Install PHP) |
 | Refresh | `⌘R` | `Ctrl+R` | Re-fetch the current page's data |
-| Restart daemon | `⇧⌘R` | `Ctrl+Shift+R` | Restart `yerdd` |
+| Restart daemon | `⇧⌘R` | `Ctrl+Shift+R` | Restart `orckerd` |
 | Toggle theme | `⇧⌘L` | `Ctrl+Shift+L` | Switch light / dark (applies to every window) |
 | Open Mail viewer | `⇧⌘M` | `Ctrl+Shift+M` | Open the standalone Mail capture window |
 | Open Dumps viewer | `⇧⌘D` | `Ctrl+Shift+D` | Open the standalone Dumps telemetry window |
@@ -190,10 +190,10 @@ There's no Quit shortcut: closing the window (`⌘W` / `Ctrl+W`) hides it to the
 
 ## Related
 
-- [Getting Started](./getting-started) - install Yerd and walk through the first-run onboarding journey
-- [The Daemon](./daemon) - what `yerdd` is and how it runs
+- [Getting Started](./getting-started) - install Orcker and walk through the first-run onboarding journey
+- [The Daemon](./daemon) - what `orckerd` is and how it runs
 - [Sites](./sites) · [PHP Versions](./php-versions) · [HTTPS & Certificates](./https) - the features the GUI surfaces
 - [Elevation & Privileges](./elevation) - how "Fix" actions stay root-free
-- [CLI Reference](../reference/cli/) - the `yerd` command line, a first-class alternative
+- [CLI Reference](../reference/cli/) - the `orcker` command line, a first-class alternative
 - [Desktop App Internals](../developer/gui) - the Tauri/Vue architecture for contributors
-- [Source on GitHub](https://github.com/forjedio/yerd) - `apps/yerd-gui`
+- [Source on GitHub](https://github.com/forjedio/orcker) - `apps/orcker-gui`

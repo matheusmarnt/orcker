@@ -1,28 +1,28 @@
 # Config schema history
 
-`yerd.toml`'s on-disk schema is versioned independently of everything else - the IPC wire protocol, the app version, the daemon binary. This page is the version-by-version changelog: what each schema version added, whether the daemon can migrate a file forward automatically, and - the reason this page exists - **exactly what to change by hand if you need to downgrade** a config file so an older Yerd build will accept it again.
+`orcker.toml`'s on-disk schema is versioned independently of everything else - the IPC wire protocol, the app version, the daemon binary. This page is the version-by-version changelog: what each schema version added, whether the daemon can migrate a file forward automatically, and - the reason this page exists - **exactly what to change by hand if you need to downgrade** a config file so an older Orcker build will accept it again.
 
-For how the versioning *mechanism* works (the `STEPS` array, `deny_unknown_fields`, the purity boundary), see [yerd-config](./crates/yerd-config#schema-versioning-and-migration). For the field-by-field "how do I configure X" reference, see the [Configuration Reference](../reference/configuration).
+For how the versioning *mechanism* works (the `STEPS` array, `deny_unknown_fields`, the purity boundary), see [orcker-config](./crates/orcker-config#schema-versioning-and-migration). For the field-by-field "how do I configure X" reference, see the [Configuration Reference](../reference/configuration).
 
 ## Where the file lives
 
-`yerd.toml` sits in the OS-standard config directory for the `io.yerd.Yerd` app, resolved once at startup by [`yerd-platform`](./crates/yerd-platform)'s `PlatformDirs`:
+`orcker.toml` sits in the OS-standard config directory for the `io.orcker.Orcker` app, resolved once at startup by [`orcker-platform`](./crates/orcker-platform)'s `PlatformDirs`:
 
 | OS | Default config directory | Full default path |
 | --- | --- | --- |
-| macOS | `~/Library/Application Support/io.yerd.Yerd` | `~/Library/Application Support/io.yerd.Yerd/yerd.toml` |
-| Linux | `$XDG_CONFIG_HOME/yerd` (falls back to `~/.config/yerd` when unset) | `~/.config/yerd/yerd.toml` |
+| macOS | `~/Library/Application Support/io.orcker.Orcker` | `~/Library/Application Support/io.orcker.Orcker/orcker.toml` |
+| Linux | `$XDG_CONFIG_HOME/orcker` (falls back to `~/.config/orcker` when unset) | `~/.config/orcker/orcker.toml` |
 | Windows | Not yet supported (`os::unsupported` stub) | n/a |
 
 ::: info Overriding the path
-`yerdd serve -c <path>` (`--config <path>`) points the daemon at a different file entirely - useful for testing a downgraded copy without touching your real config. A missing file is not an error: the daemon boots with `Config::default()` (a fresh, empty config) and logs that it's using defaults for a first-run boot. Anything else - invalid TOML, a version the daemon doesn't understand, a value that fails validation - is fatal; the daemon refuses to start rather than silently discarding your settings.
+`orckerd serve -c <path>` (`--config <path>`) points the daemon at a different file entirely - useful for testing a downgraded copy without touching your real config. A missing file is not an error: the daemon boots with `Config::default()` (a fresh, empty config) and logs that it's using defaults for a first-run boot. Anything else - invalid TOML, a version the daemon doesn't understand, a value that fails validation - is fatal; the daemon refuses to start rather than silently discarding your settings.
 :::
 
-macOS's `config`, `data`, and `state` directories all coincide at the same `io.yerd.Yerd` bundle (no XDG-style state/data/config split); Linux keeps them genuinely separate per the XDG base-directory spec, so `yerd.toml` (config) is not near the CA certificate or PHP installs (data) or the daemon's runtime state.
+macOS's `config`, `data`, and `state` directories all coincide at the same `io.orcker.Orcker` bundle (no XDG-style state/data/config split); Linux keeps them genuinely separate per the XDG base-directory spec, so `orcker.toml` (config) is not near the CA certificate or PHP installs (data) or the daemon's runtime state.
 
 ## How to read this page
 
-Every on-disk file **must** carry a top-level `version = N` key - there is no "unversioned" file, and a missing key is a hard parse error. The daemon migrates a file **forward only**, one version at a time, the moment it loads it; there is no automatic downgrade path. A file whose version is *newer* than what a given Yerd build understands is rejected cleanly as `UnsupportedVersion` (a clear error naming both versions) rather than being partially parsed or silently corrupted - so an old binary reading a new file always fails safely. That rejection is also *why* you'd want this page: to hand-edit a newer file back down so an older build can read it, rather than losing your settings and starting from a blank config.
+Every on-disk file **must** carry a top-level `version = N` key - there is no "unversioned" file, and a missing key is a hard parse error. The daemon migrates a file **forward only**, one version at a time, the moment it loads it; there is no automatic downgrade path. A file whose version is *newer* than what a given Orcker build understands is rejected cleanly as `UnsupportedVersion` (a clear error naming both versions) rather than being partially parsed or silently corrupted - so an old binary reading a new file always fails safely. That rejection is also *why* you'd want this page: to hand-edit a newer file back down so an older build can read it, rather than losing your settings and starting from a blank config.
 
 Each entry below states what changed, whether the daemon's own migration is a bare version-number bump (nothing else in the file needs to change to move forward) or a structural rewrite, and - under **To downgrade** - the exact manual edit that reverses it.
 
@@ -46,7 +46,7 @@ A proxy name may itself be dotted (`api.account`), in which case TOML quotes the
 
 ### v22
 
-**Added:** the optional `[services.<id>.overrides]` sub-table - free-form configuration overrides for a service instance, keyed by directive name. Each entry is written into that engine's generated `conf.d/10-yerd.<ext>` sidecar on every start, so the settings survive the restart that regenerates the main config (issue #195). Only the config-backed engines accept them (`mysql`, `mariadb`, `postgres`, `redis`); the table is dropped at load for any other service. It defaults to empty when absent, so an uncustomised file omits it entirely.
+**Added:** the optional `[services.<id>.overrides]` sub-table - free-form configuration overrides for a service instance, keyed by directive name. Each entry is written into that engine's generated `conf.d/10-orcker.<ext>` sidecar on every start, so the settings survive the restart that regenerates the main config (issue #195). Only the config-backed engines accept them (`mysql`, `mariadb`, `postgres`, `redis`); the table is dropped at load for any other service. It defaults to empty when absent, so an uncustomised file omits it entirely.
 
 ```toml
 [services.mysql.overrides]
@@ -54,13 +54,13 @@ max_allowed_packet = "256M"
 sql_mode = "STRICT_TRANS_TABLES,NO_ZERO_DATE"
 ```
 
-Entries are shape-validated, not semantically validated: a name or value that could break out of the generated option file is refused when set, and an entry naming a directive Yerd owns (`port`, `datadir`, `bind-address`, …) is refused with a hint pointing at the typed command that manages it. At **load** time the same checks run leniently - a bad entry is dropped rather than failing the whole file - so hand-editing this table can never make the daemon refuse to start.
+Entries are shape-validated, not semantically validated: a name or value that could break out of the generated option file is refused when set, and an entry naming a directive Orcker owns (`port`, `datadir`, `bind-address`, …) is refused with a hint pointing at the typed command that manages it. At **load** time the same checks run leniently - a bad entry is dropped rather than failing the whole file - so hand-editing this table can never make the daemon refuse to start.
 
-Hand edits belong in the sibling `conf.d/50-local.<ext>` file instead, which Yerd creates once and never rewrites; it is read after `10-yerd.<ext>`, so it wins.
+Hand edits belong in the sibling `conf.d/50-local.<ext>` file instead, which Orcker creates once and never rewrites; it is read after `10-orcker.<ext>`, so it wins.
 
 **Migration from v21:** bare version bump - the table defaults to empty when absent, so a v21 file needs no other change.
 
-**To downgrade to v21:** change `version = 22` to `version = 21` and delete any `[services.<id>.overrides]` tables. Those overrides stop being written to `conf.d/10-yerd.<ext>`, so the affected engines fall back to Yerd's generated defaults on the next restart. Anything you put in `conf.d/50-local.<ext>` is unaffected by the downgrade, but an older build emits no include line for it, so it stops being read until you upgrade again.
+**To downgrade to v21:** change `version = 22` to `version = 21` and delete any `[services.<id>.overrides]` tables. Those overrides stop being written to `conf.d/10-orcker.<ext>`, so the affected engines fall back to Orcker's generated defaults on the next restart. Anything you put in `conf.d/50-local.<ext>` is unaffected by the downgrade, but an older build emits no include line for it, so it stops being read until you upgrade again.
 
 ### v21
 
@@ -131,17 +131,17 @@ The table loads **leniently**: an invalid or reserved entry (e.g. from a hand-ed
 
 ### v17
 
-**Added:** the top-level `mcp_enabled` scalar (bool) - whether `yerd mcp` serves Yerd's tools to local AI agents. Defaults to `false`, so exposing Yerd to agents is an explicit opt-in, and is always emitted.
+**Added:** the top-level `mcp_enabled` scalar (bool) - whether `orcker mcp` serves Orcker's tools to local AI agents. Defaults to `false`, so exposing Orcker to agents is an explicit opt-in, and is always emitted.
 
 ```toml
 mcp_enabled = false
 ```
 
-The daemon runs no MCP server of its own: it stores this flag and reports it in the status report, and each `yerd mcp` session reads it to decide whether to serve. See [AI Agents](../guide/ai-agents).
+The daemon runs no MCP server of its own: it stores this flag and reports it in the status report, and each `orcker mcp` session reads it to decide whether to serve. See [AI Agents](../guide/ai-agents).
 
 **Migration from v16:** bare version bump - the key defaults to `false` when absent, so a v16 file needs no other change.
 
-**To downgrade to v16:** change `version = 17` to `version = 16` and delete the `mcp_enabled` line (a v16 daemon rejects the unknown key under `deny_unknown_fields` rather than ignoring it). Agents lose access to Yerd's tools; nothing else is affected.
+**To downgrade to v16:** change `version = 17` to `version = 16` and delete the `mcp_enabled` line (a v16 daemon rejects the unknown key under `deny_unknown_fields` rather than ignoring it). Agents lose access to Orcker's tools; nothing else is affected.
 
 ### v16
 
@@ -162,7 +162,7 @@ The table loads **leniently**: an invalid entry (e.g. from a hand-edit) is dropp
 
 **Added:** the multi-instance services rework - the optional per-instance `site` field inside `[services.<id>]` tables and the `"{type}:{site}"` wire ids for per-site app servers, plus a behaviour change: the `enabled` flag now actually gates boot autostart (before v15 every installed engine auto-started regardless).
 
-**Migration from v14:** structural but small - the migration marks every existing single-instance engine (colon-free `[services.<id>]` key) `enabled = true`, so engines installed before the upgrade keep starting with Yerd now that the flag is enforced.
+**Migration from v14:** structural but small - the migration marks every existing single-instance engine (colon-free `[services.<id>]` key) `enabled = true`, so engines installed before the upgrade keep starting with Orcker now that the flag is enforced.
 
 **To downgrade to v14:** change `version = 15` to `version = 14`, then delete any per-site `[services."<type>:<site>"]` tables and any `site = "..."` lines (a v14 daemon rejects the unknown field under `deny_unknown_fields`). Single-instance `enabled` flags survive; a v14 daemon auto-starts every installed engine regardless of the flag.
 
@@ -199,7 +199,7 @@ front_controller = false
 
 **Migration from v12:** bare version bump - the field defaults to auto when absent, so a v12 file needs no other change to become a valid v13 file.
 
-**Security note (behaviour change on upgrade):** because the default is auto, a plain root-served site (a parked directory that is a whole project, not just its `public/` dir) flips from single-front-controller mode to **direct execution** on upgrade. Any real `.php` under its served root - a stray `phpinfo.php`, `adminer.php`, an old admin tool, a vendored dev script - becomes directly URL-executable where it was previously funnelled to `index.php`. If the site is exposed beyond loopback (a tunnel), those files become remotely reachable. To keep the old behaviour, set `front_controller = true` on the site (`yerd front-controller <name> on`), or point its `web_root` at a clean public directory. Unknown paths still fall back to `index.php`, so custom-router apps are unaffected.
+**Security note (behaviour change on upgrade):** because the default is auto, a plain root-served site (a parked directory that is a whole project, not just its `public/` dir) flips from single-front-controller mode to **direct execution** on upgrade. Any real `.php` under its served root - a stray `phpinfo.php`, `adminer.php`, an old admin tool, a vendored dev script - becomes directly URL-executable where it was previously funnelled to `index.php`. If the site is exposed beyond loopback (a tunnel), those files become remotely reachable. To keep the old behaviour, set `front_controller = true` on the site (`orcker front-controller <name> on`), or point its `web_root` at a clean public directory. Unknown paths still fall back to `index.php`, so custom-router apps are unaffected.
 
 **To downgrade to v12:** change `version = 13` to `version = 12`, then delete any `front_controller` lines (a v12 daemon rejects the unknown key under `deny_unknown_fields`, it doesn't just ignore it).
 
@@ -407,26 +407,26 @@ kind = "linked"
 
 **Migration from v1:** bare version bump - `web_subpath`/`web_root` default to "auto-detect" when absent.
 
-**To downgrade to v1:** change `version = 2` to `version = 1` and delete any `web_subpath` (from `[[linked]]`) or `web_root` (from `[[overrides]]`) lines. Those sites fall back to Yerd's automatic web-root detection, which is usually - but not guaranteed to be - the same directory.
+**To downgrade to v1:** change `version = 2` to `version = 1` and delete any `web_subpath` (from `[[linked]]`) or `web_root` (from `[[overrides]]`) lines. Those sites fall back to Orcker's automatic web-root detection, which is usually - but not guaranteed to be - the same directory.
 
 ### v1
 
-The first schema version any shipped build of Yerd actually wrote to disk. No older shipped file exists to migrate from in practice, but v0 is kept reachable in the migration chain for a hand-crafted `version = 0` file.
+The first schema version any shipped build of Orcker actually wrote to disk. No older shipped file exists to migrate from in practice, but v0 is kept reachable in the migration chain for a hand-crafted `version = 0` file.
 
-**To downgrade to v0:** not meaningful - no Yerd build has ever read a v0 file from disk. If you're here, you almost certainly want v1, which every build since the schema was introduced understands.
+**To downgrade to v0:** not meaningful - no Orcker build has ever read a v0 file from disk. If you're here, you almost certainly want v1, which every build since the schema was introduced understands.
 
 ## Downgrading in practice
 
-1. **Stop the daemon first.** Editing `yerd.toml` while `yerdd` is running risks it being overwritten by the next mutation (any `yerd park`/`yerd secure`/… command, or a GUI action, rewrites the whole file).
-2. **Back up the file** before editing - `cp yerd.toml yerd.toml.bak` - so you can restore the newer version if the older build turns out not to be what you needed.
+1. **Stop the daemon first.** Editing `orcker.toml` while `orckerd` is running risks it being overwritten by the next mutation (any `orcker park`/`orcker secure`/… command, or a GUI action, rewrites the whole file).
+2. **Back up the file** before editing - `cp orcker.toml orcker.toml.bak` - so you can restore the newer version if the older build turns out not to be what you needed.
 3. **Walk the versions one at a time**, newest to oldest, applying each "To downgrade" step above in order - don't skip straight from v11 to v5, since some steps (structural v3, in particular) need the intermediate shape.
-4. **Reinstall/switch to the older Yerd build**, then start the daemon and confirm it comes up clean (check its log output for a config error) before relying on it.
+4. **Reinstall/switch to the older Orcker build**, then start the daemon and confirm it comes up clean (check its log output for a config error) before relying on it.
 
-If you'd rather not hand-edit at all: delete `yerd.toml` outright and let the older daemon boot with a fresh default config, then re-park/re-link your sites. That's often faster than a multi-version downgrade if you don't have many customised settings to preserve.
+If you'd rather not hand-edit at all: delete `orcker.toml` outright and let the older daemon boot with a fresh default config, then re-park/re-link your sites. That's often faster than a multi-version downgrade if you don't have many customised settings to preserve.
 
 ## See also
 
-- [yerd-config crate reference](./crates/yerd-config) - the migration mechanism itself (`STEPS`, wire mirrors, `deny_unknown_fields`).
+- [orcker-config crate reference](./crates/orcker-config) - the migration mechanism itself (`STEPS`, wire mirrors, `deny_unknown_fields`).
 - [Configuration Reference](../reference/configuration) - the current schema's field-by-field guide.
-- [yerd-platform crate reference](./crates/yerd-platform) - `PlatformDirs` and the config/data/state/cache/runtime split.
-- [yerdd (daemon)](./binaries/yerdd) - where the config is loaded at startup (`startup::bring_up`).
+- [orcker-platform crate reference](./crates/orcker-platform) - `PlatformDirs` and the config/data/state/cache/runtime split.
+- [orckerd (daemon)](./binaries/orckerd) - where the config is loaded at startup (`startup::bring_up`).

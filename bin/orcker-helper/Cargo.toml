@@ -1,0 +1,33 @@
+[package]
+name                   = "orcker-helper"
+version.workspace      = true
+edition.workspace      = true
+rust-version.workspace = true
+license.workspace      = true
+publish.workspace      = true
+description            = "Privileged one-shot for Orcker: CA install, resolver install, setcap."
+readme                 = "README.md"
+
+[[bin]]
+name = "orcker-helper"
+path = "src/main.rs"
+
+[dependencies]
+orcker-core     = { path = "../../crates/orcker-core" }
+orcker-platform = { path = "../../crates/orcker-platform" }
+clap          = { workspace = true }
+thiserror     = { workspace = true }
+hex           = { workspace = true }
+pem           = { workspace = true }
+
+[dev-dependencies]
+tempfile      = { workspace = true }
+orcker-depcheck = { path = "../../crates/orcker-depcheck" }
+# Test-only: mint CAs (and the Validity timestamps they need) to exercise the
+# orcker-ownership guard. Not a runtime dep — keeps rcgen/ring out of the
+# privileged binary.
+orcker-tls      = { path = "../../crates/orcker-tls" }
+time          = { workspace = true }
+
+[lints]
+workspace = true

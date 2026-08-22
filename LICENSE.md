@@ -1,6 +1,7 @@
 # MIT License
 
-Copyright (c) 2026 Forjed
+Copyright (c) 2026 Forjed — Yerd, the upstream project this is forked from
+Copyright (c) 2026 Matheus Mariano — Orcker modifications
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

@@ -1,28 +1,28 @@
 # Self-Update
 
-The bare `yerd update` command (no subcommand) checks for, and optionally
-installs, a newer version of Yerd itself. `yerd update php` is a different
+The bare `orcker update` command (no subcommand) checks for, and optionally
+installs, a newer version of Orcker itself. `orcker update php` is a different
 command that updates an installed PHP version - see [PHP](./php).
 
 | Command | Description |
 | --- | --- |
-| `yerd update` | Check for a newer Yerd on your configured channel and report it. Installs nothing. |
-| `yerd update --yes` | Check, then download, verify, and install the update, and restart the daemon. |
-| `yerd update --edge` / `--stable` | Check (or, with `--yes`, apply) against the edge or stable channel for this run. |
-| `yerd update --edge --yes` / `--stable --yes` | Also persist the given channel as your saved default. |
-| `yerd update --yes --force` | Allow a downgrade (e.g. moving from a newer pre-release back to stable). |
+| `orcker update` | Check for a newer Orcker on your configured channel and report it. Installs nothing. |
+| `orcker update --yes` | Check, then download, verify, and install the update, and restart the daemon. |
+| `orcker update --edge` / `--stable` | Check (or, with `--yes`, apply) against the edge or stable channel for this run. |
+| `orcker update --edge --yes` / `--stable --yes` | Also persist the given channel as your saved default. |
+| `orcker update --yes --force` | Allow a downgrade (e.g. moving from a newer pre-release back to stable). |
 
 ```sh
-yerd update                    # check only, using your saved channel
-yerd update --edge              # check against edge, without changing your saved channel
-yerd update --yes               # check and install on your saved channel
-yerd update --edge --yes        # switch to (and install from) the edge channel
+orcker update                    # check only, using your saved channel
+orcker update --edge              # check against edge, without changing your saved channel
+orcker update --yes               # check and install on your saved channel
+orcker update --edge --yes        # switch to (and install from) the edge channel
 ```
 
 ## Channels
 
-Yerd ships two release channels, persisted as `update_channel` in
-[`yerd.toml`](../configuration) (`"stable"` by default):
+Orcker ships two release channels, persisted as `update_channel` in
+[`orcker.toml`](../configuration) (`"stable"` by default):
 
 - **`stable`** - the highest released version that isn't a pre-release.
 - **`edge`** - the highest released version including pre-releases / release
@@ -34,7 +34,7 @@ check-only run (no `--yes`) never touches your saved preference, but prints a
 reminder that it's showing a channel other than the one it will use next time.
 
 The stable channel never installs a **downgrade**: if you're running a
-pre-release that is already newer than the latest stable, `yerd update --yes`
+pre-release that is already newer than the latest stable, `orcker update --yes`
 (without `--edge`) reports you're ahead of stable and stays put. `--force`
 (which requires `--yes`) is the escape hatch for that case, though an
 automated downgrade isn't implemented yet - it currently just says so.
@@ -42,7 +42,7 @@ automated downgrade isn't implemented yet - it currently just says so.
 ## What `--yes` does
 
 1. Persists the channel override, if `--edge`/`--stable` was given.
-2. Asks the daemon to check the channel (`yerd_ipc::Request::CheckUpdate`). If
+2. Asks the daemon to check the channel (`orcker_ipc::Request::CheckUpdate`). If
    nothing is available, it reports and exits `0` - no download happens.
 3. Otherwise asks the daemon to download and verify the target release's
    artifact (`Request::StageUpdate`): the daemon fetches the platform-specific
@@ -57,9 +57,9 @@ automated downgrade isn't implemented yet - it currently just says so.
 `--yes` is not compatible with `--json` - the apply path is interactive
 progress output, not a single structured response.
 
-::: warning Where Yerd must live
-On macOS, self-update only works when Yerd is installed at
-`/Applications/Yerd.app` and that location is writable by you. Installs
+::: warning Where Orcker must live
+On macOS, self-update only works when Orcker is installed at
+`/Applications/Orcker.app` and that location is writable by you. Installs
 elsewhere (e.g. a dev build) are rejected with a clear error rather than
 silently failing.
 :::
@@ -72,12 +72,12 @@ silently failing.
 | Linux (`.deb` build) | Reinstalls via `dpkg -i`, elevated with `pkexec` if needed; restarts the daemon via `systemctl --user restart` (or a stop/start fallback with no systemd user instance). |
 | Linux (Arch `.pkg.tar.zst` build) | Reinstalls via `pacman -U`, same elevation and restart path as the `.deb` build. |
 | Linux (Fedora `.rpm` build) | Reinstalls via `rpm -U --oldpackage`, same elevation and restart path as the `.deb` build. |
-| Intel macOS, other platforms | No self-update artifact is published; `yerd update` reports nothing available. |
+| Intel macOS, other platforms | No self-update artifact is published; `orcker update` reports nothing available. |
 
 ## See also
 
-- [PHP](./php) - the unrelated `yerd update php [VERSION]` command.
+- [PHP](./php) - the unrelated `orcker update php [VERSION]` command.
 - [Configuration Reference](../configuration) - the persisted `update_channel` key.
-- [yerd-update](../../developer/crates/yerd-update) - the channel-resolution and artifact-selection/verification logic.
-- [yerd-service-ctl](../../developer/crates/yerd-service-ctl) - the daemon restart step of the applier.
-- [Daemon control](./daemon) - the separate `yerd restart daemon` command.
+- [orcker-update](../../developer/crates/orcker-update) - the channel-resolution and artifact-selection/verification logic.
+- [orcker-service-ctl](../../developer/crates/orcker-service-ctl) - the daemon restart step of the applier.
+- [Daemon control](./daemon) - the separate `orcker restart daemon` command.

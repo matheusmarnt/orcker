@@ -1,6 +1,6 @@
 # Architecture
 
-This page is the orientation map for contributors. It explains how the Yerd
+This page is the orientation map for contributors. It explains how the Orcker
 workspace is organised, the one rule that everything else follows from, and the
 boundaries you must respect when you add code. If you read one developer page
 before opening the source, read this one.
@@ -18,23 +18,23 @@ Everything in the codebase is a consequence of this rule:
 
 1. **Pure crates and pure modules do no I/O.** No filesystem, no network, no
    process spawning, no clock reads, no environment reads. They are
-   unit-testable with in-memory fixtures and zero setup. `yerd-core` is the
-   exemplar - it depends on no other `yerd-*` crate and is kept rigorously pure.
+   unit-testable with in-memory fixtures and zero setup. `orcker-core` is the
+   exemplar - it depends on no other `orcker-*` crate and is kept rigorously pure.
 2. **Side effects go behind traits.** Anything that touches the OS is expressed
    as a trait - `TrustStore`, `ResolverInstaller`, `PortBinder`,
    `PortRedirector`, `Paths`, and the per-crate spawner/probe traits. Business
    logic depends on the trait; tests inject a fake; the real implementation
-   lives in `yerd-platform` (or a crate's own `os`/`io` module) selected by
+   lives in `orcker-platform` (or a crate's own `os`/`io` module) selected by
    `#[cfg(target_os = ...)]`.
-3. **Binaries are thin.** `bin/yerdd`, `bin/yerd`, `bin/yerd-helper`, and the
+3. **Binaries are thin.** `bin/orckerd`, `bin/orcker`, `bin/orcker-helper`, and the
    Tauri `src-tauri` layer wire crates together and own transports. They contain
    orchestration, not behaviour. Interesting logic belongs in a crate with
    tests.
 4. **The IPC protocol is a stable contract.** Add fields and variants
    additively; never silently rename or reorder a variant or field; bump the
    protocol version on any breaking change.
-5. **One source of truth.** The daemon (`yerdd`) owns runtime state. The CLI and
-   the GUI are both `yerd-ipc` *clients* - neither reimplements daemon logic.
+5. **One source of truth.** The daemon (`orckerd`) owns runtime state. The CLI and
+   the GUI are both `orcker-ipc` *clients* - neither reimplements daemon logic.
 
 ::: tip Why this matters
 A side effect routed around a trait, or domain logic that creeps into a binary,
@@ -45,31 +45,31 @@ than working around it.
 
 ## Workspace layout
 
-Yerd is a single Cargo workspace (`resolver = "2"`) plus a Tauri v2 + Vue 3
+Orcker is a single Cargo workspace (`resolver = "2"`) plus a Tauri v2 + Vue 3
 desktop app. The members are declared in the root
-[`Cargo.toml`](https://github.com/forjedio/yerd/blob/main/Cargo.toml):
+[`Cargo.toml`](https://github.com/forjedio/orcker/blob/main/Cargo.toml):
 
 ```
-yerd/
+orcker/
 ├── crates/              library crates - all behaviour lives here
-│   ├── yerd-core        pure domain types + host→site routing (bottom of the graph)
-│   ├── yerd-ipc         request/response protocol + length-prefixed framing
-│   ├── yerd-config      on-disk config: parse / migrate / serialize
-│   ├── yerd-tls         pure-Rust local CA + per-site leaf certs (rustls/rcgen)
-│   ├── yerd-platform    OS abstraction layer: the side-effect traits + per-OS impls
-│   ├── yerd-dns         embedded *.test resolver (hickory)
-│   ├── yerd-php         PHP-FPM pool supervision + release handling
-│   ├── yerd-proxy       hand-rolled hyper + tokio-rustls reverse proxy
-│   ├── yerd-supervise   generic process-supervision substrate (FPM + services)
-│   ├── yerd-services    DB/cache engines (Redis/Valkey · MySQL · MariaDB · Postgres)
-│   ├── yerd-mail        embedded SMTP sink (catch-all mailbox)
-│   └── yerd-doctor      diagnostics + repair planning
+│   ├── orcker-core        pure domain types + host→site routing (bottom of the graph)
+│   ├── orcker-ipc         request/response protocol + length-prefixed framing
+│   ├── orcker-config      on-disk config: parse / migrate / serialize
+│   ├── orcker-tls         pure-Rust local CA + per-site leaf certs (rustls/rcgen)
+│   ├── orcker-platform    OS abstraction layer: the side-effect traits + per-OS impls
+│   ├── orcker-dns         embedded *.test resolver (hickory)
+│   ├── orcker-php         PHP-FPM pool supervision + release handling
+│   ├── orcker-proxy       hand-rolled hyper + tokio-rustls reverse proxy
+│   ├── orcker-supervise   generic process-supervision substrate (FPM + services)
+│   ├── orcker-services    DB/cache engines (Redis/Valkey · MySQL · MariaDB · Postgres)
+│   ├── orcker-mail        embedded SMTP sink (catch-all mailbox)
+│   └── orcker-doctor      diagnostics + repair planning
 ├── bin/                 thin binaries - orchestration + transports only
-│   ├── yerdd            the unprivileged per-user daemon (source of truth)
-│   ├── yerd             the CLI (a yerd-ipc client)
-│   └── yerd-helper      the privileged one-shot (the security boundary)
+│   ├── orckerd            the unprivileged per-user daemon (source of truth)
+│   ├── orcker             the CLI (a orcker-ipc client)
+│   └── orcker-helper      the privileged one-shot (the security boundary)
 ├── apps/
-│   └── yerd-gui         Tauri v2 + Vue 3 desktop app (another yerd-ipc client)
+│   └── orcker-gui         Tauri v2 + Vue 3 desktop app (another orcker-ipc client)
 └── xtask/               build automation (cargo xtask bump / version-check)
 ```
 
@@ -84,50 +84,50 @@ See [Build Automation (xtask)](./xtask) for what `xtask` packages, and the
 
 ## The two-process model
 
-In normal operation Yerd runs as an **unprivileged daemon** with **thin
+In normal operation Orcker runs as an **unprivileged daemon** with **thin
 clients**, and reaches for a separate **one-shot privileged helper** only for
 the handful of operations that genuinely require root.
 
 ```mermaid
 flowchart TD
-    CLI["yerd (CLI)<br/>unprivileged client"]
-    GUI["yerd-gui (Tauri)<br/>unprivileged client"]
-    DAEMON["yerdd, the daemon<br/>UNPRIVILEGED, runs as your user<br/>owns runtime state: router,<br/>cert store, DNS, proxy, PHP-FPM"]
-    HELPER["yerd-helper<br/>PRIVILEGED one-shot<br/>does one op, then exits"]
+    CLI["orcker (CLI)<br/>unprivileged client"]
+    GUI["orcker-gui (Tauri)<br/>unprivileged client"]
+    DAEMON["orckerd, the daemon<br/>UNPRIVILEGED, runs as your user<br/>owns runtime state: router,<br/>cert store, DNS, proxy, PHP-FPM"]
+    HELPER["orcker-helper<br/>PRIVILEGED one-shot<br/>does one op, then exits"]
 
-    CLI -->|"yerd-ipc"| DAEMON
-    GUI -->|"yerd-ipc"| DAEMON
+    CLI -->|"orcker-ipc"| DAEMON
+    GUI -->|"orcker-ipc"| DAEMON
     DAEMON -->|"HelperInvocation<br/>(only when root is needed)"| HELPER
 ```
 
-The clients reach the daemon over `yerd-ipc`: length-prefixed JSON over a
+The clients reach the daemon over `orcker-ipc`: length-prefixed JSON over a
 per-user socket or named pipe.
 
-- **`yerdd`** runs as the user, unprivileged, and is the single source of truth
-  for runtime state. It loads `yerd-config`, builds a `SiteRouter`, starts the
+- **`orckerd`** runs as the user, unprivileged, and is the single source of truth
+  for runtime state. It loads `orcker-config`, builds a `SiteRouter`, starts the
   DNS responder, reverse proxy, and PHP-FPM pools, owns the cert store, and
-  serves the `yerd-ipc` server transport. It is thin orchestration - behaviour
+  serves the `orcker-ipc` server transport. It is thin orchestration - behaviour
   lives in the crates it wires together.
-- **`yerd` (CLI)** and **`yerd-gui`** are both `yerd-ipc` clients. They connect
+- **`orcker` (CLI)** and **`orcker-gui`** are both `orcker-ipc` clients. They connect
   to the daemon's per-user socket, send a typed `Request`, and render the
   `Response`. Neither holds authoritative state, so the CLI and the GUI can
   never disagree. (The GUI's `src-tauri` Cargo manifest depends on
-  `yerd-ipc` with the `transport` feature and on `yerd-core` for domain types -
+  `orcker-ipc` with the `transport` feature and on `orcker-core` for domain types -
   nothing daemon-internal.)
-- **`yerd-helper`** is the only privileged surface and therefore the security
+- **`orcker-helper`** is the only privileged surface and therefore the security
   boundary. It takes strict typed arguments, never shells out, never accepts
   network input, performs exactly one operation, then exits. The daemon and GUI
   processes never run as root; when an operation needs root, code goes through
-  `yerd-platform`, which returns a typed `HelperInvocation`, and a privileged
-  caller (the daemon, or `yerd elevate` under `sudo`) owns the actual
+  `orcker-platform`, which returns a typed `HelperInvocation`, and a privileged
+  caller (the daemon, or `orcker elevate` under `sudo`) owns the actual
   `Command::new(...)` that spawns the helper.
 
 ::: warning Privilege boundary
-`yerd-platform`'s OS implementations never spawn the helper themselves - they
+`orcker-platform`'s OS implementations never spawn the helper themselves - they
 return `PlatformError::NeedsHelper` and hand back a typed `HelperInvocation`.
 The privileged caller owns the spawn. The GUI process must never run as root.
 See [Elevation & Privileges](../guide/elevation) and the
-[yerd-helper](./binaries/yerd-helper) page.
+[orcker-helper](./binaries/orcker-helper) page.
 :::
 
 ## One source of truth
@@ -135,7 +135,7 @@ See [Elevation & Privileges](../guide/elevation) and the
 The daemon owns state; clients are stateless views. This is rule 5 above, and it
 is load-bearing: any feature that would let a client decide runtime truth (cache
 authoritative state, mutate config without the daemon, reimplement routing) is a
-boundary violation. Mutations flow as `yerd-ipc` requests to the daemon, which
+boundary violation. Mutations flow as `orcker-ipc` requests to the daemon, which
 applies them and broadcasts the new state. PHP updates are deliberately
 **notify-only** - the daemon's periodic checker and `list` only *report* newer
 patches; an install happens solely on an explicit update request.
@@ -144,9 +144,9 @@ patches; an install happens solely on an explicit update request.
 
 Beyond serving sites, the daemon hosts two self-contained developer-tooling
 subsystems. Both follow the rules above - the daemon owns the state, the GUI is a
-stateless `yerd-ipc` view - and both keep their pure logic in a crate.
+stateless `orcker-ipc` view - and both keep their pure logic in a crate.
 
-- **Mail capture.** A built-in SMTP sink (`crates/yerd-mail`) that the daemon
+- **Mail capture.** A built-in SMTP sink (`crates/orcker-mail`) that the daemon
   binds on a loopback port when capture is enabled. Anything it receives is
   stored as a raw `.eml` on disk; there is **no relaying** - captured mail never
   leaves the box. The store is opened unconditionally (so already-captured mail
@@ -163,39 +163,39 @@ stateless `yerd-ipc` view - and both keep their pure logic in a crate.
   IPC → GUI**: a native Zend extension emits newline-delimited JSON frames to a
   loopback dump server the daemon runs, which buffers them in a bounded
   in-memory ring and pages them to the GUI (`ListDumps` / `DumpsStatus`). The
-  shared wire model lives in `crates/yerd-ipc` (`dump.rs`); the daemon treats
+  shared wire model lives in `crates/orcker-ipc` (`dump.rs`); the daemon treats
   each frame's `payload` as **opaque** JSON so the extension's per-category
   schema can evolve without daemon changes.
 
   The native extension is an **external dependency**: the `.so` is built and
-  published by the separate [`forjedio/yerd-php-ext`](https://github.com/forjedio/yerd-php-ext)
+  published by the separate [`forjedio/orcker-php-ext`](https://github.com/forjedio/orcker-php-ext)
   repository, and the daemon downloads + SHA-256-verifies the artifact matching
   each installed PHP version's host triple (against the release `manifest.json`),
   placing it beside - not inside - the PHP installs so a PHP patch update never
   removes it. The daemon then wires it into each FPM pool via
   `-d extension`; the extension self-disables (via a daemon-written state
   file) when dumps are off. Fetch/verify is best-effort - a failure leaves the
-  site running with no dumps. See the [yerdd](./binaries/yerdd) page for the
+  site running with no dumps. See the [orckerd](./binaries/orckerd) page for the
   `dump_server` / `ext_install` modules.
 
 ## Dependency direction (downhill, no cycles)
 
-Internal dependencies flow strictly downhill. `yerd-core` sits at the bottom and
-depends on no other `yerd-*` crate; libraries never depend on binaries; the CLI
-and GUI depend on `yerd-ipc` (with its `transport` feature), not on the daemon's
+Internal dependencies flow strictly downhill. `orcker-core` sits at the bottom and
+depends on no other `orcker-*` crate; libraries never depend on binaries; the CLI
+and GUI depend on `orcker-ipc` (with its `transport` feature), not on the daemon's
 internals.
 
 ```mermaid
 flowchart TD
-    CORE["yerd-core (pure domain types, routing)"]
-    IPC["yerd-ipc"]
-    TLS["yerd-tls"]
-    CONFIG["yerd-config"]
-    DOCTOR["yerd-doctor"]
-    PLATFORM["yerd-platform (OS traits + per-OS impls)"]
-    PHP["yerd-php"]
-    PROXY["yerd-proxy"]
-    BINS["yerdd, yerd, yerd-helper, yerd-gui (binaries/app)"]
+    CORE["orcker-core (pure domain types, routing)"]
+    IPC["orcker-ipc"]
+    TLS["orcker-tls"]
+    CONFIG["orcker-config"]
+    DOCTOR["orcker-doctor"]
+    PLATFORM["orcker-platform (OS traits + per-OS impls)"]
+    PHP["orcker-php"]
+    PROXY["orcker-proxy"]
+    BINS["orckerd, orcker, orcker-helper, orcker-gui (binaries/app)"]
 
     IPC --> CORE
     TLS --> CORE
@@ -212,19 +212,19 @@ flowchart TD
 ```
 
 Arrows point from a crate to what it depends on, so everything below points up
-toward `yerd-core`.
+toward `orcker-core`.
 
 Reading the graph:
 
-- `yerd-core` ◄── everything.
-- `yerd-core` ◄── `yerd-ipc` ◄── `yerd-config`, `yerd-doctor`, the binaries, and
+- `orcker-core` ◄── everything.
+- `orcker-core` ◄── `orcker-ipc` ◄── `orcker-config`, `orcker-doctor`, the binaries, and
   the GUI.
-- `yerd-tls` ◄── `yerd-platform` ◄── `yerd-php`, `yerd-proxy`, the binaries.
-  `yerd-platform` also depends on `yerd-core` directly, for the pure
+- `orcker-tls` ◄── `orcker-platform` ◄── `orcker-php`, `orcker-proxy`, the binaries.
+  `orcker-platform` also depends on `orcker-core` directly, for the pure
   web-root detector it feeds (`ProjectSignals` in, framework decision out).
 
-Crates carry dependency-graph tests (for example `yerdd`'s
-`tests/no_runtime_deps.rs` and `yerd-helper`'s `tests/no_runtime_deps.rs`) that
+Crates carry dependency-graph tests (for example `orckerd`'s
+`tests/no_runtime_deps.rs` and `orcker-helper`'s `tests/no_runtime_deps.rs`) that
 fail if a forbidden crate - or an OpenSSL/native-tls variant - leaks into the
 runtime graph. TLS is **rustls + rcgen only, never OpenSSL**.
 
@@ -237,26 +237,26 @@ testable in-memory.
 
 | Crate | Pure layer | I/O / OS edge |
 |---|---|---|
-| `yerd-core` | the whole crate (`host`, `router`, `site`, `php`, `tld`, `domain`, `php_settings`, `detect`) | - (no I/O at all) |
-| `yerd-ipc` | default build: `frame`, `message`, `request`, `response` | `transport` module, gated behind the `transport` feature (the only part allowed `tokio`) |
-| `yerd-platform` | `pure` module (decision logic, parsing, port planning) | `os` module (`#[cfg(target_os)]` impls), `helper`, `trust_store`, `resolver`, `port_binder`, `port_redirect`, `metrics`, `detect` (project-signal gathering) |
-| `yerd-php` | `pure/` (`fpm_conf`, `supervisor`, `env_scrub`) | `io/` (`atomic_write`, `fastcgi_probe`), `traits.rs`, `real.rs` |
-| `yerd-proxy` | `pure/` | `server.rs`, `tls.rs`, `forward/`, `traits.rs` |
-| `yerd-config` | `parse`, `migrate`, `serialize`, `schema` | `io.rs` |
-| `yerd-tls` | the whole crate - no I/O, no clock reads, no env reads (callers pass `Validity` timestamps) | - |
-| `yerd-dns` | `answer.rs`, `responder.rs` | `server.rs` |
+| `orcker-core` | the whole crate (`host`, `router`, `site`, `php`, `tld`, `domain`, `php_settings`, `detect`) | - (no I/O at all) |
+| `orcker-ipc` | default build: `frame`, `message`, `request`, `response` | `transport` module, gated behind the `transport` feature (the only part allowed `tokio`) |
+| `orcker-platform` | `pure` module (decision logic, parsing, port planning) | `os` module (`#[cfg(target_os)]` impls), `helper`, `trust_store`, `resolver`, `port_binder`, `port_redirect`, `metrics`, `detect` (project-signal gathering) |
+| `orcker-php` | `pure/` (`fpm_conf`, `supervisor`, `env_scrub`) | `io/` (`atomic_write`, `fastcgi_probe`), `traits.rs`, `real.rs` |
+| `orcker-proxy` | `pure/` | `server.rs`, `tls.rs`, `forward/`, `traits.rs` |
+| `orcker-config` | `parse`, `migrate`, `serialize`, `schema` | `io.rs` |
+| `orcker-tls` | the whole crate - no I/O, no clock reads, no env reads (callers pass `Validity` timestamps) | - |
+| `orcker-dns` | `answer.rs`, `responder.rs` | `server.rs` |
 
-For example, `yerd-tls` documents its own purity contract at the crate root:
+For example, `orcker-tls` documents its own purity contract at the crate root:
 
 ```rust
-//! `yerd-tls` generates a self-signed CA, loads it back from PEM, computes its
+//! `orcker-tls` generates a self-signed CA, loads it back from PEM, computes its
 //! SHA-256 fingerprint, and issues per-site leaf certs signed by it. It does
 //! **no I/O**, **no clock reads**, and **no env reads** - callers pass
 //! timestamps via [`Validity`]; persistence and trust-store install live in
-//! `yerd-config` and `yerd-platform` respectively.
+//! `orcker-config` and `orcker-platform` respectively.
 ```
 
-And `yerd-platform` exposes its OS traits at the crate root, with one thin impl
+And `orcker-platform` exposes its OS traits at the crate root, with one thin impl
 per OS:
 
 ```rust
@@ -293,15 +293,15 @@ on the other platform will break. Details on the
 
 Pure crates and pure modules are synchronous and runtime-free. Only the I/O
 layers touch `tokio` and `async-trait`. Concretely, the crates that pull in
-`tokio` are `yerd-dns`, `yerd-proxy`, `yerd-php`, and `yerd-ipc` (only via its
-`transport` feature), plus the daemon and CLI binaries. `yerd-core`,
-`yerd-tls`, `yerd-config`, `yerd-doctor`, and `yerd-platform`'s pure layer have
-no async. The default `yerd-ipc` build is pure: the frame codec and message
+`tokio` are `orcker-dns`, `orcker-proxy`, `orcker-php`, and `orcker-ipc` (only via its
+`transport` feature), plus the daemon and CLI binaries. `orcker-core`,
+`orcker-tls`, `orcker-config`, `orcker-doctor`, and `orcker-platform`'s pure layer have
+no async. The default `orcker-ipc` build is pure: the frame codec and message
 types compile with no `tokio` at all, so a pure client can use them; the async
 connect/read/write helper lives behind the `transport` feature.
 
 ```toml
-# crates/yerd-ipc/Cargo.toml
+# crates/orcker-ipc/Cargo.toml
 [features]
 default   = []
 transport = ["dep:tokio"]
@@ -309,7 +309,7 @@ transport = ["dep:tokio"]
 
 ## The IPC stable-contract rule
 
-`yerd-ipc` is a published contract between the daemon and its clients, so it
+`orcker-ipc` is a published contract between the daemon and its clients, so it
 gets special discipline. The wire format is a length-prefixed JSON frame: a
 4-byte big-endian `u32` length followed by that many bytes of UTF-8 JSON.
 `Request` and `Response` are internally tagged on a `snake_case` `type` field.
@@ -335,8 +335,8 @@ pub const PROTOCOL_VERSION: u32 = 1;
 The framing edges are pinned in `tests/frame_codec.rs` (partial reads, multiple
 frames per buffer, oversized-length rejection, empty frames) and round-trips in
 `tests/roundtrip.rs`. The privileged argv contract has its own analogue:
-`yerd-helper`'s clap parse is cross-checked against
-`yerd_platform::HelperInvocation::from_argv` in debug builds, firing `WireDrift`
+`orcker-helper`'s clap parse is cross-checked against
+`orcker_platform::HelperInvocation::from_argv` in debug builds, firing `WireDrift`
 if a clap upgrade silently changes argv normalisation.
 
 Full message catalogue and framing details are on the
@@ -354,7 +354,7 @@ workspace-wide:
 | `thiserror` in libraries; `anyhow` only at binary top level | convention; no `anyhow` in any library runtime graph |
 | TLS is rustls + rcgen, never OpenSSL / native-tls | dependency-graph tests in several crates |
 | Async only at the I/O edge | pure crates/modules carry no `tokio` |
-| `yerd-helper` is the only privileged surface | typed argv, no shelling out, no network input, one op then exit |
+| `orcker-helper` is the only privileged surface | typed argv, no shelling out, no network input, one op then exit |
 | Document public items | `missing_docs = "warn"`, pedantic clippy on |
 
 The definition of done for a change: pure logic has table-driven unit tests;
@@ -371,6 +371,6 @@ and `cargo test --workspace` all pass on **both** Linux and macOS. See
   format.
 - [Cross-Platform Model](./cross-platform) - the `#[cfg(target_os)]` strategy and
   per-OS adapters.
-- Binaries: [yerdd (daemon)](./binaries/yerdd),
-  [yerd (CLI)](./binaries/yerd), [yerd-helper (privileged)](./binaries/yerd-helper).
+- Binaries: [orckerd (daemon)](./binaries/orckerd),
+  [orcker (CLI)](./binaries/orcker), [orcker-helper (privileged)](./binaries/orcker-helper).
 - [Desktop App Internals](./gui) and [Build Automation (xtask)](./xtask).

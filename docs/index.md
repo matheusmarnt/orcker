@@ -1,27 +1,27 @@
 ---
 layout: home
 
-# A descriptive <title> for the homepage (the default would just be "Yerd").
-title: Yerd - Local PHP development environment for macOS & Linux
+# A descriptive <title> for the homepage (the default would just be "Orcker").
+title: Orcker - Local PHP development environment for macOS & Linux
 titleTemplate: false
 
 hero:
-  name: Yerd
+  name: Orcker
   text: Local PHP, without the friction.
   tagline: Serve your projects on .test domains over HTTP and HTTPS, run a different PHP version per site, and manage it all from one tiny daemon. No Docker, no sudo for everyday work, no subscription.
   image:
     src: /images/overview-dark.png
-    alt: The Yerd desktop app
+    alt: The Orcker desktop app
   actions:
     - theme: brand
       text: Get Started
       link: /guide/getting-started
     - theme: alt
-      text: Why Yerd?
+      text: Why Orcker?
       link: /guide/introduction
     - theme: alt
       text: View on GitHub
-      link: https://github.com/forjedio/yerd
+      link: https://github.com/forjedio/orcker
 
 features:
   - icon: 🚀
@@ -41,12 +41,12 @@ features:
     details: Setup elevates exactly once. The daemon, CLI, and GUI never run as root - everything after the one-time setup runs as your own user.
   - icon: 🔍
     title: Self-diagnosing
-    details: yerd status shows what's running; yerd doctor tells you exactly what's broken and how to fix it - and auto-repairs the safe problems.
+    details: orcker status shows what's running; orcker doctor tells you exactly what's broken and how to fix it - and auto-repairs the safe problems.
 ---
 
 <div class="home-showcase">
 
-<h2 class="home-showcase__heading">See Yerd in action</h2>
+<h2 class="home-showcase__heading">See Orcker in action</h2>
 <p class="home-showcase__sub">A tiny tray app over the whole toolchain - PHP, sites, services, mail, Laravel telemetry, and public sharing, all in one place.</p>
 
 <ShowcaseRow
@@ -59,7 +59,7 @@ features:
 <ShowcaseRow
   reverse
   title="Developer tooling, managed"
-  description="Composer, Node, and Bun installed onto your PATH alongside PHP and managed by Yerd - no global installs to collide with, no version juggling. Add or remove a tool in a click."
+  description="Composer, Node, and Bun installed onto your PATH alongside PHP and managed by Orcker - no global installs to collide with, no version juggling. Add or remove a tool in a click."
   light="/images/tooling-light.png"
   dark="/images/tooling-dark.png"
 />

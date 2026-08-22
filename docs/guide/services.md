@@ -1,9 +1,9 @@
 # Services & Databases
 
-Yerd installs and supervises local **database, cache, and search** engines as native,
+Orcker installs and supervises local **database, cache, and search** engines as native,
 per-user processes - the way [DBngin](https://dbngin.com) does, but folded into
-the same [`yerdd` daemon](./daemon) that already runs your sites, PHP, HTTPS, and
-DNS. No Docker, no containers, no VM. A single `yerd status` shows the whole
+the same [`orckerd` daemon](./daemon) that already runs your sites, PHP, HTTPS, and
+DNS. No Docker, no containers, no VM. A single `orcker status` shows the whole
 stack.
 
 The five engines:
@@ -19,13 +19,13 @@ The five engines:
 ::: info Redis is served by Valkey
 The `redis` slot is filled by **Valkey**, the BSD-licensed fork, because recent
 Redis releases are no longer cleanly redistributable. It is wire-compatible, so
-your Redis clients work unchanged. Yerd shows it as `Redis (Valkey)`.
+your Redis clients work unchanged. Orcker shows it as `Redis (Valkey)`.
 :::
 
 ::: tip Engine availability
 All five engines are implemented end-to-end. Whether a specific engine/version
 installs depends on whether a prebuilt build is published for your platform in
-Yerd's hosted distribution - run `yerd service available` to see what you can
+Orcker's hosted distribution - run `orcker service available` to see what you can
 install right now. MySQL/MariaDB share port 3306, so only one can be enabled on it
 at a time.
 :::
@@ -35,10 +35,10 @@ at a time.
 Service support follows the same model as [PHP versions](./php-versions):
 
 - **Native processes, not Docker.** Prebuilt binaries are downloaded on demand
-  from Yerd's own hosted distribution, then run as your user on loopback.
-- **Supervised.** `yerdd` runs one process per enabled service, restarts it on
+  from Orcker's own hosted distribution, then run as your user on loopback.
+- **Supervised.** `orckerd` runs one process per enabled service, restarts it on
   crash with backoff, and reports health - the same supervision substrate the PHP
-  pools use ([`yerd-supervise`](../developer/crates/yerd-supervise)).
+  pools use ([`orcker-supervise`](../developer/crates/orcker-supervise)).
 - **Rootless.** Everything runs as your user with no elevation. See the
   [privilege model](./elevation).
 - **Local-dev posture.** Engines bind to loopback only and accept passwordless
@@ -52,7 +52,7 @@ under the **Developer** group in the sidebar. Install a version, then Start /
 Stop / Restart it inline - no terminal needed. The daemon auto-starts every
 installed engine on boot, so what you install stays running across reboots.
 
-<ThemedImage light="/images/services-light.png" dark="/images/services-dark.png" alt="The Services page in the Yerd desktop app" />
+<ThemedImage light="/images/services-light.png" dark="/images/services-dark.png" alt="The Services page in the Orcker desktop app" />
 
 Each installed engine's `⋯` menu offers:
 
@@ -76,41 +76,41 @@ Each installed engine's `⋯` menu offers:
 ### Managing services
 
 ```sh
-yerd service available            # versions installable for your platform
-yerd service install redis 8      # download, install, and start
-yerd service install postgres 17-full  # PostGIS build (see below)
-yerd services                     # list everything: version, state, port
+orcker service available            # versions installable for your platform
+orcker service install redis 8      # download, install, and start
+orcker service install postgres 17-full  # PostGIS build (see below)
+orcker services                     # list everything: version, state, port
 
-yerd service start redis        # start it now
-yerd service stop redis         # stop for this session (returns on next daemon start)
-yerd service restart redis
+orcker service start redis        # start it now
+orcker service stop redis         # stop for this session (returns on next daemon start)
+orcker service restart redis
 
-yerd service set-port redis 6380   # change the loopback port (next start)
-yerd service logs redis --lines 50 # tail the service log
+orcker service set-port redis 6380   # change the loopback port (next start)
+orcker service logs redis --lines 50 # tail the service log
 
-yerd service set mysql max_allowed_packet 256M  # engine config directive (next start)
-yerd service unset mysql max_allowed_packet     # drop it again
-yerd service overrides mysql                    # what's currently set
+orcker service set mysql max_allowed_packet 256M  # engine config directive (next start)
+orcker service unset mysql max_allowed_packet     # drop it again
+orcker service overrides mysql                    # what's currently set
 
-yerd service change-version redis 8.1   # upgrade in place, keep data
-yerd service uninstall redis 8          # remove binaries, keep data
-yerd service uninstall redis 8 --purge  # remove binaries AND data
+orcker service change-version redis 8.1   # upgrade in place, keep data
+orcker service uninstall redis 8          # remove binaries, keep data
+orcker service uninstall redis 8 --purge  # remove binaries AND data
 ```
 
 See the [Services CLI reference](../reference/cli/services) for every flag.
 
 ### Managing databases
 
-For the SQL engines (`mysql`, `mariadb`, `postgres`), Yerd can create, drop, list,
+For the SQL engines (`mysql`, `mariadb`, `postgres`), Orcker can create, drop, list,
 back up, and restore databases without you reaching for a separate client. The
 engine must be running.
 
 ```sh
-yerd db create mysql my_app
-yerd db list mysql
-yerd db backup mysql my_app ./my_app.sql      # plain-SQL dump
-yerd db restore mysql my_app ./my_app.sql     # replay into an existing db
-yerd db drop mysql my_app
+orcker db create mysql my_app
+orcker db list mysql
+orcker db backup mysql my_app ./my_app.sql      # plain-SQL dump
+orcker db restore mysql my_app ./my_app.sql     # replay into an existing db
+orcker db drop mysql my_app
 ```
 
 Database names are validated to a strict allowlist (letters, digits, and
@@ -154,26 +154,26 @@ single SQL engine, or give one a different `port`.
 
 ## Service configuration overrides
 
-Yerd owns each config-backed engine's config file and **regenerates it on every
+Orcker owns each config-backed engine's config file and **regenerates it on every
 start** - that is what keeps the port, the data directory, the socket, the log
-path, and the loopback-only binding in step with the rest of Yerd. The cost used
+path, and the loopback-only binding in step with the rest of Orcker. The cost used
 to be that any directive you added to that file by hand vanished the next time
 the service started.
 
 It doesn't any more. Every engine that has a config file now reads two extra
-files from a `conf.d/` directory beside it, and both are read **after** Yerd's own
+files from a `conf.d/` directory beside it, and both are read **after** Orcker's own
 settings:
 
 ```text
 <state>/services/mysql/
-├─ mysql.conf                # generated by Yerd on every start - don't edit
+├─ mysql.conf                # generated by Orcker on every start - don't edit
 └─ conf.d/
-   ├─ 10-yerd.cnf            # your `yerd service set` overrides - regenerated on every start
+   ├─ 10-orcker.cnf            # your `orcker service set` overrides - regenerated on every start
    └─ 50-local.cnf           # yours - created once, never rewritten
 ```
 
-`<state>` is `~/Library/Application Support/io.yerd.Yerd` on macOS and
-`~/.local/state/yerd` on Linux. The extension is `.cnf` for MySQL/MariaDB and
+`<state>` is `~/Library/Application Support/io.orcker.Orcker` on macOS and
+`~/.local/state/orcker` on Linux. The extension is `.cnf` for MySQL/MariaDB and
 `.conf` for PostgreSQL and Redis, because MySQL's include directive reads only
 `*.cnf`.
 
@@ -183,7 +183,7 @@ directory form - two explicit `include` lines naming both files in order. Every
 one of those reads its files last and in name order, which is where the
 precedence comes from.
 
-**Precedence:** `50-local` beats `10-yerd`, which beats Yerd's own defaults.
+**Precedence:** `50-local` beats `10-orcker`, which beats Orcker's own defaults.
 
 ::: info Which engines support this
 `mysql`, `mariadb`, `postgres`, and `redis`. Meilisearch takes its settings from
@@ -199,49 +199,49 @@ The common case - matching the settings of the production MySQL server your app
 actually runs against:
 
 ```sh
-yerd service set mysql max_allowed_packet 256M
-yerd service set mysql max_connections 500
-yerd service set mysql sql_mode STRICT_TRANS_TABLES,NO_ZERO_DATE
+orcker service set mysql max_allowed_packet 256M
+orcker service set mysql max_connections 500
+orcker service set mysql sql_mode STRICT_TRANS_TABLES,NO_ZERO_DATE
 
-yerd service overrides mysql
+orcker service overrides mysql
 #   max_allowed_packet = 256M
 #   max_connections = 500
 #   sql_mode = STRICT_TRANS_TABLES,NO_ZERO_DATE
 
-yerd service restart mysql
+orcker service restart mysql
 ```
 
-`yerd service unset mysql sql_mode` drops one again. Each override is stored in
-`yerd.toml` (so it survives a restart, an upgrade, and a `change-version`) and
-rendered into `10-yerd.cnf` on every start. The desktop app has the same thing
+`orcker service unset mysql sql_mode` drops one again. Each override is stored in
+`orcker.toml` (so it survives a restart, an upgrade, and a `change-version`) and
+rendered into `10-orcker.cnf` on every start. The desktop app has the same thing
 under **Override settings** in a service's `⋯` menu.
 
 ::: warning Restart to apply
 Setting an override never restarts anything, exactly like
-`yerd service set-port`. The engine picks it up the next time it starts - run
-`yerd service restart <service>` when you're ready.
+`orcker service set-port`. The engine picks it up the next time it starts - run
+`orcker service restart <service>` when you're ready.
 :::
 
 ### Which file should I edit?
 
 | What you want | Where it goes |
 |---|---|
-| A directive with a name and a value - `max_connections`, `maxmemory`, `work_mem` | `yerd service set`, which renders it into `10-yerd.<ext>` |
+| A directive with a name and a value - `max_connections`, `maxmemory`, `work_mem` | `orcker service set`, which renders it into `10-orcker.<ext>` |
 | Comments, grouped stanzas, long blocks, or anything you want to keep formatted your way | your editor, in `conf.d/50-local.<ext>` |
-| The port, data directory, socket, pid file, log path, or the loopback binding | nowhere - Yerd manages these (use `yerd service set-port` for the port) |
+| The port, data directory, socket, pid file, log path, or the loopback binding | nowhere - Orcker manages these (use `orcker service set-port` for the port) |
 
 `50-local.<ext>` is created once, as an all-comments stub explaining the rules,
 and **never rewritten** - it is yours, so what you put there survives every
 restart. It is read last, so it also wins over anything set with
-`yerd service set`. If you delete it, Yerd recreates the stub on the next start.
+`orcker service set`. If you delete it, Orcker recreates the stub on the next start.
 
-Directives Yerd manages itself are rejected when you set them through
-`yerd service set` or the desktop app, with a hint naming the command that does
+Directives Orcker manages itself are rejected when you set them through
+`orcker service set` or the desktop app, with a hint naming the command that does
 own them:
 
 ```sh
-yerd service set mysql port 3307
-# error: port is managed by Yerd: the port is managed with `yerd service set-port <service>`
+orcker service set mysql port 3307
+# error: port is managed by Orcker: the port is managed with `orcker service set-port <service>`
 ```
 
 The check folds letter case in every engine, and `-` against `_` for
@@ -249,16 +249,16 @@ MySQL/MariaDB, so `Bind_Address` is caught just as `bind-address` is - the engin
 themselves are that lenient, and an override that slipped through could unpin the
 loopback-only binding.
 
-`50-local.<ext>` is a different matter. Yerd never rewrites that file and the
+`50-local.<ext>` is a different matter. Orcker never rewrites that file and the
 engine reads it directly, so nothing can *refuse* what you put there: a reserved
-directive in it does take effect. `yerd doctor` is the safety net, reporting each
+directive in it does take effect. `orcker doctor` is the safety net, reporting each
 one with the file, the line, and the same hint:
 
 ```sh
-yerd doctor
+orcker doctor
 # ⚠ Service override needs attention
 #     …/services/mysql/conf.d/50-local.cnf line 20: bind-address - this directive
-#     is managed by Yerd: Yerd pins this service to loopback
+#     is managed by Orcker: Orcker pins this service to loopback
 ```
 
 Run it after hand-editing. It is a warning, not a block, so a directive that
@@ -267,7 +267,7 @@ unpins the loopback binding will stay in effect until you remove it and restart.
 ::: tip Some directives accumulate rather than replace
 Last-wins holds for ordinary scalar directives. A few are additive: MySQL's
 `plugin-load-add` and Redis' `save` / `client-output-buffer-limit` **append** to
-Yerd's value instead of replacing it. And in PostgreSQL, anything written by
+Orcker's value instead of replacing it. And in PostgreSQL, anything written by
 `ALTER SYSTEM` lands in `postgresql.auto.conf`, which is read after every include
 and therefore outranks both files. The stub comments in `50-local.<ext>` repeat
 the caveat for the engine you're looking at.
@@ -275,10 +275,10 @@ the caveat for the engine you're looking at.
 
 ### Getting a directive wrong
 
-Yerd checks the **shape** of a name and value - a name starts with a letter or
+Orcker checks the **shape** of a name and value - a name starts with a letter or
 `_` and uses only letters, digits, `.`, `_`, `-`; a value carries no control
 characters, `;` or `#`, and stays under 512 bytes. It does not check the meaning:
-Yerd holds no table of every directive of every engine, so a well-formed
+Orcker holds no table of every directive of every engine, so a well-formed
 directive the engine doesn't recognise is accepted here and rejected there.
 
 Most engines refuse to start at all on an unknown option, and they say so while
@@ -286,20 +286,20 @@ parsing the file. So if a restart fails after an override, the error carries the
 tail of the engine's own log and the path of the hand-edit file:
 
 ```sh
-yerd service restart mysql
+orcker service restart mysql
 # error: mysql crashed repeatedly (last exit: exit status 1)
 # last lines of the service log:
 # [ERROR] [MY-000067] unknown variable 'max_allowd_packet=256M'
-# check ~/Library/Application Support/io.yerd.Yerd/services/mysql/conf.d/50-local.cnf and `yerd service logs mysql`
+# check ~/Library/Application Support/io.orcker.Orcker/services/mysql/conf.d/50-local.cnf and `orcker service logs mysql`
 ```
 
-The message always names the hand-edit file, since that is the one Yerd can't
-inspect for you. If the offending line came from `yerd service set` instead,
-`yerd service overrides mysql` lists what's set; drop it with
-`yerd service unset` and restart again.
+The message always names the hand-edit file, since that is the one Orcker can't
+inspect for you. If the offending line came from `orcker service set` instead,
+`orcker service overrides mysql` lists what's set; drop it with
+`orcker service unset` and restart again.
 
-`yerd doctor` also reads `50-local.<ext>` for every override-capable engine and
-raises a warning per line that names a directive Yerd manages or that isn't a
+`orcker doctor` also reads `50-local.<ext>` for every override-capable engine and
+raises a warning per line that names a directive Orcker manages or that isn't a
 directive at all, with the file and line number. It never edits the file - that
 one is yours, which is the whole point of it.
 
@@ -315,11 +315,11 @@ version label. `full` is the PostGIS variant, appended to the version as a
 | `17-full` | The base plus **PostGIS** and its geospatial stack. | ≈ 60-64 MB | GPL-encumbered (see below) |
 
 ```sh
-yerd service install postgres 17        # lean base
-yerd service install postgres 17-full   # PostGIS build
+orcker service install postgres 17        # lean base
+orcker service install postgres 17-full   # PostGIS build
 ```
 
-Both show up as distinct installable versions in `yerd service available` and in
+Both show up as distinct installable versions in `orcker service available` and in
 the desktop app's version picker. The build is downloaded once per install and
 cached.
 
@@ -342,7 +342,7 @@ The **`full`** build adds the geospatial and crypto stack on top:
 `17` and `17-full` are separate *installs* but **share a single data directory**
 (Postgres datadirs are pinned to the major version, and the `full` variant maps to
 the same major). So you can install the base build, create databases, then switch
-with `yerd service change-version postgres 17-full` (or back) **without losing your
+with `orcker service change-version postgres 17-full` (or back) **without losing your
 data** - the databases carry across the switch.
 
 One caveat: PostGIS objects created while running `full` need the PostGIS `.so` to
@@ -350,7 +350,7 @@ be *used*. The base build still starts against the shared datadir and your regul
 tables are fine, but queries that touch PostGIS types or functions only work while
 `full` is running - so enable `full` before you start using PostGIS.
 
-Uninstalling with `--purge` deletes the shared datadir, so `yerd service uninstall
+Uninstalling with `--purge` deletes the shared datadir, so `orcker service uninstall
 postgres <label> --purge` removes the databases for **both** flavours of that major.
 
 ::: warning `full` is GPL-encumbered
@@ -363,7 +363,7 @@ friends).
 :::
 
 Backup and restore are unchanged - both builds ship the same `pg_dump` /
-`pg_restore` / `psql` tools, so [`yerd db backup` / `restore`](../reference/cli/db)
+`pg_restore` / `psql` tools, so [`orcker db backup` / `restore`](../reference/cli/db)
 work identically. A dump that uses PostGIS objects only restores into a `full`
 target, because those objects need the PostGIS `.so`.
 
@@ -378,4 +378,4 @@ engines run today (subject to a published build for your architecture).
 - [Services CLI reference](../reference/cli/services) and [Databases CLI reference](../reference/cli/db)
 - [PHP Versions](./php-versions) - the supervision model services share
 - [Configuration Reference](../reference/configuration) - the `[services.<id>]` tables
-- [yerd-services](../developer/crates/yerd-services) and [yerd-supervise](../developer/crates/yerd-supervise) - the crates behind this
+- [orcker-services](../developer/crates/orcker-services) and [orcker-supervise](../developer/crates/orcker-supervise) - the crates behind this

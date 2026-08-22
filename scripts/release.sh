@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# release.sh — cut a Yerd release.
+# release.sh — cut a Orcker release.
 #
 # Usage:
 #   ./scripts/release.sh --version v2.0.2-rc.5
@@ -141,8 +141,8 @@ step "Committing version bump"
 MANIFESTS=(
   "Cargo.toml"
   "Cargo.lock"
-  "apps/yerd-gui/src-tauri/tauri.conf.json"
-  "apps/yerd-gui/package.json"
+  "apps/orcker-gui/src-tauri/tauri.conf.json"
+  "apps/orcker-gui/package.json"
 )
 git add -- "${MANIFESTS[@]}"
 
