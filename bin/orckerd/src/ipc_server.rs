@@ -60,7 +60,6 @@ async fn handle_client(stream: IpcStream, state: Arc<DaemonState>) {
             }
         };
         let resp = match req {
-            Request::CreateSite { spec } => crate::create_site::start(spec, state.clone()).await,
             Request::InstallToolStreamed { tool } => {
                 install_tool_streamed(tool, state.clone()).await
             }
@@ -68,10 +67,6 @@ async fn handle_client(stream: IpcStream, state: Arc<DaemonState>) {
                 crate::tunnel::install_cloudflared_streamed(state.clone()).await
             }
             Request::CloudflaredLogin => crate::tunnel::named::login_streamed(state.clone()).await,
-            Request::InstallPhpStreamed {
-                version,
-                confirm_legacy,
-            } => install_php_streamed(version, confirm_legacy, state.clone()).await,
             Request::JobStatus { job_id, cursor } => state.jobs.poll(&job_id, cursor).await,
             Request::JobCancel { job_id } => state.jobs.cancel(&job_id).await,
             other => dispatch(other, &state).await,
@@ -158,10 +153,8 @@ async fn dispatch(req: Request, state: &DaemonState) -> Response {
         | Request::Link { .. }
         | Request::Unlink { .. }
         | Request::Unpark { .. }
-        | Request::SetPhp { .. }
         | Request::SetSecure { .. }
         | Request::SetWebRoot { .. }
-        | Request::SetWordpressAutoLogin { .. }
         | Request::SetFrontController { .. }
         | Request::AddDomain { .. }
         | Request::RemoveDomain { .. }
@@ -196,44 +189,6 @@ async fn dispatch(req: Request, state: &DaemonState) -> Response {
         | Request::SetGroupOrder { .. }
         | Request::SetSiteGroup { .. }
         | Request::RenameGroup { .. } => handle_group_mutation(req, state).await,
-        Request::ListPhp => php_versions_response(state).await,
-        Request::InstallPhp {
-            version,
-            confirm_legacy,
-        } => install_php(version, confirm_legacy, state).await,
-        Request::SetDefaultPhp { version } => set_default_php(version, state).await,
-        Request::CheckPhpUpdates => {
-            let dl = crate::php_install::ReqwestDownloader::new();
-            crate::php_updates::poll_and_refresh(state, &dl, orcker_update::PHP_LISTING_PUBLIC_KEY)
-                .await;
-            php_versions_response(state).await
-        }
-        Request::UpdatePhp { version } => update_php(version, state).await,
-        Request::AvailablePhp => available_php_response(state).await,
-        Request::SetPhpSettings { settings } => set_php_settings(settings, state).await,
-        Request::SetPhpVersionSettings { version, settings } => {
-            set_php_version_settings(version, settings, state).await
-        }
-        Request::SetPhpDirectives {
-            version,
-            directives,
-        } => set_php_directives(version, directives, state).await,
-        Request::SetPhpPoolSettings { version, settings } => {
-            set_php_pool_settings(version, settings, state).await
-        }
-        Request::AddPhpExtension {
-            version,
-            path,
-            name,
-            zend,
-        } => add_php_extension(version, path, name, zend, state).await,
-        Request::RemovePhpExtension { version, name } => {
-            remove_php_extension(version, name, state).await
-        }
-        Request::ListPhpExtensions => list_php_extensions(state).await,
-        Request::RestartPhp { version } => restart_php(version, state).await,
-        Request::RestartAllPhp => restart_all_php(state).await,
-        Request::UninstallPhp { version } => uninstall_php(version, state).await,
         Request::Status => Response::Status {
             report: Box::new(build_status_report(state).await),
         },
@@ -241,7 +196,6 @@ async fn dispatch(req: Request, state: &DaemonState) -> Response {
             items: orcker_doctor::diagnose(
                 &build_status_report(state).await,
                 path_needs_setup(state),
-                &crate::services::local_override_files(&state.dirs),
             ),
         },
         Request::DoctorFix => run_doctor_fix(state).await,
@@ -257,114 +211,6 @@ async fn dispatch(req: Request, state: &DaemonState) -> Response {
             code: ErrorCode::Internal,
             message: "daemon restart is not supported on this platform".into(),
         },
-        Request::ListServices => crate::services::list_services(state).await,
-        Request::AvailableServices => {
-            let dl = crate::php_install::ReqwestDownloader::new();
-            crate::services::available_services(state, &dl).await
-        }
-        Request::AvailableWordpressVersions => {
-            let dl = crate::php_install::ReqwestDownloader::new();
-            crate::wordpress_versions::available_versions(state, &dl).await
-        }
-        Request::MintWordpressLoginToken { site } => {
-            crate::wordpress_login::mint_wordpress_login_token(&site, state).await
-        }
-        Request::WordpressAdminUsers { site } => {
-            crate::wordpress_users::admin_users(&site, state).await
-        }
-        Request::InstallService { service, version } => {
-            let dl = crate::php_install::ReqwestDownloader::new();
-            crate::services::install_service(&service, &version, state, &dl).await
-        }
-        Request::UninstallService {
-            service,
-            version,
-            purge,
-        } => crate::services::uninstall_service(&service, &version, purge, state).await,
-        Request::StartService { service } => crate::services::start_service(&service, state).await,
-        Request::StopService { service } => crate::services::stop_service(&service, state).await,
-        Request::RestartService { service } => {
-            crate::services::restart_service(&service, state).await
-        }
-        Request::SetServicePort { service, port } => {
-            crate::services::set_service_port(&service, port, state).await
-        }
-        Request::SetServiceOverrides { service, overrides } => {
-            crate::services::set_service_overrides(&service, overrides, state).await
-        }
-        Request::ServiceOverrides { service } => {
-            crate::services::service_overrides(&service, state).await
-        }
-        Request::ServiceLogs { service, lines } => {
-            crate::services::service_logs(&service, lines, state)
-        }
-        Request::AddService {
-            type_id,
-            site,
-            port,
-            version,
-            autostart,
-        } => {
-            let dl = crate::php_install::ReqwestDownloader::new();
-            crate::services::add_service(
-                &type_id,
-                site.as_deref(),
-                port,
-                version.as_deref(),
-                autostart,
-                state,
-                &dl,
-            )
-            .await
-        }
-        Request::RemoveService { service, purge } => {
-            crate::services::remove_service(&service, purge, state).await
-        }
-        Request::SetServiceAutostart { service, enabled } => {
-            crate::services::set_service_autostart(&service, enabled, state).await
-        }
-        Request::SetServiceSite { service, site } => {
-            crate::services::set_service_site(&service, &site, state).await
-        }
-        Request::AddableServiceTypes => {
-            let dl = crate::php_install::ReqwestDownloader::new();
-            crate::services::addable_service_types(state, &dl).await
-        }
-        Request::CreateDatabase { service, name } => {
-            crate::db_admin::create(&service, &name, state).await
-        }
-        Request::ListDatabases { service } => crate::db_admin::list(&service, state).await,
-        Request::DropDatabase { service, name } => {
-            crate::db_admin::drop(&service, &name, state).await
-        }
-        Request::BackupDatabase {
-            service,
-            name,
-            path,
-        } => crate::db_admin::backup(&service, &name, &path, state).await,
-        Request::RestoreDatabase {
-            service,
-            name,
-            path,
-        } => crate::db_admin::restore(&service, &name, &path, state).await,
-        Request::ChangeServiceVersion { service, version } => {
-            let dl = crate::php_install::ReqwestDownloader::new();
-            crate::services::change_service_version(&service, &version, state, &dl).await
-        }
-        Request::ListDumps { since_id } => crate::dump_server::list(state, since_id).await,
-        Request::ClearDumps => crate::dump_server::clear(state).await,
-        Request::DeleteDump { id } => crate::dump_server::delete(state, id).await,
-        Request::SetDumpsEnabled { enabled } => {
-            crate::dump_server::set_enabled(state, enabled).await
-        }
-        Request::SetDumpsPort { port } => crate::dump_server::set_port(state, port).await,
-        Request::SetDumpFeature { feature, enabled } => {
-            crate::dump_server::set_feature(state, feature, enabled).await
-        }
-        Request::SetDumpsPersist { persist } => {
-            crate::dump_server::set_persist(state, persist).await
-        }
-        Request::DumpsStatus => crate::dump_server::status(state).await,
         Request::ListMails => Response::Mails {
             mails: state.mail_store.list().await,
         },
@@ -405,7 +251,7 @@ async fn dispatch(req: Request, state: &DaemonState) -> Response {
         Request::InstallTool { tool } => install_tool(&tool, state).await,
         Request::UninstallTool { tool } => uninstall_tool(&tool, state).await,
         Request::CheckUpdate { channel } => {
-            let dl = crate::php_install::ReqwestDownloader::new();
+            let dl = crate::download::ReqwestDownloader::new();
             crate::self_update::check_update(channel, state, &dl, orcker_update::UPDATE_PUBLIC_KEY)
                 .await
         }
@@ -414,7 +260,7 @@ async fn dispatch(req: Request, state: &DaemonState) -> Response {
             crate::self_update::set_update_channel(channel, state).await
         }
         Request::StageUpdate { channel } => {
-            let dl = crate::php_install::ReqwestDownloader::new();
+            let dl = crate::download::ReqwestDownloader::new();
             crate::self_update::stage_update(channel, state, &dl, orcker_update::UPDATE_PUBLIC_KEY)
                 .await
         }
@@ -468,92 +314,6 @@ fn site_entry_domains(
         _ => None,
     };
     (primary_domain, domains)
-}
-
-/// Installed PHP versions (the bundled installs in orcker's data dir), ascending
-/// and deduped. The single source of "what's installed" for the `PhpVersions`
-/// and `AvailablePhp` replies.
-fn installed_versions(state: &DaemonState) -> Vec<orcker_core::PhpVersion> {
-    let mut installed: Vec<orcker_core::PhpVersion> = Vec::new();
-    if let Ok(bundled) = orcker_php::discover_bundled(&state.dirs) {
-        installed.extend(bundled.into_iter().map(|(v, _)| v));
-    }
-    installed.sort_unstable();
-    installed.dedup();
-    installed
-}
-
-/// Build the `PhpVersions` reply: installed versions, the live global default,
-/// cached update annotations, and the global ini settings. Read-only; no network.
-async fn php_versions_response(state: &DaemonState) -> Response {
-    let (default, settings, version_settings, directives, pool) = {
-        let cfg = state.config.lock().await;
-        (
-            cfg.php.default,
-            cfg.php.settings.clone(),
-            cfg.php.version_settings.clone(),
-            cfg.php.directives.clone(),
-            cfg.php.pool.clone(),
-        )
-    };
-    Response::PhpVersions {
-        installed: installed_versions(state),
-        default,
-        updates: crate::php_updates::cached_updates(state).await,
-        settings,
-        version_settings: Box::new(version_settings),
-        directives: Box::new(directives),
-        pool: Box::new(pool),
-    }
-}
-
-/// `available php` - list the major.minor versions installable from the signed
-/// `php.json` manifest, plus what's already installed (so clients hide or tag
-/// them). Fetches + verifies the manifest on demand; a fetch/transport OR
-/// signature-verification failure is an error (an empty parse result is still a
-/// valid empty list).
-async fn available_php_response(state: &DaemonState) -> Response {
-    let dl = crate::php_install::ReqwestDownloader::new();
-    available_php_with(state, &dl, orcker_update::PHP_LISTING_PUBLIC_KEY).await
-}
-
-/// Injectable core of [`available_php_response`] (the downloader is a parameter
-/// so tests can feed a fixture listing without touching the network).
-async fn available_php_with(
-    state: &DaemonState,
-    dl: &dyn orcker_php::Downloader,
-    public_key: &str,
-) -> Response {
-    let (os, arch) = match orcker_php::current_os_arch() {
-        Ok(p) => p,
-        Err(e) => {
-            return Response::Error {
-                code: php_error_code(&e),
-                message: e.to_string(),
-            }
-        }
-    };
-    let listing = match crate::php_install::fetch_verified_listing(
-        dl,
-        public_key,
-        orcker_php::Channel::Stable,
-    )
-    .await
-    {
-        Ok(body) => body,
-        Err(e) => return internal(format!("couldn't load the PHP listing: {e}")),
-    };
-    let legacy =
-        crate::php_install::fetch_verified_listing(dl, public_key, orcker_php::Channel::Legacy)
-            .await
-            .ok()
-            .map(|body| orcker_php::available_minors(&body, os, arch, orcker_php::Channel::Legacy))
-            .unwrap_or_default();
-    Response::AvailablePhp {
-        available: orcker_php::available_minors(&listing, os, arch, orcker_php::Channel::Stable),
-        installed: installed_versions(state),
-        legacy,
-    }
 }
 
 /// Whether a dev tool is installed but Orcker's `{data}/bin` isn't on the user's
@@ -666,7 +426,6 @@ async fn build_status_report(state: &DaemonState) -> orcker_ipc::StatusReport {
     let (
         sites,
         tld,
-        default_php,
         mail_enabled,
         mail_port,
         symlink_protection,
@@ -691,7 +450,6 @@ async fn build_status_report(state: &DaemonState) -> orcker_ipc::StatusReport {
         (
             counts,
             cfg.tld.as_str().to_owned(),
-            cfg.php.default,
             cfg.mail.enabled,
             cfg.mail.port,
             cfg.symlink_protection,
@@ -712,55 +470,10 @@ async fn build_status_report(state: &DaemonState) -> orcker_ipc::StatusReport {
         (None, None)
     };
 
-    let snapshots = {
-        let mut mgr = state.php_manager.lock().await;
-        mgr.snapshots()
-    };
-
-    let installed = installed_versions(state);
-    let updates = crate::php_updates::cached_updates(state).await;
-
     let metrics = orcker_platform::ActiveSystemMetrics::new();
 
     let daemon_pid = std::process::id();
-    let pids: Vec<u32> = installed
-        .iter()
-        .filter_map(|v| {
-            snapshots
-                .iter()
-                .find(|s| s.version == *v)
-                .and_then(|s| s.pid)
-        })
-        .chain(std::iter::once(daemon_pid))
-        .collect();
-    let rss_by_pid = collect_rss_by_pid(metrics, pids).await;
-
-    let php: Vec<orcker_ipc::PhpPoolStatus> = installed
-        .iter()
-        .map(|v| {
-            let snap = snapshots.iter().find(|s| s.version == *v);
-            let (run_state, pid, listen) = match snap {
-                Some(s) => (
-                    map_pool_state(s.state),
-                    s.pid,
-                    s.listen.as_ref().map(ToString::to_string),
-                ),
-                None => (orcker_ipc::PoolRunState::Stopped, None, None),
-            };
-            orcker_ipc::PhpPoolStatus {
-                version: *v,
-                installed_patch: crate::php_install::installed_patch(&state.dirs, *v),
-                state: run_state,
-                pid,
-                listen,
-                rss_bytes: pid.and_then(|p| rss_by_pid.get(&p).copied()),
-                update_available: updates
-                    .iter()
-                    .find(|u| u.version == *v)
-                    .map(|u| u.latest.clone()),
-            }
-        })
-        .collect();
+    let rss_by_pid = collect_rss_by_pid(metrics, vec![daemon_pid]).await;
 
     let fp = state.ca_fingerprint;
     let ca_path = state.ca_path.clone();
@@ -837,7 +550,6 @@ async fn build_status_report(state: &DaemonState) -> orcker_ipc::StatusReport {
             path: state.ca_path.clone(),
             fingerprint: state.ca_fingerprint.to_hex(),
             trusted_system,
-            php_trusts_ca: php_trusts_ca(state).await,
             browser_trust,
         },
         resolver_installed,
@@ -846,12 +558,9 @@ async fn build_status_report(state: &DaemonState) -> orcker_ipc::StatusReport {
         port_redirect_targets,
         lan_redirect_targets,
         resolver_backup,
-        default_php,
-        php,
         sites,
         load_avg,
         daemon_version: env!("CARGO_PKG_VERSION").to_string(),
-        services: crate::services::service_statuses(state).await,
         mail: Some(orcker_ipc::MailStatus {
             enabled: mail_enabled,
             port: mail_port,
@@ -908,14 +617,6 @@ fn latest_resolver_backup(_tld: &str) -> Option<String> {
     None
 }
 
-/// Map a `orcker-php` pool state to the wire enum.
-fn map_pool_state(s: orcker_php::PoolRunState) -> orcker_ipc::PoolRunState {
-    match s {
-        orcker_php::PoolRunState::Running => orcker_ipc::PoolRunState::Running,
-        orcker_php::PoolRunState::Failed => orcker_ipc::PoolRunState::Failed,
-    }
-}
-
 /// Convert a (non-negative) load-average figure to integer hundredths, clamped
 /// into `u32`. The `as` cast is sign- and range-safe given the explicit clamp.
 #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
@@ -933,439 +634,26 @@ fn load_to_centi(x: f64) -> u32 {
 /// `doctor fix` - run the safe auto-fixes, then re-diagnose for the remainder.
 async fn run_doctor_fix(state: &DaemonState) -> Response {
     let report = build_status_report(state).await;
-    let mut performed: Vec<orcker_ipc::FixResult> = Vec::new();
+    let performed: Vec<orcker_ipc::FixResult> = Vec::new();
 
     for action in orcker_doctor::plan_auto_fixes(&report) {
-        match action {
-            orcker_doctor::FixAction::RestartFpm(v) => {
-                let outcome = {
-                    let mut mgr = state.php_manager.lock().await;
-                    mgr.restart(v).await
-                };
-                performed.push(match outcome {
-                    Ok(_) => orcker_ipc::FixResult {
-                        code: orcker_ipc::DiagnosisCode::FpmPoolFailed,
-                        ok: true,
-                        message: format!("restarted PHP {v} FPM pool"),
-                    },
-                    Err(e) => orcker_ipc::FixResult {
-                        code: orcker_ipc::DiagnosisCode::FpmPoolFailed,
-                        ok: false,
-                        message: format!("failed to restart PHP {v}: {e}"),
-                    },
-                });
-            }
-            orcker_doctor::FixAction::RebuildPhpCaBundle => {
-                let rebuilt = rebuild_php_ca_bundle(state).await;
-                performed.push(orcker_ipc::FixResult {
-                    code: orcker_ipc::DiagnosisCode::PhpCaNotTrusted,
-                    ok: rebuilt,
-                    message: if rebuilt {
-                        "rebuilt the PHP CA bundle".to_owned()
-                    } else {
-                        "could not rebuild the PHP CA bundle; see the daemon logs for details"
-                            .to_owned()
-                    },
-                });
-            }
-            other => {
-                tracing::warn!(?other, "unhandled doctor auto-fix action");
-            }
-        }
+        tracing::warn!(?action, "unhandled doctor auto-fix action");
     }
 
     let after = build_status_report(state).await;
-    let manual = orcker_doctor::diagnose(
-        &after,
-        path_needs_setup(state),
-        &crate::services::local_override_files(&state.dirs),
-    )
-    .into_iter()
-    .filter(|d| {
-        matches!(
-            d.severity,
-            orcker_ipc::Severity::Warn | orcker_ipc::Severity::Fail
-        )
-    })
-    .collect();
+    let manual = orcker_doctor::diagnose(&after, path_needs_setup(state))
+        .into_iter()
+        .filter(|d| {
+            matches!(
+                d.severity,
+                orcker_ipc::Severity::Warn | orcker_ipc::Severity::Fail
+            )
+        })
+        .collect();
 
     Response::DoctorFix {
         report: orcker_ipc::FixReport { performed, manual },
     }
-}
-
-/// `update php [<ver>]` - upgrade the given minor (or all installed) to the
-/// latest published build when newer; restart the updated pools; refresh the
-/// cache; return the new list.
-///
-/// Update-all skips only a minor that is genuinely absent from the manifest
-/// (`VersionUnavailable`); a manifest-wide fault (parse/schema/untrusted) and any
-/// failure for a **targeted** update (`version: Some`) are surfaced as an error
-/// rather than a silent no-op. If a later minor's install fails, the minors that
-/// already updated are still finalised (pools restarted, cache refreshed) before
-/// the error is returned.
-///
-/// Holds `php_mutate` across the install loop so it can't race
-/// `install_php`/`install_php_streamed` over the same per-version staging dir.
-/// Not re-entrant: dispatched directly, never while `php_mutate` is already held.
-#[allow(clippy::too_many_lines)]
-async fn update_php(version: Option<orcker_core::PhpVersion>, state: &DaemonState) -> Response {
-    let dl = crate::php_install::ReqwestDownloader::new();
-    let (os, arch) = match orcker_php::current_os_arch() {
-        Ok(p) => p,
-        Err(e) => {
-            return Response::Error {
-                code: php_error_code(&e),
-                message: e.to_string(),
-            }
-        }
-    };
-    let targets: Vec<orcker_core::PhpVersion> = match version {
-        Some(v) => {
-            if crate::php_install::installed_patch(&state.dirs, v).is_none() {
-                return Response::Error {
-                    code: ErrorCode::NotFound,
-                    message: format!("PHP {v} is not installed - run `orcker install php {v}`"),
-                };
-            }
-            vec![v]
-        }
-        None => crate::php_updates::installed_minors(state),
-    };
-    let key = orcker_update::PHP_LISTING_PUBLIC_KEY;
-    let has_stable = targets.iter().any(|v| !v.is_legacy());
-    let has_legacy = targets.iter().any(|v| v.is_legacy());
-    let stable = if has_stable {
-        match crate::php_install::fetch_verified_listing(&dl, key, orcker_php::Channel::Stable)
-            .await
-        {
-            Ok(body) => Some(body),
-            Err(e) => return internal(format!("listing fetch/verify failed: {e}")),
-        }
-    } else {
-        None
-    };
-    let legacy = if has_legacy {
-        crate::php_install::fetch_verified_listing(&dl, key, orcker_php::Channel::Legacy)
-            .await
-            .ok()
-    } else {
-        None
-    };
-    let _guard = state.php_mutate.lock().await;
-    let mut updated: Vec<orcker_core::PhpVersion> = Vec::new();
-    let mut pending_error: Option<orcker_php::PhpError> = None;
-    for minor in targets {
-        let Some(installed) = crate::php_install::installed_patch(&state.dirs, minor) else {
-            continue;
-        };
-        let installed_rev = crate::php_install::installed_revision(&state.dirs, minor);
-        let channel = orcker_php::Channel::of(minor);
-        let listing = match channel {
-            orcker_php::Channel::Stable => stable.as_deref().unwrap_or_default(),
-            orcker_php::Channel::Legacy => match legacy.as_deref() {
-                Some(body) => body,
-                None if version.is_some() => {
-                    return internal(
-                        "couldn't load the legacy PHP listing; try again later".to_owned(),
-                    )
-                }
-                None => continue,
-            },
-        };
-        let artifact = match orcker_php::resolve_from_listing(listing, minor, os, arch, channel) {
-            Ok(a) => a,
-            Err(orcker_php::PhpError::VersionUnavailable { .. }) if version.is_none() => continue,
-            Err(e) => {
-                pending_error = Some(e);
-                break;
-            }
-        };
-        if orcker_php::is_newer_build(
-            &installed,
-            installed_rev,
-            &artifact.full_version,
-            artifact.revision,
-        ) {
-            if let Err(e) = crate::php_install::install(
-                minor,
-                &state.dirs,
-                &dl,
-                orcker_update::PHP_LISTING_PUBLIC_KEY,
-                None,
-            )
-            .await
-            {
-                tracing::error!(version = %minor, error = %e, "PHP update failed");
-                pending_error = Some(e);
-                break;
-            }
-            tracing::info!(version = %minor, from = %installed, to = %artifact.full_version, "updated PHP");
-            updated.push(minor);
-        }
-    }
-    restart_updated_pools(state, &updated).await;
-    crate::php_updates::poll_and_refresh(state, &dl, orcker_update::PHP_LISTING_PUBLIC_KEY).await;
-    if let Some(e) = pending_error {
-        return Response::Error {
-            code: php_error_code(&e),
-            message: e.to_string(),
-        };
-    }
-    php_versions_response(state).await
-}
-
-/// Restart the FPM pool of each just-updated minor that has a **started** pool
-/// (running or crashed/`Failed`), so it re-execs the freshly-installed binary
-/// instead of the stale process. A never-started / stopped ondemand pool is left
-/// alone (the next request spawns it from the new binary), matching
-/// [`restart_all_php`]'s semantics. Per-pool failures are logged, not fatal - the
-/// update itself already succeeded. Runs under the caller's `php_mutate` guard.
-async fn restart_updated_pools(state: &DaemonState, updated: &[orcker_core::PhpVersion]) {
-    if updated.is_empty() {
-        return;
-    }
-    let mut mgr = state.php_manager.lock().await;
-    let active: std::collections::HashSet<orcker_core::PhpVersion> =
-        mgr.snapshots().into_iter().map(|s| s.version).collect();
-    for minor in pools_needing_restart(&active, updated) {
-        match mgr.restart(minor).await {
-            Ok(_) => tracing::info!(version = %minor, "restarted FPM pool after PHP update"),
-            Err(e) => {
-                tracing::warn!(version = %minor, error = %e, "failed to restart FPM pool after PHP update");
-            }
-        }
-    }
-}
-
-/// The just-updated minors whose pool is currently active, preserving `updated`
-/// order. Updated-but-inactive minors are excluded so an update never *starts* a
-/// pool the user had stopped - it only re-execs one already running.
-fn pools_needing_restart(
-    active: &std::collections::HashSet<orcker_core::PhpVersion>,
-    updated: &[orcker_core::PhpVersion],
-) -> Vec<orcker_core::PhpVersion> {
-    updated
-        .iter()
-        .copied()
-        .filter(|m| active.contains(m))
-        .collect()
-}
-
-/// `install php <ver>` - download + verify + unpack a prebuilt build. Runs the
-/// (slow) download with no config lock held; the per-connection task model means
-/// other clients are unaffected. Synchronous (the CLI's `orcker php install` path);
-/// the GUI uses [`install_php_streamed`] for live progress.
-///
-/// Serializes installs under `php_mutate` (the staging dir is keyed by
-/// version + pid, so concurrent installs of the same version would clobber each
-/// other). A failure is logged as the only durable record of it (the line the
-/// GUI diagnostics / About > Logs panel tails).
-/// Reject an install of an out-of-support legacy minor (< 8.2) that did not
-/// carry the explicit `confirm_legacy` opt-in. Defence-in-depth behind the CLI
-/// `--legacy` flag / GUI confirmation checkbox: the daemon never installs a
-/// legacy version "by accident". `None` means the install may proceed.
-fn legacy_install_gate(version: orcker_core::PhpVersion, confirm_legacy: bool) -> Option<Response> {
-    if version.is_legacy() && !confirm_legacy {
-        return Some(Response::Error {
-            code: ErrorCode::LegacyRestricted,
-            message: format!(
-                "PHP {version} is an out-of-support legacy version. Re-run with explicit \
-                 confirmation (CLI `--legacy`, or tick the confirmation box in the GUI). \
-                 Legacy versions get no security support, no code coverage (phpcover), and \
-                 no orcker-dumps, and cannot be set as the default."
-            ),
-        });
-    }
-    None
-}
-
-async fn install_php(
-    version: orcker_core::PhpVersion,
-    confirm_legacy: bool,
-    state: &DaemonState,
-) -> Response {
-    if let Some(rejection) = legacy_install_gate(version, confirm_legacy) {
-        return rejection;
-    }
-    let dl = crate::php_install::ReqwestDownloader::new();
-    let _guard = state.php_mutate.lock().await;
-    match crate::php_install::install(
-        version,
-        &state.dirs,
-        &dl,
-        orcker_update::PHP_LISTING_PUBLIC_KEY,
-        None,
-    )
-    .await
-    {
-        Ok(()) => {
-            finalize_php_install(version, state).await;
-            Response::Ok
-        }
-        Err(e) => {
-            tracing::error!(%version, error = %e, "PHP install failed");
-            Response::Error {
-                code: php_error_code(&e),
-                message: e.to_string(),
-            }
-        }
-    }
-}
-
-/// Post-install bookkeeping shared by the sync and streamed install paths: teach
-/// the live `PhpManager` about the new binaries (its binary map is a startup
-/// snapshot, so this lets the proxy spawn the new FPM pool without a daemon
-/// restart), adopt the first install as the default so the `php` shim exists and
-/// sites have a runtime, then bundle pcov + rebuild shims. Adopting the default
-/// runs before the shim rebuild so the shims are built against the new default.
-/// All best-effort - the install itself has already succeeded by the time this
-/// runs.
-async fn finalize_php_install(version: orcker_core::PhpVersion, state: &DaemonState) {
-    refresh_php_binaries(state).await;
-    adopt_default_if_unset(version, state).await;
-    refresh_pcov_and_shims(state).await;
-}
-
-/// `InstallPhpStreamed` - download + unpack a PHP build as a background job,
-/// streaming phase + byte-count progress into the job log. Returns `JobStarted`
-/// immediately; the client polls `JobStatus`. The streaming sibling of
-/// [`install_php`] (used by the GUI onboarding + PHP screen) so a multi-minute
-/// download shows progress and can be cancelled instead of spinning a request.
-///
-/// The `php_mutate` lock is acquired by racing it against `JobCancel` so a job
-/// queued behind another install can cancel without waiting for the lock, and is
-/// held through [`finalize_php_install`] so no other PHP mutation interleaves
-/// with the default/shim/manager updates. On cancel the install future is
-/// dropped: its only side effects are in a `.staging-` dir the next install
-/// clears, so an interrupted download leaves nothing half-installed. Every arm
-/// closes the progress channel and drains it before finishing the job, so no log
-/// line is lost.
-pub(crate) async fn install_php_streamed(
-    version: orcker_core::PhpVersion,
-    confirm_legacy: bool,
-    state: Arc<DaemonState>,
-) -> Response {
-    if let Some(rejection) = legacy_install_gate(version, confirm_legacy) {
-        return rejection;
-    }
-    let (job_id, mut cancel) = state.jobs.create().await;
-    let id = job_id.clone();
-    tokio::spawn(async move {
-        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<String>();
-        let drain = {
-            let state = state.clone();
-            let id = id.clone();
-            tokio::spawn(async move {
-                while let Some(line) = rx.recv().await {
-                    state.jobs.push_log(&id, line).await;
-                }
-            })
-        };
-
-        state
-            .jobs
-            .set_phase(&id, format!("Installing PHP {version}"))
-            .await;
-        let dl = crate::php_install::ReqwestDownloader::new();
-        let guard = tokio::select! {
-            g = state.php_mutate.lock() => g,
-            _ = cancel.changed() => {
-                drop(tx);
-                let _ = drain.await;
-                state
-                    .jobs
-                    .finish(&id, orcker_ipc::JobState::Cancelled, None)
-                    .await;
-                return;
-            }
-        };
-        let result = tokio::select! {
-            r = crate::php_install::install(version, &state.dirs, &dl, orcker_update::PHP_LISTING_PUBLIC_KEY, Some(&tx)) => Some(r),
-            _ = cancel.changed() => None,
-        };
-
-        match result {
-            Some(Ok(())) => {
-                finalize_php_install(version, &state).await;
-                drop(guard);
-                drop(tx);
-                let _ = drain.await;
-                state
-                    .jobs
-                    .finish(&id, orcker_ipc::JobState::Succeeded, None)
-                    .await;
-            }
-            Some(Err(e)) => {
-                drop(guard);
-                drop(tx);
-                let _ = drain.await;
-                tracing::error!(%version, error = %e, "PHP install failed");
-                state
-                    .jobs
-                    .finish(&id, orcker_ipc::JobState::Failed, Some(e.to_string()))
-                    .await;
-            }
-            None => {
-                drop(guard);
-                drop(tx);
-                let _ = drain.await;
-                state
-                    .jobs
-                    .finish(&id, orcker_ipc::JobState::Cancelled, None)
-                    .await;
-            }
-        }
-    });
-    Response::JobStarted { job_id }
-}
-
-/// On the *first* successful install - when the configured default PHP isn't
-/// actually installed yet - adopt the just-installed `version` as the default,
-/// so the `php` shim gets created and sites have a runtime. No-op once a real
-/// default is installed (later installs never steal the default).
-///
-/// Lock-safe: the "is the current default installed?" check and the set happen
-/// under the config lock, so two concurrent first-installs can't both win.
-/// Best-effort (the install already succeeded) and does NOT reconcile shims -
-/// the caller's `refresh_pcov_and_shims` reconciles against the updated default.
-async fn adopt_default_if_unset(version: orcker_core::PhpVersion, state: &DaemonState) {
-    if version.is_legacy() {
-        return;
-    }
-    let mut cfg_guard = state.config.lock().await;
-    if crate::php_install::cli_binary_path(&state.dirs, cfg_guard.php.default).exists() {
-        return;
-    }
-    let mut new = cfg_guard.clone();
-    new.php.default = version;
-    if let Some(orcker_bin) = orcker_sibling() {
-        if let Err(e) = crate::php_install::set_default_shim(&state.dirs, &orcker_bin) {
-            tracing::warn!(error = %e, "auto-default shim update failed");
-        }
-    } else {
-        tracing::warn!("cannot locate the `orcker` binary; skipping php shim update");
-    }
-    if let Err(e) = new.save(&state.config_path) {
-        tracing::warn!(error = %e, "auto-default config save failed");
-        return;
-    }
-    *cfg_guard = new;
-    tracing::info!(version = %version, "adopted first installed PHP as the default");
-}
-
-/// Re-discover installed PHP binaries (bundled) and hand the refreshed map to
-/// the live `PhpManager`. Mirrors the discovery done at startup.
-async fn refresh_php_binaries(state: &DaemonState) {
-    let binaries: std::collections::BTreeMap<orcker_core::PhpVersion, std::path::PathBuf> =
-        match orcker_php::discover_bundled(&state.dirs) {
-            Ok(b) => b.into_iter().collect(),
-            Err(e) => {
-                tracing::warn!(error = %e, "bundled PHP re-discovery failed after install");
-                return;
-            }
-        };
-    state.php_manager.lock().await.set_binaries(binaries);
 }
 
 /// Absolute path to the `orcker` CLI binary, assumed a sibling of the running
@@ -1374,43 +662,6 @@ async fn refresh_php_binaries(state: &DaemonState) {
 fn orcker_sibling() -> Option<std::path::PathBuf> {
     let exe = std::env::current_exe().ok()?;
     Some(exe.parent()?.join("orcker"))
-}
-
-/// Reconcile the managed PHP shims (`php`/`php<ver>`/`phpcover`/`php<ver>cover`),
-/// serialized behind the shim mutex. Best-effort: failures are logged. Each shim
-/// is a wrapper that resolves its version (and the default from config) at run
-/// time, so this needs no default argument.
-async fn reconcile_shims_for(state: &DaemonState) {
-    let Some(orcker_bin) = orcker_sibling() else {
-        tracing::warn!("cannot locate the `orcker` binary; skipping PHP-shim reconcile");
-        return;
-    };
-    let _guard = state.shim_reconcile.lock().await;
-    if let Err(e) = crate::php_install::reconcile_shims(&state.dirs, &orcker_bin) {
-        tracing::warn!(error = %e, "PHP-shim reconcile failed");
-    }
-}
-
-/// Rebuild `{data}/cacert.pem` (host roots + Orcker CA) from the current host
-/// trust store. Returns whether the file now contains public roots. Because FPM
-/// and the CLI read the bundle by its stable path at TLS-handshake / invocation
-/// time, restoring a deleted/stale file takes effect without a pool restart.
-async fn rebuild_php_ca_bundle(state: &DaemonState) -> bool {
-    let dirs = state.dirs.clone();
-    let ca_path = state.ca_path.clone();
-    tokio::task::spawn_blocking(move || {
-        use orcker_platform::TrustStore;
-        let Ok(ca_pem) = std::fs::read_to_string(&ca_path) else {
-            return false;
-        };
-        let roots = orcker_platform::ActiveTrustStore
-            .system_root_bundle()
-            .ok()
-            .flatten();
-        crate::startup::build_php_ca_bundle(&dirs, &ca_pem, roots.as_deref()).is_some()
-    })
-    .await
-    .unwrap_or(false)
 }
 
 /// Map the platform browser-trust probe to the wire enum.
@@ -1455,72 +706,16 @@ async fn trust_browsers(uninstall: bool, state: &DaemonState) -> Response {
     }
 }
 
-/// Probe whether the bundled PHP trusts the Orcker CA: `None` when the feature is
-/// off (no managed bundle wired at startup), else `Some(true)` when
-/// `{data}/cacert.pem` exists and contains the CA cert, `Some(false)` otherwise
-/// (missing / stale bundle → PHP HTTPS to `.test` fails).
-async fn php_trusts_ca(state: &DaemonState) -> Option<bool> {
-    let bundle = state.php_ca_bundle.clone()?;
-    let ca_path = state.ca_path.clone();
-    tokio::task::spawn_blocking(move || {
-        match (
-            std::fs::read_to_string(&ca_path),
-            std::fs::read_to_string(&bundle),
-        ) {
-            (Ok(ca), Ok(b)) => bundle_contains_ca(&ca, &b),
-            _ => false,
-        }
-    })
-    .await
-    .ok()
-}
-
-/// Whether `bundle_pem` embeds the CA certificate `ca_pem` (both read from disk,
-/// both originating from the same `cert_pem()` so the CA block is byte-identical
-/// and a contiguous substring). An empty/whitespace-only `ca_pem` (corrupt CA
-/// file) is never treated as trusted, to avoid the trivial `contains("")` match.
-fn bundle_contains_ca(ca_pem: &str, bundle_pem: &str) -> bool {
-    let ca = ca_pem.trim();
-    !ca.is_empty() && bundle_pem.contains(ca)
-}
-
-pub(crate) async fn write_cli_ini_now(state: &DaemonState) {
-    let (settings, extensions, version_settings, directives) = {
-        let cfg = state.config.lock().await;
-        (
-            cfg.php.settings.clone(),
-            cfg.php.extensions.clone(),
-            cfg.php.version_settings.clone(),
-            cfg.php.directives.clone(),
-        )
-    };
-    if let Err(e) = crate::php_install::write_cli_ini(
-        &state.dirs,
-        &settings,
-        state.php_ca_bundle.as_deref(),
-        &extensions,
-        &version_settings,
-        &directives,
-    ) {
-        tracing::warn!(error = %e, "failed to write CLI php.ini");
-    }
-}
-
-/// Reconcile the managed PHP shims against the installed set.
-async fn reconcile_shims_now(state: &DaemonState) {
-    reconcile_shims_for(state).await;
-}
-
-/// Reconcile the dev-tool shims (`composer`/`node`/`npm`/`npx`/`bun`/`bunx`) under
-/// the **shared** `shim_reconcile` mutex (same dir as the PHP reconcile).
+/// Reconcile the dev-tool shims (`node`/`npm`/`npx`/`bun`/`bunx`) under the
+/// shared `shim_reconcile` mutex.
 /// Best-effort: failures are logged. Used at startup and after install/uninstall.
 pub(crate) async fn reconcile_tool_shims_now(state: &DaemonState) {
-    let Some(orcker_bin) = orcker_sibling() else {
+    let Some(_orcker_bin) = orcker_sibling() else {
         tracing::warn!("cannot locate the `orcker` binary; skipping tool-shim reconcile");
         return;
     };
     let _guard = state.shim_reconcile.lock().await;
-    if let Err(e) = crate::tools::reconcile_tool_shims(&state.dirs, &orcker_bin) {
+    if let Err(e) = crate::tools::reconcile_tool_shims(&state.dirs) {
         tracing::warn!(error = %e, "tool-shim reconcile failed");
     }
 }
@@ -1568,7 +763,7 @@ async fn install_tool(tool: &str, state: &DaemonState) -> Response {
             message: format!("unknown tool {tool:?}"),
         };
     };
-    let dl = crate::php_install::ReqwestDownloader::new();
+    let dl = crate::download::ReqwestDownloader::new();
     let _mutate = state.tool_mutate.lock().await;
     match crate::tools::install(t, &state.dirs, &dl, None).await {
         Ok(()) => {
@@ -1610,7 +805,7 @@ pub(crate) async fn install_tool_streamed(tool: String, state: Arc<DaemonState>)
             .jobs
             .set_phase(&id, format!("Installing {}", t.display_name()))
             .await;
-        let dl = crate::php_install::ReqwestDownloader::new();
+        let dl = crate::download::ReqwestDownloader::new();
         let guard = state.tool_mutate.lock().await;
         let result = tokio::select! {
             r = crate::tools::install(t, &state.dirs, &dl, Some(&tx)) => Some(r),
@@ -1674,152 +869,6 @@ fn tool_error_code(e: &crate::tools::ToolError) -> ErrorCode {
         ToolError::UnsupportedHost(_) => ErrorCode::InvalidPath,
         _ => ErrorCode::Internal,
     }
-}
-
-/// Best-effort: fetch the `pcov` `.so` for installed PHP versions, then rebuild
-/// the cover/clean versioned CLI shims. Ungated (pcov is always bundled). Used at
-/// startup and after a PHP install.
-pub(crate) async fn refresh_pcov_and_shims(state: &DaemonState) {
-    let dl = crate::php_install::ReqwestDownloader::new();
-    crate::ext_install::ensure_pcov_for_installed(&state.dirs, &dl).await;
-    reconcile_shims_now(state).await;
-}
-
-/// `restart php <ver>` - stop + ensure the version's FPM pool. Starts a stopped
-/// pool too (the GUI greys "Restart" when idle; the CLI may use it to start one).
-async fn restart_php(version: orcker_core::PhpVersion, state: &DaemonState) -> Response {
-    let outcome = {
-        let mut mgr = state.php_manager.lock().await;
-        mgr.restart(version).await
-    };
-    match outcome {
-        Ok(_) => Response::Ok,
-        Err(orcker_php::PhpError::VersionNotInstalled { version }) => Response::Error {
-            code: ErrorCode::NotFound,
-            message: format!("PHP {version} is not installed"),
-        },
-        Err(e) => internal(format!("restart of PHP {version} failed: {e}")),
-    }
-}
-
-/// `restart php` (no version) - restart every started pool (running or failed).
-/// Best-effort: a per-pool failure is logged, not fatal. Idle/never-started
-/// ondemand pools are left alone (they spawn fresh on the next request).
-async fn restart_all_php(state: &DaemonState) -> Response {
-    let mut mgr = state.php_manager.lock().await;
-    for snap in mgr.snapshots() {
-        if let Err(e) = mgr.restart(snap.version).await {
-            tracing::warn!(version = %snap.version, error = %e, "failed to restart FPM pool");
-        }
-    }
-    Response::Ok
-}
-
-/// `uninstall php <ver>` - remove an installed version after safety checks.
-///
-/// Blocked (→ `InvalidPath` with a human message) when the version is in use by
-/// a site, is the last installed version while sites remain, or is the current
-/// default while other versions are installed. The config/router guards are
-/// dropped before the filesystem remove + manager ops (lock discipline); a
-/// concurrent `SetPhp` to this version is a benign microsecond TOCTOU, accepted
-/// the same way `set_default_php` accepts its read-then-act window.
-async fn uninstall_php(version: orcker_core::PhpVersion, state: &DaemonState) -> Response {
-    let installed = installed_versions(state);
-    if !installed.contains(&version) {
-        return Response::Error {
-            code: ErrorCode::NotFound,
-            message: format!("PHP {version} is not installed"),
-        };
-    }
-
-    let default = state.config.lock().await.php.default;
-    let (sites_using, total_sites) = {
-        let router = state.router.read().await;
-        let using: Vec<String> = router
-            .iter()
-            .filter(|s| s.php() == version)
-            .map(|s| s.name().to_owned())
-            .collect();
-        (using, router.iter().count())
-    };
-
-    if !sites_using.is_empty() {
-        return Response::Error {
-            code: ErrorCode::InvalidPath,
-            message: format!(
-                "PHP {version} is assigned to site(s): {} - reassign them first",
-                sites_using.join(", ")
-            ),
-        };
-    }
-    if installed.len() <= 1 && total_sites > 0 {
-        return Response::Error {
-            code: ErrorCode::InvalidPath,
-            message: format!(
-                "can't uninstall PHP {version}: it's the last installed version and sites still exist"
-            ),
-        };
-    }
-    if version == default && installed.len() > 1 {
-        return Response::Error {
-            code: ErrorCode::InvalidPath,
-            message: format!("PHP {version} is the default - set another version as default first"),
-        };
-    }
-
-    let _ = state.php_manager.lock().await.stop(version).await;
-    let version_dir = state
-        .dirs
-        .data
-        .join("php")
-        .join(format!("php-{}.{}", version.major, version.minor));
-    if let Err(e) = std::fs::remove_dir_all(&version_dir) {
-        return internal(format!("failed to remove PHP {version}: {e}"));
-    }
-    let _ = std::fs::remove_file(crate::ext_install::pcov_so_path(&state.dirs, version));
-    refresh_php_binaries(state).await;
-    reconcile_shims_now(state).await;
-    tracing::info!(version = %version, "uninstalled PHP");
-    php_versions_response(state).await
-}
-
-/// `use <ver>` (global) - require the version installed, set the live default +
-/// site fallback (`config.php.default`), persist, and repoint the `php` shim.
-async fn set_default_php(version: orcker_core::PhpVersion, state: &DaemonState) -> Response {
-    if version.is_legacy() {
-        return Response::Error {
-            code: ErrorCode::LegacyRestricted,
-            message: format!(
-                "PHP {version} is an out-of-support legacy version and cannot be the global \
-                 default. It can still serve individual sites and run via `php{version}`."
-            ),
-        };
-    }
-    if !crate::php_install::cli_binary_path(&state.dirs, version).exists() {
-        return Response::Error {
-            code: ErrorCode::NotFound,
-            message: format!("PHP {version} is not installed - run `orcker install php {version}`"),
-        };
-    }
-    {
-        let mut cfg_guard = state.config.lock().await;
-        let mut new = cfg_guard.clone();
-        new.php.default = version;
-        if let Some(orcker_bin) = orcker_sibling() {
-            if let Err(e) = crate::php_install::set_default_shim(&state.dirs, &orcker_bin) {
-                return internal(format!("update php shim failed: {e}"));
-            }
-        } else {
-            tracing::warn!("cannot locate the `orcker` binary; skipping php shim update");
-        }
-        if let Err(e) = new.save(&state.config_path) {
-            return internal(format!("config save failed: {e}"));
-        }
-        *cfg_guard = new;
-    }
-    reconcile_shims_for(state).await;
-    tracing::info!(version = %version, "set default PHP");
-    Response::Ok
 }
 
 /// Set the mail-capture SMTP port. Persisted to config; takes effect on the next
@@ -2043,515 +1092,6 @@ async fn mint_remote_setup_code(state: &DaemonState) -> Response {
     }
 }
 
-/// `set/unset php` - merge global PHP ini settings into the config and apply
-/// them to every live FPM pool. An empty-string value removes a key (reset to
-/// PHP's default).
-///
-/// Order (build → validate → save → commit → drop config guard → restart
-/// pools): the config write is fail-closed; the per-pool restart is best-effort
-/// and runs *after* the config guard is released, under a single `php_manager`
-/// lock so no request can `ensure` a stale-config pool mid-update. The whole
-/// sequence holds `php_settings_mutate`, so an overlapping settings request
-/// can't push a stale snapshot into the manager after a newer one applied.
-async fn set_php_settings(
-    settings: std::collections::BTreeMap<String, String>,
-    state: &DaemonState,
-) -> Response {
-    let _mutate_guard = state.php_settings_mutate.lock().await;
-    let mut cfg_guard = state.config.lock().await;
-    let mut new = cfg_guard.clone();
-    for (key, value) in settings {
-        if value.is_empty() {
-            new.php.settings.remove(&key);
-            continue;
-        }
-        if let Err(e) = orcker_core::php_settings::validate_value(&key, &value) {
-            return Response::Error {
-                code: ErrorCode::InvalidPath,
-                message: e.to_string(),
-            };
-        }
-        let canonical = orcker_core::php_settings::canonical_value(&key, &value);
-        new.php.settings.insert(key, canonical);
-    }
-
-    if new.php.settings == cfg_guard.php.settings {
-        drop(cfg_guard);
-        return php_versions_response(state).await;
-    }
-
-    if let Err(e) = new.validate() {
-        return internal(format!("config validation failed: {e}"));
-    }
-    if let Err(e) = new.save(&state.config_path) {
-        return internal(format!("config save failed: {e}"));
-    }
-    let applied = new.php.settings.clone();
-    *cfg_guard = new;
-    drop(cfg_guard);
-
-    {
-        let mut mgr = state.php_manager.lock().await;
-        mgr.set_ini_settings(applied);
-        for snap in mgr.snapshots() {
-            if let Err(e) = mgr.restart(snap.version).await {
-                tracing::warn!(version = %snap.version, error = %e, "failed to restart FPM pool after settings change");
-            }
-        }
-    }
-    write_cli_ini_now(state).await;
-    tracing::info!("applied global PHP settings");
-    php_versions_response(state).await
-}
-
-/// `set/unset php --only <version>` - merge per-version overrides of the
-/// allowlisted settings into the config and apply them to that version's FPM
-/// pool and CLI ini. An empty-string value removes the override (the global
-/// value applies again). Same lock order and `php_settings_mutate` discipline
-/// as [`set_php_settings`], but only the affected version's pool restarts.
-async fn set_php_version_settings(
-    version: orcker_core::PhpVersion,
-    settings: std::collections::BTreeMap<String, String>,
-    state: &DaemonState,
-) -> Response {
-    if let Some(resp) = require_installed(version, state) {
-        return resp;
-    }
-    let _mutate_guard = state.php_settings_mutate.lock().await;
-    let mut cfg_guard = state.config.lock().await;
-    let mut new = cfg_guard.clone();
-    for (key, value) in settings {
-        if value.is_empty() {
-            if let Some(map) = new.php.version_settings.get_mut(&version) {
-                map.remove(&key);
-            }
-            continue;
-        }
-        if let Err(e) = orcker_core::php_settings::validate_value(&key, &value) {
-            return Response::Error {
-                code: ErrorCode::InvalidPath,
-                message: e.to_string(),
-            };
-        }
-        let canonical = orcker_core::php_settings::canonical_value(&key, &value);
-        new.php
-            .version_settings
-            .entry(version)
-            .or_default()
-            .insert(key, canonical);
-    }
-    if new
-        .php
-        .version_settings
-        .get(&version)
-        .is_some_and(std::collections::BTreeMap::is_empty)
-    {
-        new.php.version_settings.remove(&version);
-    }
-
-    if new.php.version_settings == cfg_guard.php.version_settings {
-        drop(cfg_guard);
-        return php_versions_response(state).await;
-    }
-
-    if let Err(e) = new.validate() {
-        return internal(format!("config validation failed: {e}"));
-    }
-    if let Err(e) = new.save(&state.config_path) {
-        return internal(format!("config save failed: {e}"));
-    }
-    *cfg_guard = new;
-    drop(cfg_guard);
-
-    apply_version_php_config(state, version).await;
-    tracing::info!(version = %version, "applied per-version PHP settings");
-    php_versions_response(state).await
-}
-
-/// `orcker php ini set/unset` - merge free-form per-version ini directives into
-/// the config and apply them to that version's FPM pool and CLI ini. An
-/// empty-string value removes the directive. Reserved names (allowlisted
-/// settings, extension loading, the CA bundle) are refused with a pointer to
-/// the typed path. Same lock order and `php_settings_mutate` discipline as
-/// [`set_php_settings`], but only the affected version's pool restarts.
-async fn set_php_directives(
-    version: orcker_core::PhpVersion,
-    directives: std::collections::BTreeMap<String, String>,
-    state: &DaemonState,
-) -> Response {
-    if let Some(resp) = require_installed(version, state) {
-        return resp;
-    }
-    let _mutate_guard = state.php_settings_mutate.lock().await;
-    let mut cfg_guard = state.config.lock().await;
-    let mut new = cfg_guard.clone();
-    for (key, value) in directives {
-        if let Err(e) = orcker_core::php_directives::validate_name(&key) {
-            return Response::Error {
-                code: ErrorCode::InvalidPath,
-                message: e.to_string(),
-            };
-        }
-        if let Some(hint) = orcker_core::php_directives::reserved(&key) {
-            return Response::Error {
-                code: ErrorCode::InvalidPath,
-                message: format!("{key} is managed by Orcker: {hint}"),
-            };
-        }
-        if value.is_empty() {
-            if let Some(map) = new.php.directives.get_mut(&version) {
-                map.remove(&key);
-            }
-            continue;
-        }
-        if let Err(e) = orcker_core::php_directives::validate_value(&value) {
-            return Response::Error {
-                code: ErrorCode::InvalidPath,
-                message: e.to_string(),
-            };
-        }
-        new.php
-            .directives
-            .entry(version)
-            .or_default()
-            .insert(key, value.trim().to_owned());
-    }
-    if new
-        .php
-        .directives
-        .get(&version)
-        .is_some_and(std::collections::BTreeMap::is_empty)
-    {
-        new.php.directives.remove(&version);
-    }
-
-    if new.php.directives == cfg_guard.php.directives {
-        drop(cfg_guard);
-        return php_versions_response(state).await;
-    }
-
-    if let Err(e) = new.validate() {
-        return internal(format!("config validation failed: {e}"));
-    }
-    if let Err(e) = new.save(&state.config_path) {
-        return internal(format!("config save failed: {e}"));
-    }
-    *cfg_guard = new;
-    drop(cfg_guard);
-
-    apply_version_php_config(state, version).await;
-    tracing::info!(version = %version, "applied per-version PHP ini directives");
-    php_versions_response(state).await
-}
-
-/// `orcker php pool set/unset` - merge per-version FPM pool settings into the
-/// config and apply them to that version's pool. An empty-string value resets
-/// the setting to its built-in default. Mirrors [`set_php_directives`]'s lock
-/// order and `php_settings_mutate` discipline; only the affected version's
-/// pool restarts. Values are stored canonically (`"032"` persists as `"32"`),
-/// matching [`set_php_version_settings`].
-async fn set_php_pool_settings(
-    version: orcker_core::PhpVersion,
-    settings: std::collections::BTreeMap<String, String>,
-    state: &DaemonState,
-) -> Response {
-    if let Some(resp) = require_installed(version, state) {
-        return resp;
-    }
-    let _mutate_guard = state.php_settings_mutate.lock().await;
-    let mut cfg_guard = state.config.lock().await;
-    let mut new = cfg_guard.clone();
-    for (key, value) in settings {
-        if let Err(e) = orcker_core::php_pool::validate_name(&key) {
-            return Response::Error {
-                code: ErrorCode::InvalidPath,
-                message: e.to_string(),
-            };
-        }
-        if value.is_empty() {
-            if let Some(map) = new.php.pool.get_mut(&version) {
-                map.remove(&key);
-            }
-            continue;
-        }
-        let parsed = match orcker_core::php_pool::validate_value(&value) {
-            Ok(n) => n,
-            Err(e) => {
-                return Response::Error {
-                    code: ErrorCode::InvalidPath,
-                    message: e.to_string(),
-                }
-            }
-        };
-        new.php
-            .pool
-            .entry(version)
-            .or_default()
-            .insert(key, parsed.to_string());
-    }
-    if new
-        .php
-        .pool
-        .get(&version)
-        .is_some_and(std::collections::BTreeMap::is_empty)
-    {
-        new.php.pool.remove(&version);
-    }
-
-    if new.php.pool == cfg_guard.php.pool {
-        drop(cfg_guard);
-        return php_versions_response(state).await;
-    }
-
-    if let Err(e) = new.validate() {
-        return internal(format!("config validation failed: {e}"));
-    }
-    if let Err(e) = new.save(&state.config_path) {
-        return internal(format!("config save failed: {e}"));
-    }
-    *cfg_guard = new;
-    drop(cfg_guard);
-
-    apply_version_php_config(state, version).await;
-    tracing::info!(version = %version, "applied per-version FPM pool settings");
-    php_versions_response(state).await
-}
-
-/// `NotFound` error when `version` has no installed CLI binary, else `None`.
-/// Per-version config only makes sense for an installed version (mirrors
-/// `add_php_extension`).
-fn require_installed(version: orcker_core::PhpVersion, state: &DaemonState) -> Option<Response> {
-    let php_bin = crate::php_install::cli_binary_path(&state.dirs, version);
-    if php_bin.exists() {
-        return None;
-    }
-    Some(Response::Error {
-        code: ErrorCode::NotFound,
-        message: format!("PHP {version} is not installed - run `orcker install php {version}`"),
-    })
-}
-
-/// Push the config's per-version settings overrides, directives, and FPM pool
-/// settings into the live `PhpManager`, restart the affected version's pool if
-/// it is currently running, and rewrite the per-version CLI inis. Follows
-/// `set_php_settings`'s lock discipline: the config lock is released before the
-/// manager lock is taken. Runs under the caller's `php_settings_mutate` guard,
-/// which is what keeps the config re-read here from racing a concurrent
-/// settings mutation. The pool map never reaches `write_cli_ini`, so pool
-/// settings cannot leak into a CLI `php.ini`.
-async fn apply_version_php_config(state: &DaemonState, affected: orcker_core::PhpVersion) {
-    let (version_settings, directives, pool) = {
-        let cfg = state.config.lock().await;
-        (
-            cfg.php.version_settings.clone(),
-            cfg.php.directives.clone(),
-            cfg.php.pool.clone(),
-        )
-    };
-    {
-        let mut mgr = state.php_manager.lock().await;
-        mgr.set_ini_overrides(version_settings);
-        mgr.set_directives(directives);
-        mgr.set_pool_overrides(pool);
-        if mgr.snapshots().iter().any(|s| s.version == affected) {
-            if let Err(e) = mgr.restart(affected).await {
-                tracing::warn!(version = %affected, error = %e, "failed to restart FPM pool after per-version PHP config change");
-            }
-        }
-    }
-    write_cli_ini_now(state).await;
-}
-
-/// Register a custom extension for `version`: validate, load-probe, persist, then
-/// load it into that version's FPM pool + CLI ini. Modeled on `set_php_settings`.
-///
-/// A cheap pre-probe duplicate check returns immediately when the extension is
-/// already registered, avoiding a PHP spawn; the authoritative check under the
-/// write lock still guards against a concurrent add.
-async fn add_php_extension(
-    version: orcker_core::PhpVersion,
-    path: String,
-    name: Option<String>,
-    zend: bool,
-    state: &DaemonState,
-) -> Response {
-    let php_bin = crate::php_install::cli_binary_path(&state.dirs, version);
-    if !php_bin.exists() {
-        return Response::Error {
-            code: ErrorCode::NotFound,
-            message: format!("PHP {version} is not installed - run `orcker install php {version}`"),
-        };
-    }
-    let name = name
-        .or_else(|| orcker_core::php_extensions::default_name_from_path(&path))
-        .unwrap_or_default();
-    if let Err(e) = orcker_core::php_extensions::validate_entry(&name, &path, zend) {
-        return Response::Error {
-            code: ErrorCode::InvalidPath,
-            message: e.to_string(),
-        };
-    }
-
-    if state
-        .config
-        .lock()
-        .await
-        .php
-        .extensions
-        .get(&version)
-        .is_some_and(|list| list.iter().any(|e| e.name == name))
-    {
-        return Response::Error {
-            code: ErrorCode::AlreadyExists,
-            message: format!("an extension named {name} is already registered for PHP {version}"),
-        };
-    }
-
-    let runner = orcker_php::TokioCommandRunner;
-    if let Err(e) =
-        orcker_php::probe_extension(&runner, &php_bin, std::path::Path::new(&path), zend).await
-    {
-        return Response::Error {
-            code: ErrorCode::ExtensionLoadFailed,
-            message: format!("extension failed to load into PHP {version}: {e}"),
-        };
-    }
-
-    {
-        let mut cfg_guard = state.config.lock().await;
-        let mut new = cfg_guard.clone();
-        let list = new.php.extensions.entry(version).or_default();
-        if list.iter().any(|e| e.name == name) {
-            return Response::Error {
-                code: ErrorCode::AlreadyExists,
-                message: format!(
-                    "an extension named {name} is already registered for PHP {version}"
-                ),
-            };
-        }
-        list.push(orcker_config::ExtEntry { name, path, zend });
-        if let Err(e) = new.validate() {
-            return internal(format!("config validation failed: {e}"));
-        }
-        if let Err(e) = new.save(&state.config_path) {
-            return internal(format!("config save failed: {e}"));
-        }
-        *cfg_guard = new;
-    }
-    apply_extensions(state, version).await;
-    list_php_extensions(state).await
-}
-
-/// Remove a registered extension by name for `version`.
-async fn remove_php_extension(
-    version: orcker_core::PhpVersion,
-    name: String,
-    state: &DaemonState,
-) -> Response {
-    {
-        let mut cfg_guard = state.config.lock().await;
-        let mut new = cfg_guard.clone();
-        let Some(list) = new.php.extensions.get_mut(&version) else {
-            return Response::Error {
-                code: ErrorCode::NotFound,
-                message: format!("no extension named {name} registered for PHP {version}"),
-            };
-        };
-        let before = list.len();
-        list.retain(|e| e.name != name);
-        if list.len() == before {
-            return Response::Error {
-                code: ErrorCode::NotFound,
-                message: format!("no extension named {name} registered for PHP {version}"),
-            };
-        }
-        if list.is_empty() {
-            new.php.extensions.remove(&version);
-        }
-        if let Err(e) = new.save(&state.config_path) {
-            return internal(format!("config save failed: {e}"));
-        }
-        *cfg_guard = new;
-    }
-    apply_extensions(state, version).await;
-    list_php_extensions(state).await
-}
-
-/// List registered extensions across all versions, tagging each with whether its
-/// `.so` currently exists on disk.
-async fn list_php_extensions(state: &DaemonState) -> Response {
-    let cfg = state.config.lock().await;
-    let by_version = cfg
-        .php
-        .extensions
-        .iter()
-        .map(|(v, entries)| {
-            let infos = entries
-                .iter()
-                .map(|e| orcker_ipc::PhpExtInfo {
-                    name: e.name.clone(),
-                    path: e.path.clone(),
-                    zend: e.zend,
-                    present: std::path::Path::new(&e.path).is_file(),
-                })
-                .collect();
-            (*v, infos)
-        })
-        .collect();
-    Response::PhpExtensions { by_version }
-}
-
-/// Push the config's extension registry into the live `PhpManager`, restart the
-/// affected version's pool if it is currently running, and rewrite the per-version
-/// CLI inis. Follows `set_php_settings`'s lock discipline: the config lock is
-/// released before the manager lock is taken.
-async fn apply_extensions(state: &DaemonState, affected: orcker_core::PhpVersion) {
-    let ext_map = extension_load_map(state).await;
-    {
-        let mut mgr = state.php_manager.lock().await;
-        mgr.set_extensions(ext_map);
-        if mgr.snapshots().iter().any(|s| s.version == affected) {
-            if let Err(e) = mgr.restart(affected).await {
-                tracing::warn!(version = %affected, error = %e, "failed to restart FPM pool after extension change");
-            }
-        }
-    }
-    write_cli_ini_now(state).await;
-}
-
-/// Build the `PhpManager`'s extension map (`version -> [ExtLoad]`) from the
-/// persisted config.
-async fn extension_load_map(
-    state: &DaemonState,
-) -> std::collections::BTreeMap<orcker_core::PhpVersion, Vec<orcker_php::ExtLoad>> {
-    let cfg = state.config.lock().await;
-    cfg.php
-        .extensions
-        .iter()
-        .map(|(v, entries)| {
-            let loads = entries
-                .iter()
-                .map(|e| orcker_php::ExtLoad {
-                    path: std::path::PathBuf::from(&e.path),
-                    zend: e.zend,
-                })
-                .collect();
-            (*v, loads)
-        })
-        .collect()
-}
-
-/// Map a [`orcker_php::PhpError`] to a wire [`ErrorCode`].
-fn php_error_code(e: &orcker_php::PhpError) -> ErrorCode {
-    use orcker_php::PhpError;
-    match e {
-        PhpError::UnsupportedPlatform { .. } | PhpError::VersionUnavailable { .. } => {
-            ErrorCode::InvalidPath
-        }
-        _ => ErrorCode::Internal,
-    }
-}
-
 /// Apply a mutation: canonicalise paths, run the pure delta, validate, persist,
 /// and swap the live router - **build-then-validate-then-commit** so a failed
 /// mutation leaves disk and the live router untouched. A `Link`'s web-root
@@ -2632,7 +1172,6 @@ pub(crate) async fn handle_mutation(req: Request, state: &DaemonState) -> Respon
     }
 
     *cfg_guard = new;
-    let site_after = site_needing_url_sync(&req, &candidate);
     *state.router.write().await = candidate;
     *state.wordpress_sites.write().await = candidate_wordpress;
     *state.laravel_sites.write().await = candidate_laravel;
@@ -2640,41 +1179,8 @@ pub(crate) async fn handle_mutation(req: Request, state: &DaemonState) -> Respon
 
     state.watch_dirty.notify_one();
 
-    if let Some(site) = site_after {
-        crate::wordpress_url_sync::sync_site_url(&site, state).await;
-    }
-
     tracing::info!(summary = %applied.summary, "applied mutation");
     Response::Ok
-}
-
-/// The post-mutation site to run [`crate::wordpress_url_sync::sync_site_url`]
-/// against: `SetSecure` (which flips the scheme) plus every domain mutation
-/// (each of which can change the primary domain a WordPress install should
-/// advertise). `AddDomain` is included, not just `SetPrimaryDomain`/`ResetDomains`
-/// /`RemoveDomain`: re-adding a previously-suppressed apex when the delta holds no
-/// stored primary flips the derived primary back to the apex (`choose_primary`
-/// prefers the apex over the first exact), so an add can change the primary too.
-/// `sync_site_url` re-reads the just-rebuilt router's primary, so re-running it
-/// when nothing actually changed is a harmless, idempotent no-op. `None` for
-/// every other request kind. Looks `candidate` (the just-rebuilt router) up by
-/// the *lowercased* site name, matching every other name-resolution site in
-/// `mutate.rs` - the router is always keyed by the lowercased name (`Site`
-/// lowercases at construction), so looking up an un-lowercased, user-typed name
-/// (e.g. from `orcker secure MyWpSite`) would silently miss and skip the sync.
-fn site_needing_url_sync(
-    req: &Request,
-    candidate: &orcker_core::SiteRouter,
-) -> Option<orcker_core::Site> {
-    let (Request::SetSecure { name, .. }
-    | Request::AddDomain { name, .. }
-    | Request::RemoveDomain { name, .. }
-    | Request::SetPrimaryDomain { name, .. }
-    | Request::ResetDomains { name }) = req
-    else {
-        return None;
-    };
-    candidate.get(&name.to_ascii_lowercase()).cloned()
 }
 
 /// Whether `url` is a loopback target on one of Orcker's **actively bound** proxy
@@ -2784,46 +1290,6 @@ async fn list_routes(state: &DaemonState) -> Response {
         }
     }
     Response::Routes { rules }
-}
-
-/// Apply a group mutation (create/delete/reorder/assign). Groups are a
-/// config-only organisational overlay that never affects routing, so this uses
-/// the lighter clone → apply → validate → save → commit path (like
-/// [`set_dns_port`]) - **no** router rebuild and **no** `watch_dirty` notify,
-/// which would only provoke a needless parked-dir rescan.
-async fn handle_group_mutation(req: Request, state: &DaemonState) -> Response {
-    let mut cfg_guard = state.config.lock().await;
-    let mut new = cfg_guard.clone();
-
-    // Groups ignore `default_php`, but `apply` still takes it; capture before the
-    // mutable borrow of `new`.
-    let live_default = new.php.default;
-    let applied = match mutate::apply(
-        &mut new,
-        &*state.router.read().await,
-        &req,
-        None,
-        live_default,
-    ) {
-        Ok(a) => a,
-        Err(e) => {
-            return Response::Error {
-                code: mutate::error_code(&e),
-                message: e.to_string(),
-            }
-        }
-    };
-
-    if let Err(e) = new.validate() {
-        return internal(format!("config validation failed: {e}"));
-    }
-    if let Err(e) = new.save(&state.config_path) {
-        return internal(format!("config save failed: {e}"));
-    }
-
-    *cfg_guard = new;
-    tracing::info!(summary = %applied.summary, "applied group mutation");
-    Response::Ok
 }
 
 /// Auto-detect the web subpath to serve for a project at `doc_root` (e.g.
@@ -2967,6 +1433,46 @@ fn lan_not_ready(message: String) -> Response {
     }
 }
 
+/// Apply a group mutation (create/delete/reorder/assign). Groups are a
+/// config-only organisational overlay that never affects routing, so this uses
+/// the lighter clone → apply → validate → save → commit path (like
+/// [`set_dns_port`]) - **no** router rebuild and **no** `watch_dirty` notify,
+/// which would only provoke a needless parked-dir rescan.
+async fn handle_group_mutation(req: Request, state: &DaemonState) -> Response {
+    let mut cfg_guard = state.config.lock().await;
+    let mut new = cfg_guard.clone();
+
+    // Groups ignore `default_php`, but `apply` still takes it; capture before the
+    // mutable borrow of `new`.
+    let live_default = new.php.default;
+    let applied = match mutate::apply(
+        &mut new,
+        &*state.router.read().await,
+        &req,
+        None,
+        live_default,
+    ) {
+        Ok(a) => a,
+        Err(e) => {
+            return Response::Error {
+                code: mutate::error_code(&e),
+                message: e.to_string(),
+            }
+        }
+    };
+
+    if let Err(e) = new.validate() {
+        return internal(format!("config validation failed: {e}"));
+    }
+    if let Err(e) = new.save(&state.config_path) {
+        return internal(format!("config save failed: {e}"));
+    }
+
+    *cfg_guard = new;
+    tracing::info!(summary = %applied.summary, "applied group mutation");
+    Response::Ok
+}
+
 #[cfg(test)]
 #[allow(
     clippy::unwrap_used,
@@ -2977,8 +1483,6 @@ fn lan_not_ready(message: String) -> Response {
 )]
 mod tests {
     use super::*;
-    use orcker_core::{PhpVersion, RouterConfig, SiteRouter, Tld};
-    use orcker_platform::PlatformDirs;
 
     use crate::test_support::state_in;
 
@@ -2994,90 +1498,6 @@ mod tests {
         assert!(!is_self_forward("not-a-url", &bound));
     }
 
-    #[test]
-    fn bundle_contains_ca_matches_embedded_ca() {
-        let ca = "-----BEGIN CERTIFICATE-----\nCA\n-----END CERTIFICATE-----";
-        let bundle =
-            format!("-----BEGIN CERTIFICATE-----\nROOT\n-----END CERTIFICATE-----\n{ca}\n");
-        assert!(bundle_contains_ca(ca, &bundle));
-        assert!(bundle_contains_ca(&format!("{ca}\n\n"), &bundle));
-    }
-
-    #[test]
-    fn bundle_contains_ca_false_when_absent() {
-        let ca = "-----BEGIN CERTIFICATE-----\nCA\n-----END CERTIFICATE-----";
-        let bundle = "-----BEGIN CERTIFICATE-----\nOTHER\n-----END CERTIFICATE-----\n";
-        assert!(!bundle_contains_ca(ca, bundle));
-    }
-
-    #[test]
-    fn bundle_contains_ca_empty_ca_is_never_trusted() {
-        assert!(!bundle_contains_ca("", "anything"));
-        assert!(!bundle_contains_ca("   \n", "anything"));
-    }
-
-    #[test]
-    fn site_needing_url_sync_finds_mixed_case_name() {
-        let mut router = SiteRouter::new(RouterConfig::with_tld(Tld::new("test").unwrap()));
-        router
-            .insert(
-                orcker_core::Site::linked("myblog", "/srv/myblog", PhpVersion::new(8, 3)).unwrap(),
-            )
-            .unwrap();
-        let req = Request::SetSecure {
-            name: "MyBlog".into(),
-            secure: true,
-        };
-        let site = site_needing_url_sync(&req, &router);
-        assert_eq!(site.map(|s| s.name().to_owned()), Some("myblog".to_owned()));
-    }
-
-    #[test]
-    fn site_needing_url_sync_covers_all_domain_mutations() {
-        let mut router = SiteRouter::new(RouterConfig::with_tld(Tld::new("test").unwrap()));
-        router
-            .insert(
-                orcker_core::Site::linked("myblog", "/srv/myblog", PhpVersion::new(8, 3)).unwrap(),
-            )
-            .unwrap();
-        for req in [
-            Request::AddDomain {
-                name: "MyBlog".into(),
-                domain: "api.myblog.test".into(),
-            },
-            Request::RemoveDomain {
-                name: "myblog".into(),
-                domain: "corp.test".into(),
-            },
-            Request::SetPrimaryDomain {
-                name: "MyBlog".into(),
-                domain: "corp.test".into(),
-            },
-            Request::ResetDomains {
-                name: "myblog".into(),
-            },
-        ] {
-            assert_eq!(
-                site_needing_url_sync(&req, &router).map(|s| s.name().to_owned()),
-                Some("myblog".to_owned()),
-                "{req:?} should trigger the WordPress URL sync"
-            );
-        }
-    }
-
-    #[test]
-    fn site_needing_url_sync_none_for_non_domain_requests() {
-        let router = SiteRouter::new(RouterConfig::with_tld(Tld::new("test").unwrap()));
-        assert!(site_needing_url_sync(
-            &Request::SetPhp {
-                name: "myblog".into(),
-                version: PhpVersion::new(8, 3),
-            },
-            &router
-        )
-        .is_none());
-    }
-
     #[tokio::test]
     async fn dispatch_ping_returns_pong() {
         let tmp = tempfile::tempdir().unwrap();
@@ -3086,44 +1506,6 @@ mod tests {
             dispatch(Request::Ping, &state).await,
             Response::Pong
         ));
-    }
-
-    #[tokio::test]
-    async fn list_proxies_reports_domains_only_for_a_customised_proxy() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        let target = orcker_core::UpstreamTarget::from_url_str("http://127.0.0.1:9011").unwrap();
-        let plain = orcker_core::ProxySite::new("reverb", target.clone()).unwrap();
-        let custom = orcker_core::ProxySite::new("app", target).unwrap();
-        {
-            let mut cfg = state.config.lock().await;
-            cfg.proxies.push(plain.clone());
-            cfg.proxies.push(custom.clone());
-        }
-        {
-            let corp = orcker_core::Domain::parse_subpart("corp").unwrap();
-            let mut router = state.router.write().await;
-            router.insert_proxy(plain).unwrap();
-            router
-                .insert_proxy_with_domains(
-                    custom,
-                    vec![orcker_core::Domain::apex("app"), corp.clone()],
-                    corp,
-                )
-                .unwrap();
-        }
-
-        match dispatch(Request::ListProxies, &state).await {
-            Response::Proxies { proxies, .. } => {
-                let plain = proxies.iter().find(|p| p.name == "reverb").unwrap();
-                assert_eq!(plain.primary_domain, None);
-                assert!(plain.domains.is_empty());
-                let custom = proxies.iter().find(|p| p.name == "app").unwrap();
-                assert_eq!(custom.primary_domain.as_deref(), Some("corp.test"));
-                assert_eq!(custom.domains, ["app.test", "corp.test"]);
-            }
-            other => panic!("expected Proxies, got {other:?}"),
-        }
     }
 
     /// A name-shadowed proxy is never inserted, so its name in the shared domain
@@ -3159,6 +1541,60 @@ mod tests {
                 let shadowed = proxies.iter().find(|p| p.name == "app").unwrap();
                 assert_eq!(shadowed.primary_domain, None);
                 assert!(shadowed.domains.is_empty());
+            }
+            other => panic!("expected Proxies, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn dispatch_status_reports_runtime_facts() {
+        let tmp = tempfile::tempdir().unwrap();
+        let state = state_in(tmp.path());
+        match dispatch(Request::Status, &state).await {
+            Response::Status { report } => {
+                assert_eq!(report.tld, "test");
+                assert_eq!(report.daemon_pid, std::process::id());
+                assert!(report.http.fell_back);
+                assert_eq!(report.http.requested, 80);
+                assert_eq!(report.http.bound, 8080);
+            }
+            other => panic!("expected Status, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn list_proxies_reports_domains_only_for_a_customised_proxy() {
+        let tmp = tempfile::tempdir().unwrap();
+        let state = state_in(tmp.path());
+        let target = orcker_core::UpstreamTarget::from_url_str("http://127.0.0.1:9011").unwrap();
+        let plain = orcker_core::ProxySite::new("reverb", target.clone()).unwrap();
+        let custom = orcker_core::ProxySite::new("app", target).unwrap();
+        {
+            let mut cfg = state.config.lock().await;
+            cfg.proxies.push(plain.clone());
+            cfg.proxies.push(custom.clone());
+        }
+        {
+            let corp = orcker_core::Domain::parse_subpart("corp").unwrap();
+            let mut router = state.router.write().await;
+            router.insert_proxy(plain).unwrap();
+            router
+                .insert_proxy_with_domains(
+                    custom,
+                    vec![orcker_core::Domain::apex("app"), corp.clone()],
+                    corp,
+                )
+                .unwrap();
+        }
+
+        match dispatch(Request::ListProxies, &state).await {
+            Response::Proxies { proxies, .. } => {
+                let plain = proxies.iter().find(|p| p.name == "reverb").unwrap();
+                assert_eq!(plain.primary_domain, None);
+                assert!(plain.domains.is_empty());
+                let custom = proxies.iter().find(|p| p.name == "app").unwrap();
+                assert_eq!(custom.primary_domain.as_deref(), Some("corp.test"));
+                assert_eq!(custom.domains, ["app.test", "corp.test"]);
             }
             other => panic!("expected Proxies, got {other:?}"),
         }
@@ -3536,34 +1972,6 @@ Subject: Captured\r\n\r\nhi\r\n";
     }
 
     #[tokio::test]
-    async fn use_overrides_parked_site_keeping_kind_mixed_case() {
-        let tmp = tempfile::tempdir().unwrap();
-        let sites_root = tmp.path().join("sites");
-        std::fs::create_dir_all(sites_root.join("blog")).unwrap();
-        let state = state_in(tmp.path());
-        dispatch(Request::Park { path: sites_root }, &state).await;
-
-        let resp = dispatch(
-            Request::SetPhp {
-                name: "Blog".into(),
-                version: PhpVersion::new(8, 4),
-            },
-            &state,
-        )
-        .await;
-        assert!(matches!(resp, Response::Ok), "got {resp:?}");
-
-        match dispatch(Request::ListSites, &state).await {
-            Response::Sites { sites } => {
-                let blog = sites.iter().find(|s| s.site.name() == "blog").unwrap();
-                assert_eq!(blog.site.php(), PhpVersion::new(8, 4));
-                assert_eq!(blog.site.kind(), orcker_core::SiteKind::Parked);
-            }
-            other => panic!("expected Sites, got {other:?}"),
-        }
-    }
-
-    #[tokio::test]
     async fn list_parked_and_unpark_roundtrip() {
         let tmp = tempfile::tempdir().unwrap();
         let populated = tmp.path().join("populated");
@@ -3816,146 +2224,6 @@ Subject: Captured\r\n\r\nhi\r\n";
         }
     }
 
-    #[tokio::test]
-    async fn dispatch_status_reports_runtime_facts() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        match dispatch(Request::Status, &state).await {
-            Response::Status { report } => {
-                assert_eq!(report.tld, "test");
-                assert_eq!(report.default_php, PhpVersion::new(8, 3));
-                assert_eq!(report.daemon_pid, std::process::id());
-                assert!(report.http.fell_back);
-                assert_eq!(report.http.requested, 80);
-                assert_eq!(report.http.bound, 8080);
-                assert!(report.php.is_empty());
-            }
-            other => panic!("expected Status, got {other:?}"),
-        }
-    }
-
-    #[tokio::test]
-    async fn dispatch_diagnose_flags_missing_php() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        match dispatch(Request::Diagnose, &state).await {
-            Response::Diagnoses { items } => {
-                assert!(items
-                    .iter()
-                    .any(|d| d.code == orcker_ipc::DiagnosisCode::NoPhpInstalled));
-            }
-            other => panic!("expected Diagnoses, got {other:?}"),
-        }
-    }
-
-    /// The doctor's view of the hand-edited override file is assembled by the
-    /// daemon, so the wiring - registry walk, path, read - only shows up here.
-    #[tokio::test]
-    async fn dispatch_diagnose_flags_a_reserved_key_in_the_local_override_file() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        let path = orcker_services::version::local_override_path(&state.dirs, "mysql", "cnf");
-        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-        std::fs::write(&path, b"[mysqld]\nbind-address = 0.0.0.0\n").unwrap();
-
-        match dispatch(Request::Diagnose, &state).await {
-            Response::Diagnoses { items } => {
-                let finding = items
-                    .iter()
-                    .find(|d| d.code == orcker_ipc::DiagnosisCode::ServiceOverrideInvalid)
-                    .expect("override finding present");
-                assert!(finding.detail.contains("bind-address"), "{finding:?}");
-                assert!(finding.detail.contains("50-local.cnf"), "{finding:?}");
-            }
-            other => panic!("expected Diagnoses, got {other:?}"),
-        }
-    }
-
-    #[tokio::test]
-    async fn dispatch_doctor_fix_with_no_pools_is_noop_but_reports_manual() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        match dispatch(Request::DoctorFix, &state).await {
-            Response::DoctorFix { report } => {
-                assert!(report.performed.is_empty());
-                assert!(report
-                    .manual
-                    .iter()
-                    .any(|d| d.severity == orcker_ipc::Severity::Fail));
-            }
-            other => panic!("expected DoctorFix, got {other:?}"),
-        }
-    }
-
-    #[tokio::test]
-    async fn dispatch_doctor_fix_rebuilds_missing_php_ca_bundle() {
-        let tmp = tempfile::tempdir().unwrap();
-        let mut state = state_in(tmp.path());
-        std::fs::create_dir_all(&state.dirs.data).unwrap();
-        let validity = orcker_tls::Validity::new(
-            time::OffsetDateTime::now_utc() - time::Duration::days(1),
-            time::OffsetDateTime::now_utc() + time::Duration::days(365),
-        )
-        .unwrap();
-        let ca =
-            orcker_tls::CertAuthority::generate(orcker_core::CA_COMMON_NAME, validity).unwrap();
-        std::fs::write(&state.ca_path, ca.cert_pem()).unwrap();
-        state.php_ca_bundle = Some(state.dirs.data.join("cacert.pem"));
-
-        match dispatch(Request::DoctorFix, &state).await {
-            Response::DoctorFix { report } => {
-                let fix = report
-                    .performed
-                    .iter()
-                    .find(|r| r.code == orcker_ipc::DiagnosisCode::PhpCaNotTrusted)
-                    .expect("rebuild fix should have run");
-                if fix.ok {
-                    let bundle =
-                        std::fs::read_to_string(state.dirs.data.join("cacert.pem")).unwrap();
-                    assert!(bundle.contains(ca.cert_pem().trim()));
-                }
-            }
-            other => panic!("expected DoctorFix, got {other:?}"),
-        }
-    }
-
-    /// Lay down a fake installed version: `data/php/php-<v>/{sbin/php-fpm,bin/php}`.
-    fn fake_install(dirs: &PlatformDirs, v: PhpVersion) {
-        fake_install_patch(dirs, v, &format!("{}.{}.0", v.major, v.minor));
-    }
-
-    /// Like `fake_install` but records a specific installed patch in the marker.
-    fn fake_install_patch(dirs: &PlatformDirs, v: PhpVersion, full: &str) {
-        let base = dirs
-            .data
-            .join("php")
-            .join(format!("php-{}.{}", v.major, v.minor));
-        std::fs::create_dir_all(base.join("sbin")).unwrap();
-        std::fs::create_dir_all(base.join("bin")).unwrap();
-        std::fs::write(base.join("sbin").join("php-fpm"), b"x").unwrap();
-        std::fs::write(base.join("bin").join("php"), b"x").unwrap();
-        std::fs::write(base.join(".orcker-version"), full).unwrap();
-    }
-
-    #[tokio::test]
-    async fn dispatch_list_php_reports_installed_and_default() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        fake_install(&state.dirs, PhpVersion::new(8, 4));
-        match dispatch(Request::ListPhp, &state).await {
-            Response::PhpVersions {
-                installed, default, ..
-            } => {
-                assert!(
-                    installed.contains(&PhpVersion::new(8, 4)),
-                    "got {installed:?}"
-                );
-                assert_eq!(default, PhpVersion::new(8, 3));
-            }
-            other => panic!("expected PhpVersions, got {other:?}"),
-        }
-    }
-
     #[cfg(unix)]
     #[tokio::test]
     async fn dispatch_restart_daemon_arms_flag_and_oks() {
@@ -3969,1092 +2237,6 @@ Subject: Captured\r\n\r\nhi\r\n";
         assert!(state
             .restart_requested
             .load(std::sync::atomic::Ordering::Acquire));
-    }
-
-    #[tokio::test]
-    async fn dispatch_set_default_php_requires_installed() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        match dispatch(
-            Request::SetDefaultPhp {
-                version: PhpVersion::new(8, 5),
-            },
-            &state,
-        )
-        .await
-        {
-            Response::Error { code, .. } => assert_eq!(code, ErrorCode::NotFound),
-            other => panic!("expected NotFound, got {other:?}"),
-        }
-    }
-
-    #[tokio::test]
-    async fn dispatch_set_default_php_sets_config_and_shim() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        fake_install(&state.dirs, PhpVersion::new(8, 4));
-        let resp = dispatch(
-            Request::SetDefaultPhp {
-                version: PhpVersion::new(8, 4),
-            },
-            &state,
-        )
-        .await;
-        assert!(matches!(resp, Response::Ok), "got {resp:?}");
-        assert_eq!(state.config.lock().await.php.default, PhpVersion::new(8, 4));
-        let shim = state.dirs.data.join("bin").join("php");
-        assert_eq!(
-            std::fs::read_link(shim).unwrap(),
-            orcker_sibling().expect("orcker sibling resolves in tests")
-        );
-    }
-
-    #[tokio::test]
-    async fn restart_php_not_installed_is_not_found() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        match dispatch(
-            Request::RestartPhp {
-                version: PhpVersion::new(8, 5),
-            },
-            &state,
-        )
-        .await
-        {
-            Response::Error { code, .. } => assert_eq!(code, ErrorCode::NotFound),
-            other => panic!("expected NotFound, got {other:?}"),
-        }
-    }
-
-    #[tokio::test]
-    async fn uninstall_php_not_installed_is_not_found() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        match dispatch(
-            Request::UninstallPhp {
-                version: PhpVersion::new(8, 5),
-            },
-            &state,
-        )
-        .await
-        {
-            Response::Error { code, .. } => assert_eq!(code, ErrorCode::NotFound),
-            other => panic!("expected NotFound, got {other:?}"),
-        }
-    }
-
-    #[tokio::test]
-    async fn uninstall_php_blocked_when_in_use_by_site() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        fake_install(&state.dirs, PhpVersion::new(8, 4));
-        fake_install(&state.dirs, PhpVersion::new(8, 5));
-        let app_dir = tmp.path().join("app");
-        std::fs::create_dir_all(&app_dir).unwrap();
-        dispatch(
-            Request::Link {
-                name: "app".into(),
-                path: app_dir,
-            },
-            &state,
-        )
-        .await;
-        dispatch(
-            Request::SetPhp {
-                name: "app".into(),
-                version: PhpVersion::new(8, 5),
-            },
-            &state,
-        )
-        .await;
-
-        match dispatch(
-            Request::UninstallPhp {
-                version: PhpVersion::new(8, 5),
-            },
-            &state,
-        )
-        .await
-        {
-            Response::Error { code, message } => {
-                assert_eq!(code, ErrorCode::InvalidPath);
-                assert!(message.contains("app"), "{message}");
-            }
-            other => panic!("expected InvalidPath (in use), got {other:?}"),
-        }
-    }
-
-    #[tokio::test]
-    async fn uninstall_php_blocked_when_default_with_others() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        fake_install(&state.dirs, PhpVersion::new(8, 4));
-        fake_install(&state.dirs, PhpVersion::new(8, 5));
-        dispatch(
-            Request::SetDefaultPhp {
-                version: PhpVersion::new(8, 4),
-            },
-            &state,
-        )
-        .await;
-        match dispatch(
-            Request::UninstallPhp {
-                version: PhpVersion::new(8, 4),
-            },
-            &state,
-        )
-        .await
-        {
-            Response::Error { code, message } => {
-                assert_eq!(code, ErrorCode::InvalidPath);
-                assert!(message.contains("default"), "{message}");
-            }
-            other => panic!("expected InvalidPath (is default), got {other:?}"),
-        }
-    }
-
-    #[tokio::test]
-    async fn uninstall_php_succeeds_and_removes_dir() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        fake_install(&state.dirs, PhpVersion::new(8, 4));
-        fake_install(&state.dirs, PhpVersion::new(8, 5));
-        dispatch(
-            Request::SetDefaultPhp {
-                version: PhpVersion::new(8, 4),
-            },
-            &state,
-        )
-        .await;
-
-        let dir = state.dirs.data.join("php").join("php-8.5");
-        assert!(dir.exists());
-        match dispatch(
-            Request::UninstallPhp {
-                version: PhpVersion::new(8, 5),
-            },
-            &state,
-        )
-        .await
-        {
-            Response::PhpVersions { installed, .. } => {
-                assert!(!installed.contains(&PhpVersion::new(8, 5)), "{installed:?}");
-                assert!(installed.contains(&PhpVersion::new(8, 4)));
-            }
-            other => panic!("expected PhpVersions, got {other:?}"),
-        }
-        assert!(!dir.exists(), "version dir should be removed");
-    }
-
-    /// Guards the live-default fix: after `SetDefaultPhp`, a newly-linked site
-    /// inherits the *new* default (not the startup snapshot).
-    #[tokio::test]
-    async fn set_default_php_changes_fallback_for_new_sites() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        fake_install(&state.dirs, PhpVersion::new(8, 4));
-        let app_dir = tmp.path().join("app");
-        std::fs::create_dir_all(&app_dir).unwrap();
-
-        assert!(matches!(
-            dispatch(
-                Request::SetDefaultPhp {
-                    version: PhpVersion::new(8, 4)
-                },
-                &state
-            )
-            .await,
-            Response::Ok
-        ));
-        assert!(matches!(
-            dispatch(
-                Request::Link {
-                    name: "app".into(),
-                    path: app_dir,
-                },
-                &state
-            )
-            .await,
-            Response::Ok
-        ));
-        match dispatch(Request::ListSites, &state).await {
-            Response::Sites { sites } => {
-                let app = sites.iter().find(|s| s.site.name() == "app").unwrap();
-                assert_eq!(app.site.php(), PhpVersion::new(8, 4));
-            }
-            other => panic!("expected Sites, got {other:?}"),
-        }
-    }
-
-    #[tokio::test]
-    async fn set_php_settings_persists_validates_and_resets() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-
-        let resp = dispatch(
-            Request::SetPhpSettings {
-                settings: std::collections::BTreeMap::from([
-                    ("memory_limit".to_string(), "512M".to_string()),
-                    ("display_errors".to_string(), "on".to_string()),
-                ]),
-            },
-            &state,
-        )
-        .await;
-        match resp {
-            Response::PhpVersions { settings, .. } => {
-                assert_eq!(
-                    settings.get("memory_limit").map(String::as_str),
-                    Some("512M")
-                );
-                assert_eq!(
-                    settings.get("display_errors").map(String::as_str),
-                    Some("On")
-                );
-            }
-            other => panic!("expected PhpVersions, got {other:?}"),
-        }
-        assert_eq!(
-            state
-                .config
-                .lock()
-                .await
-                .php
-                .settings
-                .get("memory_limit")
-                .map(String::as_str),
-            Some("512M")
-        );
-
-        assert!(matches!(
-            dispatch(
-                Request::SetPhpSettings {
-                    settings: std::collections::BTreeMap::from([(
-                        "memory_limit".to_string(),
-                        "bogus".to_string()
-                    )]),
-                },
-                &state,
-            )
-            .await,
-            Response::Error { .. }
-        ));
-        assert_eq!(
-            state
-                .config
-                .lock()
-                .await
-                .php
-                .settings
-                .get("memory_limit")
-                .map(String::as_str),
-            Some("512M")
-        );
-
-        let resp = dispatch(
-            Request::SetPhpSettings {
-                settings: std::collections::BTreeMap::from([(
-                    "memory_limit".to_string(),
-                    String::new(),
-                )]),
-            },
-            &state,
-        )
-        .await;
-        match resp {
-            Response::PhpVersions { settings, .. } => {
-                assert!(!settings.contains_key("memory_limit"));
-                assert!(settings.contains_key("display_errors"));
-            }
-            other => panic!("expected PhpVersions, got {other:?}"),
-        }
-    }
-
-    /// Dispatch a single-entry `SetPhpVersionSettings` request.
-    async fn set_version_setting(
-        state: &DaemonState,
-        version: PhpVersion,
-        name: &str,
-        value: &str,
-    ) -> Response {
-        dispatch(
-            Request::SetPhpVersionSettings {
-                version,
-                settings: std::collections::BTreeMap::from([(name.to_string(), value.to_string())]),
-            },
-            state,
-        )
-        .await
-    }
-
-    /// Dispatch a single-entry `SetPhpDirectives` request.
-    async fn set_directive(
-        state: &DaemonState,
-        version: PhpVersion,
-        name: &str,
-        value: &str,
-    ) -> Response {
-        dispatch(
-            Request::SetPhpDirectives {
-                version,
-                directives: std::collections::BTreeMap::from([(
-                    name.to_string(),
-                    value.to_string(),
-                )]),
-            },
-            state,
-        )
-        .await
-    }
-
-    #[tokio::test]
-    async fn set_php_version_settings_persists_canonicalises_and_falls_back() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        let v83 = PhpVersion::new(8, 3);
-        fake_install(&state.dirs, v83);
-
-        assert!(matches!(
-            set_version_setting(&state, PhpVersion::new(8, 5), "memory_limit", "1G").await,
-            Response::Error {
-                code: ErrorCode::NotFound,
-                ..
-            }
-        ));
-
-        let _ = set_version_setting(&state, v83, "memory_limit", "1G").await;
-        match set_version_setting(&state, v83, "display_errors", "off").await {
-            Response::PhpVersions {
-                version_settings, ..
-            } => {
-                let map = version_settings.get(&v83).expect("8.3 overrides present");
-                assert_eq!(map.get("memory_limit").map(String::as_str), Some("1G"));
-                assert_eq!(map.get("display_errors").map(String::as_str), Some("Off"));
-            }
-            other => panic!("expected PhpVersions, got {other:?}"),
-        }
-
-        assert!(matches!(
-            set_version_setting(&state, v83, "memory_limit", "bogus").await,
-            Response::Error { .. }
-        ));
-        assert!(matches!(
-            set_version_setting(&state, v83, "allow_url_fopen", "1").await,
-            Response::Error { .. }
-        ));
-        assert_eq!(
-            state
-                .config
-                .lock()
-                .await
-                .php
-                .version_settings
-                .get(&v83)
-                .and_then(|m| m.get("memory_limit"))
-                .map(String::as_str),
-            Some("1G")
-        );
-
-        let _ = set_version_setting(&state, v83, "memory_limit", "").await;
-        match set_version_setting(&state, v83, "display_errors", "").await {
-            Response::PhpVersions {
-                version_settings, ..
-            } => {
-                assert!(
-                    !version_settings.contains_key(&v83),
-                    "emptied override map must drop the version key"
-                );
-            }
-            other => panic!("expected PhpVersions, got {other:?}"),
-        }
-    }
-
-    #[tokio::test]
-    async fn set_php_directives_persists_rejects_reserved_and_removes() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        let v83 = PhpVersion::new(8, 3);
-        fake_install(&state.dirs, v83);
-
-        assert!(matches!(
-            set_directive(&state, PhpVersion::new(8, 5), "xdebug.mode", "debug").await,
-            Response::Error {
-                code: ErrorCode::NotFound,
-                ..
-            }
-        ));
-
-        match set_directive(&state, v83, "xdebug.mode", "debug").await {
-            Response::PhpVersions { directives, .. } => {
-                assert_eq!(
-                    directives
-                        .get(&v83)
-                        .and_then(|m| m.get("xdebug.mode"))
-                        .map(String::as_str),
-                    Some("debug")
-                );
-            }
-            other => panic!("expected PhpVersions, got {other:?}"),
-        }
-
-        for (name, value) in [
-            ("memory_limit", "1G"),
-            ("extension", "/evil.so"),
-            ("zend_extension", "/evil.so"),
-            ("openssl.cafile", "/evil.pem"),
-            ("1bad", "x"),
-            ("bad name", "x"),
-            ("xdebug.mode", "debug; evil"),
-        ] {
-            assert!(
-                matches!(
-                    set_directive(&state, v83, name, value).await,
-                    Response::Error {
-                        code: ErrorCode::InvalidPath,
-                        ..
-                    }
-                ),
-                "{name}={value} should be rejected"
-            );
-        }
-        assert_eq!(
-            state
-                .config
-                .lock()
-                .await
-                .php
-                .directives
-                .get(&v83)
-                .map(std::collections::BTreeMap::len),
-            Some(1)
-        );
-
-        match set_directive(&state, v83, "xdebug.mode", "").await {
-            Response::PhpVersions { directives, .. } => {
-                assert!(
-                    !directives.contains_key(&v83),
-                    "emptied directive map must drop the version key"
-                );
-            }
-            other => panic!("expected PhpVersions, got {other:?}"),
-        }
-    }
-
-    async fn set_pool(
-        state: &DaemonState,
-        version: PhpVersion,
-        name: &str,
-        value: &str,
-    ) -> Response {
-        dispatch(
-            Request::SetPhpPoolSettings {
-                version,
-                settings: std::collections::BTreeMap::from([(name.to_string(), value.to_string())]),
-            },
-            state,
-        )
-        .await
-    }
-
-    #[tokio::test]
-    async fn set_php_pool_settings_persists_validates_and_removes() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        let v83 = PhpVersion::new(8, 3);
-        fake_install(&state.dirs, v83);
-
-        assert!(matches!(
-            set_pool(&state, PhpVersion::new(8, 5), "max_children", "32").await,
-            Response::Error {
-                code: ErrorCode::NotFound,
-                ..
-            }
-        ));
-
-        match set_pool(&state, v83, "max_children", "32").await {
-            Response::PhpVersions { pool, .. } => {
-                assert_eq!(
-                    pool.get(&v83)
-                        .and_then(|m| m.get("max_children"))
-                        .map(String::as_str),
-                    Some("32")
-                );
-            }
-            other => panic!("expected PhpVersions, got {other:?}"),
-        }
-
-        for (name, value) in [
-            ("max_children", "0"),
-            ("max_children", "1025"),
-            ("max_children", "abc"),
-            ("max_children", "-1"),
-            ("start_servers", "4"),
-            ("pm.max_children", "32"),
-        ] {
-            assert!(
-                matches!(
-                    set_pool(&state, v83, name, value).await,
-                    Response::Error {
-                        code: ErrorCode::InvalidPath,
-                        ..
-                    }
-                ),
-                "{name}={value} should be rejected"
-            );
-        }
-        assert_eq!(
-            state
-                .config
-                .lock()
-                .await
-                .php
-                .pool
-                .get(&v83)
-                .and_then(|m| m.get("max_children"))
-                .map(String::as_str),
-            Some("32")
-        );
-
-        match set_pool(&state, v83, "max_children", "064").await {
-            Response::PhpVersions { pool, .. } => {
-                assert_eq!(
-                    pool.get(&v83)
-                        .and_then(|m| m.get("max_children"))
-                        .map(String::as_str),
-                    Some("64"),
-                    "value must persist canonically"
-                );
-            }
-            other => panic!("expected PhpVersions, got {other:?}"),
-        }
-
-        match set_pool(&state, v83, "max_children", "").await {
-            Response::PhpVersions { pool, .. } => {
-                assert!(
-                    !pool.contains_key(&v83),
-                    "emptied pool map must drop the version key"
-                );
-            }
-            other => panic!("expected PhpVersions, got {other:?}"),
-        }
-    }
-
-    /// The `pm.` prefix is now reserved out of the free-form directives path,
-    /// so the workaround from issue #200 is refused at set time with a pointer
-    /// at the pool command instead of rendering a broken `php_value` line.
-    #[tokio::test]
-    async fn pool_settings_are_refused_through_the_directives_path() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        let v83 = PhpVersion::new(8, 3);
-        fake_install(&state.dirs, v83);
-
-        match set_directive(&state, v83, "pm.max_children", "32").await {
-            Response::Error {
-                code: ErrorCode::InvalidPath,
-                message,
-            } => assert!(message.contains("orcker php pool"), "got: {message}"),
-            other => panic!("expected InvalidPath, got {other:?}"),
-        }
-        assert!(state.config.lock().await.php.directives.is_empty());
-    }
-
-    #[tokio::test]
-    async fn add_php_extension_uninstalled_version_is_not_found() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        let resp = dispatch(
-            Request::AddPhpExtension {
-                version: PhpVersion::new(8, 5),
-                path: "/a/scrypt.so".to_string(),
-                name: None,
-                zend: false,
-            },
-            &state,
-        )
-        .await;
-        assert!(matches!(
-            resp,
-            Response::Error {
-                code: ErrorCode::NotFound,
-                ..
-            }
-        ));
-    }
-
-    #[tokio::test]
-    async fn add_php_extension_invalid_path_rejected_before_probe() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        fake_install(&state.dirs, PhpVersion::new(8, 5));
-        let resp = dispatch(
-            Request::AddPhpExtension {
-                version: PhpVersion::new(8, 5),
-                path: "relative/scrypt.so".to_string(),
-                name: None,
-                zend: false,
-            },
-            &state,
-        )
-        .await;
-        assert!(matches!(
-            resp,
-            Response::Error {
-                code: ErrorCode::InvalidPath,
-                ..
-            }
-        ));
-        assert!(state.config.lock().await.php.extensions.is_empty());
-    }
-
-    #[tokio::test]
-    async fn remove_and_list_php_extensions() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        {
-            let mut cfg = state.config.lock().await;
-            let mut new = cfg.clone();
-            new.php.extensions.insert(
-                PhpVersion::new(8, 5),
-                vec![orcker_config::ExtEntry {
-                    name: "scrypt".to_string(),
-                    path: "/a/scrypt.so".to_string(),
-                    zend: false,
-                }],
-            );
-            new.save(&state.config_path).unwrap();
-            *cfg = new;
-        }
-
-        match dispatch(Request::ListPhpExtensions, &state).await {
-            Response::PhpExtensions { by_version } => {
-                let list = by_version.get(&PhpVersion::new(8, 5)).unwrap();
-                assert_eq!(list.len(), 1);
-                assert_eq!(list[0].name, "scrypt");
-                assert!(!list[0].present, "missing .so should read as not present");
-            }
-            other => panic!("expected PhpExtensions, got {other:?}"),
-        }
-
-        match dispatch(
-            Request::RemovePhpExtension {
-                version: PhpVersion::new(8, 5),
-                name: "nope".to_string(),
-            },
-            &state,
-        )
-        .await
-        {
-            Response::Error {
-                code: ErrorCode::NotFound,
-                ..
-            } => {}
-            other => panic!("expected NotFound, got {other:?}"),
-        }
-
-        match dispatch(
-            Request::RemovePhpExtension {
-                version: PhpVersion::new(8, 5),
-                name: "scrypt".to_string(),
-            },
-            &state,
-        )
-        .await
-        {
-            Response::PhpExtensions { by_version } => assert!(by_version.is_empty()),
-            other => panic!("expected empty PhpExtensions, got {other:?}"),
-        }
-        assert!(state.config.lock().await.php.extensions.is_empty());
-    }
-
-    /// `ListPhp` annotates an installed minor from the (pre-seeded) update cache,
-    /// with no network.
-    #[tokio::test]
-    async fn dispatch_list_php_surfaces_cached_update() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        fake_install_build(&state.dirs, PhpVersion::new(8, 5), "8.5.6", 1);
-        state
-            .php_updates
-            .write()
-            .await
-            .insert(PhpVersion::new(8, 5), ("8.5.7".to_owned(), 1));
-
-        match dispatch(Request::ListPhp, &state).await {
-            Response::PhpVersions { updates, .. } => {
-                assert_eq!(updates.len(), 1);
-                assert_eq!(updates[0].version, PhpVersion::new(8, 5));
-                assert_eq!(updates[0].installed, "8.5.6-1");
-                assert_eq!(updates[0].latest, "8.5.7-1");
-            }
-            other => panic!("expected PhpVersions, got {other:?}"),
-        }
-    }
-
-    /// A legacy install (no `.orcker-revision`, so revision 0) is offered the
-    /// c-ares-cutover rebuild of the *same* patch - the auto-heal contract.
-    #[tokio::test]
-    async fn dispatch_list_php_surfaces_revision_autoheal() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        fake_install_patch(&state.dirs, PhpVersion::new(8, 5), "8.5.7");
-        state
-            .php_updates
-            .write()
-            .await
-            .insert(PhpVersion::new(8, 5), ("8.5.7".to_owned(), 1));
-
-        match dispatch(Request::ListPhp, &state).await {
-            Response::PhpVersions { updates, .. } => {
-                assert_eq!(updates.len(), 1);
-                assert_eq!(updates[0].installed, "8.5.7");
-                assert_eq!(updates[0].latest, "8.5.7-1");
-            }
-            other => panic!("expected PhpVersions, got {other:?}"),
-        }
-    }
-
-    /// Same build (patch + revision) → no update annotation.
-    #[tokio::test]
-    async fn dispatch_list_php_no_update_when_cache_not_newer() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        fake_install_build(&state.dirs, PhpVersion::new(8, 5), "8.5.6", 1);
-        state
-            .php_updates
-            .write()
-            .await
-            .insert(PhpVersion::new(8, 5), ("8.5.6".to_owned(), 1));
-
-        match dispatch(Request::ListPhp, &state).await {
-            Response::PhpVersions { updates, .. } => assert!(updates.is_empty()),
-            other => panic!("expected PhpVersions, got {other:?}"),
-        }
-    }
-
-    #[tokio::test]
-    async fn dispatch_update_php_unknown_is_not_found() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        match dispatch(
-            Request::UpdatePhp {
-                version: Some(PhpVersion::new(8, 5)),
-            },
-            &state,
-        )
-        .await
-        {
-            Response::Error { code, .. } => assert_eq!(code, ErrorCode::NotFound),
-            other => panic!("expected NotFound, got {other:?}"),
-        }
-    }
-
-    /// Fake downloader for the listing path: serves a signed `php.json` +
-    /// `php.json.minisig`; anything else errors (the poll/available paths only
-    /// fetch the manifest, not tarballs).
-    struct ListingDl {
-        manifest: String,
-        minisig: String,
-    }
-    impl ListingDl {
-        fn new(signed: &crate::test_support::SignedManifest) -> Self {
-            Self {
-                manifest: signed.manifest.clone(),
-                minisig: signed.minisig.clone(),
-            }
-        }
-    }
-    #[async_trait::async_trait]
-    impl orcker_php::Downloader for ListingDl {
-        async fn download(&self, url: &str) -> Result<Vec<u8>, orcker_php::DownloadError> {
-            if url.ends_with(".minisig") {
-                Ok(self.minisig.clone().into_bytes())
-            } else if url.contains(".json") {
-                Ok(self.manifest.clone().into_bytes())
-            } else {
-                Err(orcker_php::DownloadError::Transport {
-                    url: url.to_owned(),
-                    reason: "unexpected".into(),
-                })
-            }
-        }
-    }
-
-    /// A `php.json` body with the given `(php, minor, revision)` builds for the
-    /// host platform. Tarball shas are placeholders (`"00"`) - the poll /
-    /// available paths never download tarballs.
-    fn listing_body(builds: &[(&str, &str, u32)]) -> String {
-        let (os, arch) = orcker_php::current_os_arch().unwrap();
-        let entries: Vec<String> = builds
-            .iter()
-            .map(|(php, minor, rev)| {
-                format!(
-                    r#"{{ "php": "{php}", "minor": "{minor}", "os": "{os}", "arch": "{arch}", "revision": {rev},
-                       "cli": {{ "file": "php-{php}-{rev}-cli-{os}-{arch}.tar.gz", "sha256": "00", "size": 1 }},
-                       "fpm": {{ "file": "php-{php}-{rev}-fpm-{os}-{arch}.tar.gz", "sha256": "00", "size": 1 }} }}"#,
-                    os = os.as_str(),
-                    arch = arch.as_str(),
-                )
-            })
-            .collect();
-        format!("{{ \"schema\": 1, \"builds\": [{}] }}", entries.join(","))
-    }
-
-    /// Build + sign a `php.json` for the host platform (see [`listing_body`]).
-    fn signed_listing(builds: &[(&str, &str, u32)]) -> crate::test_support::SignedManifest {
-        crate::test_support::sign_manifest(&listing_body(builds))
-    }
-
-    /// Routes stable `php.json` to `stable` and legacy `php-legacy.json` to
-    /// `legacy`, so `available_php_with` sees a distinct manifest per channel.
-    struct TwoChannelDl {
-        stable: ListingDl,
-        legacy: ListingDl,
-    }
-    #[async_trait::async_trait]
-    impl orcker_php::Downloader for TwoChannelDl {
-        async fn download(&self, url: &str) -> Result<Vec<u8>, orcker_php::DownloadError> {
-            if url.contains("php-legacy.json") {
-                self.legacy.download(url).await
-            } else {
-                self.stable.download(url).await
-            }
-        }
-    }
-
-    /// Like `fake_install_patch` but also writes the `.orcker-revision` marker.
-    fn fake_install_build(dirs: &PlatformDirs, v: PhpVersion, full: &str, revision: u32) {
-        fake_install_patch(dirs, v, full);
-        let base = dirs
-            .data
-            .join("php")
-            .join(format!("php-{}.{}", v.major, v.minor));
-        std::fs::write(base.join(".orcker-revision"), revision.to_string()).unwrap();
-    }
-
-    struct FailingDl;
-    #[async_trait::async_trait]
-    impl orcker_php::Downloader for FailingDl {
-        async fn download(&self, url: &str) -> Result<Vec<u8>, orcker_php::DownloadError> {
-            Err(orcker_php::DownloadError::Transport {
-                url: url.to_owned(),
-                reason: "boom".into(),
-            })
-        }
-    }
-
-    /// Serves a valid legacy `php-legacy.json` but errors on every stable
-    /// `php.json` request, modelling a reachable legacy manifest behind an
-    /// unreachable stable one.
-    struct LegacyOnlyDl {
-        legacy: ListingDl,
-    }
-    #[async_trait::async_trait]
-    impl orcker_php::Downloader for LegacyOnlyDl {
-        async fn download(&self, url: &str) -> Result<Vec<u8>, orcker_php::DownloadError> {
-            if url.contains("php-legacy.json") {
-                self.legacy.download(url).await
-            } else {
-                Err(orcker_php::DownloadError::Transport {
-                    url: url.to_owned(),
-                    reason: "stable unreachable".into(),
-                })
-            }
-        }
-    }
-
-    #[tokio::test]
-    async fn poll_and_refresh_populates_cache_from_listing() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        fake_install_build(&state.dirs, PhpVersion::new(8, 5), "8.5.6", 1);
-        let signed = signed_listing(&[("8.5.9", "8.5", 1)]);
-
-        crate::php_updates::poll_and_refresh(&state, &ListingDl::new(&signed), &signed.public_key)
-            .await;
-
-        assert_eq!(
-            state
-                .php_updates
-                .read()
-                .await
-                .get(&PhpVersion::new(8, 5))
-                .cloned(),
-            Some(("8.5.9".to_owned(), 1))
-        );
-    }
-
-    #[tokio::test]
-    async fn poll_and_refresh_is_channel_aware_for_legacy() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        fake_install_build(&state.dirs, PhpVersion::new(8, 5), "8.5.6", 1);
-        fake_install_build(&state.dirs, PhpVersion::new(7, 4), "7.4.20", 1);
-        let (stable, legacy) = crate::test_support::sign_manifest_pair(
-            &listing_body(&[("8.5.9", "8.5", 1)]),
-            &listing_body(&[("7.4.33", "7.4", 1)]),
-        );
-        let dl = TwoChannelDl {
-            stable: ListingDl::new(&stable),
-            legacy: ListingDl::new(&legacy),
-        };
-
-        crate::php_updates::poll_and_refresh(&state, &dl, &stable.public_key).await;
-
-        let cache = state.php_updates.read().await;
-        assert_eq!(
-            cache.get(&PhpVersion::new(8, 5)).cloned(),
-            Some(("8.5.9".to_owned(), 1)),
-            "stable minor resolved from php.json"
-        );
-        assert_eq!(
-            cache.get(&PhpVersion::new(7, 4)).cloned(),
-            Some(("7.4.33".to_owned(), 1)),
-            "legacy minor resolved from php-legacy.json"
-        );
-    }
-
-    #[tokio::test]
-    async fn poll_and_refresh_tolerates_untrusted_legacy_manifest() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        fake_install_build(&state.dirs, PhpVersion::new(8, 5), "8.5.6", 1);
-        fake_install_build(&state.dirs, PhpVersion::new(7, 4), "7.4.20", 1);
-        // The legacy manifest is signed with a DIFFERENT key, so its signature
-        // fails verification against the stable key the poll is given - the
-        // legacy fetch degrades to `None` and 7.4 is skipped, not errored.
-        let stable = signed_listing(&[("8.5.9", "8.5", 1)]);
-        let legacy = signed_listing(&[("7.4.33", "7.4", 1)]);
-        let dl = TwoChannelDl {
-            stable: ListingDl::new(&stable),
-            legacy: ListingDl::new(&legacy),
-        };
-
-        crate::php_updates::poll_and_refresh(&state, &dl, &stable.public_key).await;
-
-        let cache = state.php_updates.read().await;
-        assert_eq!(
-            cache.get(&PhpVersion::new(8, 5)).cloned(),
-            Some(("8.5.9".to_owned(), 1)),
-            "stable minor still refreshed when the legacy manifest is unreachable"
-        );
-        assert!(
-            !cache.contains_key(&PhpVersion::new(7, 4)),
-            "legacy minor is skipped, not errored"
-        );
-    }
-
-    #[tokio::test]
-    async fn poll_and_refresh_preserves_cached_legacy_update_when_legacy_fetch_fails() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        fake_install_build(&state.dirs, PhpVersion::new(8, 5), "8.5.6", 1);
-        fake_install_build(&state.dirs, PhpVersion::new(7, 4), "7.4.20", 1);
-        state
-            .php_updates
-            .write()
-            .await
-            .insert(PhpVersion::new(7, 4), ("7.4.33".to_owned(), 1));
-        // Legacy is signed with a different key than the poll is given, so its
-        // fetch degrades to `None`; the stable manifest is valid.
-        let stable = signed_listing(&[("8.5.9", "8.5", 1)]);
-        let legacy = signed_listing(&[("7.4.40", "7.4", 1)]);
-        let dl = TwoChannelDl {
-            stable: ListingDl::new(&stable),
-            legacy: ListingDl::new(&legacy),
-        };
-
-        crate::php_updates::poll_and_refresh(&state, &dl, &stable.public_key).await;
-
-        let cache = state.php_updates.read().await;
-        assert_eq!(
-            cache.get(&PhpVersion::new(8, 5)).cloned(),
-            Some(("8.5.9".to_owned(), 1)),
-            "stable minor is refreshed"
-        );
-        assert_eq!(
-            cache.get(&PhpVersion::new(7, 4)).cloned(),
-            Some(("7.4.33".to_owned(), 1)),
-            "a legacy fetch failure preserves the previously-cached legacy update"
-        );
-    }
-
-    #[tokio::test]
-    async fn poll_and_refresh_checks_legacy_when_stable_is_unreachable() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        fake_install_build(&state.dirs, PhpVersion::new(7, 4), "7.4.20", 1);
-        let legacy = signed_listing(&[("7.4.33", "7.4", 1)]);
-        let dl = LegacyOnlyDl {
-            legacy: ListingDl::new(&legacy),
-        };
-
-        crate::php_updates::poll_and_refresh(&state, &dl, &legacy.public_key).await;
-
-        let cache = state.php_updates.read().await;
-        assert_eq!(
-            cache.get(&PhpVersion::new(7, 4)).cloned(),
-            Some(("7.4.33".to_owned(), 1)),
-            "a legacy-only install still gets update checks when stable is unreachable"
-        );
-    }
-
-    #[tokio::test]
-    async fn poll_and_refresh_is_failure_tolerant() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        fake_install_build(&state.dirs, PhpVersion::new(8, 5), "8.5.6", 1);
-        state
-            .php_updates
-            .write()
-            .await
-            .insert(PhpVersion::new(8, 5), ("8.5.6".to_owned(), 1));
-
-        crate::php_updates::poll_and_refresh(
-            &state,
-            &FailingDl,
-            orcker_update::PHP_LISTING_PUBLIC_KEY,
-        )
-        .await;
-
-        assert_eq!(
-            state
-                .php_updates
-                .read()
-                .await
-                .get(&PhpVersion::new(8, 5))
-                .cloned(),
-            Some(("8.5.6".to_owned(), 1))
-        );
-    }
-
-    /// A validly-signed but unknown-schema manifest must NOT wipe a good cache:
-    /// resolve fails schema-wide, so the poll aborts without overwriting.
-    #[tokio::test]
-    async fn poll_and_refresh_keeps_cache_on_unknown_schema() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        fake_install_build(&state.dirs, PhpVersion::new(8, 5), "8.5.6", 1);
-        state
-            .php_updates
-            .write()
-            .await
-            .insert(PhpVersion::new(8, 5), ("8.5.7".to_owned(), 1));
-        let signed = crate::test_support::sign_manifest(r#"{ "schema": 2, "builds": [] }"#);
-
-        crate::php_updates::poll_and_refresh(&state, &ListingDl::new(&signed), &signed.public_key)
-            .await;
-
-        assert_eq!(
-            state
-                .php_updates
-                .read()
-                .await
-                .get(&PhpVersion::new(8, 5))
-                .cloned(),
-            Some(("8.5.7".to_owned(), 1)),
-            "a bad-schema manifest must not clear the previously-cached update"
-        );
     }
 
     // A tiny `latest.json` payload. Far-future versions so the target is always
@@ -5078,9 +2260,10 @@ Subject: Captured\r\n\r\nhi\r\n";
             &self.0.public_key
         }
     }
+
     #[async_trait::async_trait]
-    impl orcker_php::Downloader for ManifestDl {
-        async fn download(&self, url: &str) -> Result<Vec<u8>, orcker_php::DownloadError> {
+    impl crate::download::Downloader for ManifestDl {
+        async fn download(&self, url: &str) -> Result<Vec<u8>, crate::download::DownloadError> {
             if url.ends_with(".minisig") {
                 Ok(self.0.minisig.clone().into_bytes())
             } else {
@@ -5088,7 +2271,6 @@ Subject: Captured\r\n\r\nhi\r\n";
             }
         }
     }
-
     #[tokio::test]
     async fn check_update_reports_both_channel_latests_live() {
         let tmp = tempfile::tempdir().unwrap();
@@ -5166,26 +2348,6 @@ Subject: Captured\r\n\r\nhi\r\n";
         assert!(state.orcker_update.read().await.is_empty());
     }
 
-    #[tokio::test]
-    async fn check_update_falls_back_to_cache_when_offline() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        let dl = ManifestDl::new(LATEST_MANIFEST);
-        crate::self_update::poll_and_refresh(&state, &dl, dl.key()).await;
-        let resp = crate::self_update::check_update(None, &state, &FailingDl, dl.key()).await;
-        match resp {
-            Response::UpdateStatus {
-                latest_stable,
-                source,
-                ..
-            } => {
-                assert_eq!(source, orcker_ipc::UpdateSource::Cached);
-                assert_eq!(latest_stable.as_deref(), Some("99.0.1"));
-            }
-            other => panic!("expected UpdateStatus, got {other:?}"),
-        }
-    }
-
     /// Fake downloader for the full stage flow. Serves the signed `latest.json`
     /// (and its `.minisig`) for the manifest URLs; the signed bytes (`b"test"`)
     /// for any artifact URL; the matching artifact signature for any `.sig` /
@@ -5196,6 +2358,23 @@ Subject: Captured\r\n\r\nhi\r\n";
         manifest: crate::test_support::SignedManifest,
         artifact_sig: String,
         sums: String,
+    }
+
+    #[async_trait::async_trait]
+    impl crate::download::Downloader for StageDl {
+        async fn download(&self, url: &str) -> Result<Vec<u8>, crate::download::DownloadError> {
+            if url.contains("latest.json.minisig") {
+                Ok(self.manifest.minisig.clone().into_bytes())
+            } else if url.contains("latest.json") {
+                Ok(self.manifest.manifest.clone().into_bytes())
+            } else if url.ends_with("SHA256SUMS") {
+                Ok(self.sums.clone().into_bytes())
+            } else if url.ends_with(".minisig") || url.ends_with(".sig") {
+                Ok(self.artifact_sig.clone().into_bytes())
+            } else {
+                Ok(b"test".to_vec())
+            }
+        }
     }
     impl StageDl {
         /// Build from a `stable` release object body and a `SHA256SUMS`. The
@@ -5214,23 +2393,6 @@ Subject: Captured\r\n\r\nhi\r\n";
             &self.manifest.public_key
         }
     }
-    #[async_trait::async_trait]
-    impl orcker_php::Downloader for StageDl {
-        async fn download(&self, url: &str) -> Result<Vec<u8>, orcker_php::DownloadError> {
-            if url.contains("latest.json.minisig") {
-                Ok(self.manifest.minisig.clone().into_bytes())
-            } else if url.contains("latest.json") {
-                Ok(self.manifest.manifest.clone().into_bytes())
-            } else if url.ends_with("SHA256SUMS") {
-                Ok(self.sums.clone().into_bytes())
-            } else if url.ends_with(".minisig") || url.ends_with(".sig") {
-                Ok(self.artifact_sig.clone().into_bytes())
-            } else {
-                Ok(b"test".to_vec())
-            }
-        }
-    }
-
     #[tokio::test]
     async fn stage_update_downloads_verifies_and_writes_artifact() {
         if !matches!(
@@ -5611,150 +2773,7 @@ Subject: Captured\r\n\r\nhi\r\n";
         }
     }
 
-    #[tokio::test]
-    async fn available_php_lists_distribution_minors_and_installed() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        fake_install_patch(&state.dirs, PhpVersion::new(8, 5), "8.5.6");
-        let signed = signed_listing(&[("8.3.20", "8.3", 1), ("8.5.9", "8.5", 1)]);
-
-        match available_php_with(&state, &ListingDl::new(&signed), &signed.public_key).await {
-            Response::AvailablePhp {
-                available,
-                installed,
-                legacy,
-            } => {
-                assert_eq!(
-                    available,
-                    vec![PhpVersion::new(8, 3), PhpVersion::new(8, 5)]
-                );
-                assert_eq!(installed, vec![PhpVersion::new(8, 5)]);
-                assert!(
-                    legacy.is_empty(),
-                    "legacy manifest unreachable via ListingDl → empty"
-                );
-            }
-            other => panic!("expected AvailablePhp, got {other:?}"),
-        }
-    }
-
-    #[tokio::test]
-    async fn available_php_lists_legacy_from_second_manifest() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        let (stable, legacy) = crate::test_support::sign_manifest_pair(
-            &listing_body(&[("8.4.21", "8.4", 1), ("8.5.9", "8.5", 1)]),
-            &listing_body(&[("7.4.33", "7.4", 1), ("8.1.33", "8.1", 1)]),
-        );
-        let dl = TwoChannelDl {
-            stable: ListingDl::new(&stable),
-            legacy: ListingDl::new(&legacy),
-        };
-
-        match available_php_with(&state, &dl, &stable.public_key).await {
-            Response::AvailablePhp {
-                available, legacy, ..
-            } => {
-                assert_eq!(
-                    available,
-                    vec![PhpVersion::new(8, 4), PhpVersion::new(8, 5)]
-                );
-                assert_eq!(legacy, vec![PhpVersion::new(7, 4), PhpVersion::new(8, 1)]);
-            }
-            other => panic!("expected AvailablePhp, got {other:?}"),
-        }
-    }
-
-    #[tokio::test]
-    async fn available_php_errors_on_fetch_failure() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-
-        match available_php_with(&state, &FailingDl, orcker_update::PHP_LISTING_PUBLIC_KEY).await {
-            Response::Error { code, .. } => assert_eq!(code, ErrorCode::Internal),
-            other => panic!("expected Error, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn legacy_install_gate_blocks_only_unconfirmed_legacy() {
-        assert!(legacy_install_gate(PhpVersion::new(8, 5), false).is_none());
-        assert!(legacy_install_gate(PhpVersion::new(7, 4), true).is_none());
-        match legacy_install_gate(PhpVersion::new(7, 4), false) {
-            Some(Response::Error { code, .. }) => assert_eq!(code, ErrorCode::LegacyRestricted),
-            other => panic!("expected LegacyRestricted, got {other:?}"),
-        }
-    }
-
-    #[tokio::test]
-    async fn install_php_legacy_without_confirm_is_rejected() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        match install_php(PhpVersion::new(7, 4), false, &state).await {
-            Response::Error { code, .. } => assert_eq!(code, ErrorCode::LegacyRestricted),
-            other => panic!("expected LegacyRestricted, got {other:?}"),
-        }
-        assert!(!state.dirs.data.join("php").join("php-7.4").exists());
-    }
-
-    #[tokio::test]
-    async fn install_php_streamed_legacy_without_confirm_creates_no_job() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = Arc::new(state_in(tmp.path()));
-        match install_php_streamed(PhpVersion::new(8, 0), false, state.clone()).await {
-            Response::Error { code, .. } => assert_eq!(code, ErrorCode::LegacyRestricted),
-            other => panic!("expected synchronous LegacyRestricted, got {other:?}"),
-        }
-    }
-
-    #[tokio::test]
-    async fn set_default_php_rejects_legacy_even_when_installed() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        fake_install_patch(&state.dirs, PhpVersion::new(7, 4), "7.4.33");
-        match set_default_php(PhpVersion::new(7, 4), &state).await {
-            Response::Error { code, .. } => assert_eq!(code, ErrorCode::LegacyRestricted),
-            other => panic!("expected LegacyRestricted, got {other:?}"),
-        }
-    }
-
-    #[tokio::test]
-    async fn adopt_default_if_unset_never_adopts_legacy() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        let before = state.config.lock().await.php.default;
-        adopt_default_if_unset(PhpVersion::new(7, 4), &state).await;
-        assert_eq!(state.config.lock().await.php.default, before);
-    }
-
     // ---------- pure helpers ----------
-
-    #[test]
-    fn pools_needing_restart_only_targets_active_updated_minors() {
-        let active: std::collections::HashSet<PhpVersion> =
-            [PhpVersion::new(8, 4), PhpVersion::new(8, 5)]
-                .into_iter()
-                .collect();
-        let updated = [PhpVersion::new(8, 5), PhpVersion::new(8, 3)];
-        assert_eq!(
-            pools_needing_restart(&active, &updated),
-            vec![PhpVersion::new(8, 5)]
-        );
-        assert!(pools_needing_restart(&active, &[]).is_empty());
-        assert!(pools_needing_restart(&std::collections::HashSet::new(), &updated).is_empty());
-    }
-
-    #[test]
-    fn map_pool_state_maps_both_variants() {
-        assert_eq!(
-            map_pool_state(orcker_php::PoolRunState::Running),
-            orcker_ipc::PoolRunState::Running
-        );
-        assert_eq!(
-            map_pool_state(orcker_php::PoolRunState::Failed),
-            orcker_ipc::PoolRunState::Failed
-        );
-    }
 
     #[test]
     fn load_to_centi_clamps_and_rounds() {
@@ -5762,17 +2781,6 @@ Subject: Captured\r\n\r\nhi\r\n";
         assert_eq!(load_to_centi(-5.0), 0, "negative clamps to 0");
         assert_eq!(load_to_centi(1.234), 123, "rounded to hundredths");
         assert_eq!(load_to_centi(f64::from(u32::MAX)), u32::MAX, "saturates");
-    }
-
-    #[tokio::test]
-    async fn installed_versions_empty_then_lists_fake_install() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        assert!(installed_versions(&state).is_empty());
-        fake_install(&state.dirs, PhpVersion::new(8, 4));
-        fake_install(&state.dirs, PhpVersion::new(8, 3));
-        let versions = installed_versions(&state);
-        assert_eq!(versions, vec![PhpVersion::new(8, 3), PhpVersion::new(8, 4)]);
     }
 
     #[test]
@@ -5786,32 +2794,6 @@ Subject: Captured\r\n\r\nhi\r\n";
     }
 
     // ---------- additional `dispatch` arms ----------
-
-    #[tokio::test]
-    async fn dispatch_list_services_reports_all_engines_uninstalled() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        match dispatch(Request::ListServices, &state).await {
-            Response::Services { services } => {
-                assert!(!services.is_empty(), "all engines enumerated");
-                assert!(
-                    services.iter().all(|s| s.installed_versions.is_empty()),
-                    "{services:?}"
-                );
-            }
-            other => panic!("expected Services, got {other:?}"),
-        }
-    }
-
-    #[tokio::test]
-    async fn dispatch_restart_all_php_no_pools_is_ok() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-        assert!(matches!(
-            dispatch(Request::RestartAllPhp, &state).await,
-            Response::Ok
-        ));
-    }
 
     #[tokio::test]
     async fn dispatch_set_fallback_ports_validates_and_persists() {
@@ -5872,63 +2854,4 @@ Subject: Captured\r\n\r\nhi\r\n";
     }
 
     // ---------- dump-server arms routed through `dispatch` ----------
-
-    #[tokio::test]
-    async fn dispatch_dumps_status_lifecycle() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = state_in(tmp.path());
-
-        assert!(matches!(
-            dispatch(Request::SetDumpsPersist { persist: true }, &state).await,
-            Response::Ok
-        ));
-        assert!(state.config.lock().await.dumps.persist);
-
-        assert!(matches!(
-            dispatch(
-                Request::SetDumpFeature {
-                    feature: "queries".into(),
-                    enabled: false,
-                },
-                &state,
-            )
-            .await,
-            Response::Ok
-        ));
-        match dispatch(
-            Request::SetDumpFeature {
-                feature: "nope".into(),
-                enabled: true,
-            },
-            &state,
-        )
-        .await
-        {
-            Response::Error { code, .. } => assert_eq!(code, ErrorCode::NotFound),
-            other => panic!("expected NotFound, got {other:?}"),
-        }
-
-        match dispatch(Request::DumpsStatus, &state).await {
-            Response::DumpsStatus {
-                persist, features, ..
-            } => {
-                assert!(persist);
-                assert_eq!(features.get("queries"), Some(&false));
-            }
-            other => panic!("expected DumpsStatus, got {other:?}"),
-        }
-
-        match dispatch(Request::ListDumps { since_id: 0 }, &state).await {
-            Response::Dumps { events, .. } => assert!(events.is_empty()),
-            other => panic!("expected Dumps, got {other:?}"),
-        }
-        assert!(matches!(
-            dispatch(Request::ClearDumps, &state).await,
-            Response::Ok
-        ));
-        assert!(matches!(
-            dispatch(Request::DeleteDump { id: 42 }, &state).await,
-            Response::Ok
-        ));
-    }
 }

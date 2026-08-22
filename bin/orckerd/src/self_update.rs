@@ -18,8 +18,8 @@
 //! Network failure is tolerated: the periodic poll leaves the cache untouched,
 //! and `CheckUpdate` falls back to the cache with [`UpdateSource::Cached`].
 
+use crate::download::Downloader;
 use orcker_ipc::{Response, StagedArtifact, UpdateSource};
-use orcker_php::Downloader;
 use orcker_platform::PlatformDirs;
 use orcker_release_manifest::LatestManifest;
 use orcker_update::{

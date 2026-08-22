@@ -13,7 +13,7 @@
 //!    resolver, macOS pf redirect) by driving `orcker-helper` directly. Without
 //!    root we print the exact manual steps and continue.
 //! 5. Stop + disable the daemon service and reap the daemon (a graceful SIGTERM
-//!    lets it reap its php-fpm / DB / mail children).
+//!    lets it reap its mail and tunnel children).
 //! 6. Remove the PATH block, the service unit files, the user dirs, and the
 //!    binaries (or advise `apt purge` for a `.deb` install).
 
@@ -290,14 +290,14 @@ mod unix_impl {
     }
 
     /// Reap any still-running `orckerd` for this user: SIGTERM (graceful - it
-    /// reaps its php-fpm/DB/mail children), wait a bounded grace, then SIGKILL
+    /// reaps its mail and tunnel children), wait a bounded grace, then SIGKILL
     /// any holdout. `pgrep`/`pkill -U <uid>` match by *real* uid on both
     /// Linux and macOS; `-x orckerd` matches the exact process name (so it never
     /// touches the running `orcker` uninstaller or `orcker-helper`).
     ///
     /// The grace is deliberately generous (~30s). The daemon's own shutdown
     /// (`bin/orckerd/src/lib.rs`) walks several task-join timeouts before it
-    /// gracefully stops (then force-kills) its php-fpm/DB/mail children; killing
+    /// gracefully stops (then force-kills) its mail and tunnel children; killing
     /// the daemon too early would skip that and orphan those children. In
     /// practice it exits in well under a second - we only wait the full budget
     /// if one of its tasks is wedged.

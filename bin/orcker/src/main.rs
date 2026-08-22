@@ -8,26 +8,6 @@ use clap::Parser;
 use orcker::cli::Cli;
 
 fn main() -> ExitCode {
-    #[cfg(unix)]
-    if let Some(code) = orcker::composer_shim::dispatch() {
-        return code;
-    }
-    #[cfg(unix)]
-    if let Some(code) = orcker::cover_shim::dispatch() {
-        return code;
-    }
-    #[cfg(unix)]
-    if let Some(code) = orcker::laravel_shim::dispatch() {
-        return code;
-    }
-    #[cfg(unix)]
-    if let Some(code) = orcker::cli_shim::dispatch() {
-        return code;
-    }
-    #[cfg(unix)]
-    if let Some(code) = orcker::wp_shim::dispatch() {
-        return code;
-    }
     if let Some(code) = orcker::apply::run_from_env() {
         return code;
     }

@@ -97,13 +97,7 @@ pub fn apply(
         Request::Link { name, .. } => apply_link(cfg, name, canonical, default_php),
         Request::Unpark { path } => Ok(apply_unpark(cfg, path)),
         Request::Unlink { name } => apply_unlink(cfg, router, name),
-        Request::SetPhp { name, version } => apply_set_php(cfg, router, name, *version),
         Request::SetSecure { name, secure } => apply_set_secure(cfg, router, name, *secure),
-        Request::SetWordpressAutoLogin {
-            name,
-            enabled,
-            user,
-        } => apply_set_wordpress_auto_login(cfg, router, name, *enabled, user.clone()),
         Request::SetFrontController { name, enabled } => {
             apply_set_front_controller(cfg, router, name, *enabled)
         }
@@ -272,29 +266,6 @@ fn parent_is_parked_root(cfg: &Config, docroot: &str) -> bool {
         .parent()
         .and_then(std::path::Path::to_str)
         .is_some_and(|parent| cfg.parked.paths.contains(parent))
-}
-
-fn apply_set_php(
-    cfg: &mut Config,
-    router: &SiteRouter,
-    name: &str,
-    version: PhpVersion,
-) -> Result<Applied, MutateError> {
-    let name_lc = name.to_ascii_lowercase();
-    if let Some(site) = cfg.linked.iter_mut().find(|s| s.name() == name_lc) {
-        site.set_php(version);
-        Ok(Applied {
-            summary: format!("{name_lc} now uses PHP {version}"),
-        })
-    } else if let Some(parked) = router.get(&name_lc) {
-        let key = override_key(parked);
-        cfg.overrides.entry(key).or_default().php = Some(version);
-        Ok(Applied {
-            summary: format!("{name_lc} now uses PHP {version}"),
-        })
-    } else {
-        Err(not_found_site(cfg, &name_lc))
-    }
 }
 
 fn apply_set_secure(
@@ -551,33 +522,6 @@ fn apply_remove_route_rule(
     Ok(Applied {
         summary: format!("removed route {name_lc}{wanted}"),
     })
-}
-
-fn apply_set_wordpress_auto_login(
-    cfg: &mut Config,
-    router: &SiteRouter,
-    name: &str,
-    enabled: bool,
-    user: Option<String>,
-) -> Result<Applied, MutateError> {
-    let name_lc = name.to_ascii_lowercase();
-    if let Some(site) = cfg.linked.iter_mut().find(|s| s.name() == name_lc) {
-        site.set_wp_auto_login(enabled);
-        site.set_wp_auto_login_user(user);
-        Ok(Applied {
-            summary: format!("{name_lc} wp_auto_login={enabled}"),
-        })
-    } else if let Some(parked) = router.get(&name_lc) {
-        let key = override_key(parked);
-        let ov = cfg.overrides.entry(key).or_default();
-        ov.wp_auto_login = Some(enabled);
-        ov.wp_auto_login_user = user;
-        Ok(Applied {
-            summary: format!("{name_lc} wp_auto_login={enabled}"),
-        })
-    } else {
-        Err(not_found_site(cfg, &name_lc))
-    }
 }
 
 /// Override a site's front-controller mode: `true` funnels every request through
@@ -1627,100 +1571,6 @@ mod tests {
     }
 
     #[test]
-    fn setphp_updates_linked_in_place() {
-        let mut cfg = Config::default();
-        let r = empty_router();
-        cfg.linked
-            .push(Site::linked("foo", "/srv/foo", v(8, 3)).unwrap());
-        apply(
-            &mut cfg,
-            &r,
-            &Request::SetPhp {
-                name: "foo".into(),
-                version: v(8, 4),
-            },
-            None,
-            v(8, 3),
-        )
-        .unwrap();
-        assert_eq!(cfg.linked.len(), 1);
-        assert_eq!(cfg.linked[0].php(), v(8, 4));
-    }
-
-    #[test]
-    fn setphp_records_override_keeping_parked() {
-        let mut cfg = Config::default();
-        let r = router_with_parked("blog", "/srv/blog");
-        let a = apply(
-            &mut cfg,
-            &r,
-            &Request::SetPhp {
-                name: "blog".into(),
-                version: v(8, 4),
-            },
-            None,
-            v(8, 3),
-        )
-        .unwrap();
-        assert!(!a.summary.contains("linked"));
-        assert!(cfg.linked.is_empty());
-        let ov = cfg.overrides.get("/srv/blog").expect("override stored");
-        assert_eq!(ov.php, Some(v(8, 4)));
-        assert_eq!(ov.secure, None);
-    }
-
-    #[test]
-    fn upsert_merges_php_and_secure() {
-        let mut cfg = Config::default();
-        let r = router_with_parked("blog", "/srv/blog");
-        apply(
-            &mut cfg,
-            &r,
-            &Request::SetPhp {
-                name: "blog".into(),
-                version: v(8, 4),
-            },
-            None,
-            v(8, 3),
-        )
-        .unwrap();
-        apply(
-            &mut cfg,
-            &r,
-            &Request::SetSecure {
-                name: "blog".into(),
-                secure: true,
-            },
-            None,
-            v(8, 3),
-        )
-        .unwrap();
-        assert_eq!(cfg.overrides.len(), 1);
-        let ov = cfg.overrides.get("/srv/blog").unwrap();
-        assert_eq!(ov.php, Some(v(8, 4)));
-        assert_eq!(ov.secure, Some(true));
-    }
-
-    #[test]
-    fn setphp_unknown_is_not_found() {
-        let mut cfg = Config::default();
-        let r = empty_router();
-        match apply(
-            &mut cfg,
-            &r,
-            &Request::SetPhp {
-                name: "ghost".into(),
-                version: v(8, 4),
-            },
-            None,
-            v(8, 3),
-        ) {
-            Err(MutateError::NotFound(_)) => {}
-            other => panic!("expected NotFound, got {other:?}"),
-        }
-    }
-
-    #[test]
     fn setsecure_updates_linked_in_place() {
         let mut cfg = Config::default();
         let r = empty_router();
@@ -1815,87 +1665,6 @@ mod tests {
     }
 
     #[test]
-    fn set_wordpress_auto_login_updates_linked_in_place() {
-        let mut cfg = Config::default();
-        let r = empty_router();
-        cfg.linked
-            .push(Site::linked("blog", "/srv/blog", v(8, 3)).unwrap());
-        apply(
-            &mut cfg,
-            &r,
-            &Request::SetWordpressAutoLogin {
-                name: "blog".into(),
-                enabled: true,
-                user: Some("editor".into()),
-            },
-            None,
-            v(8, 3),
-        )
-        .unwrap();
-        assert_eq!(cfg.linked.len(), 1);
-        assert!(cfg.linked[0].wp_auto_login());
-        assert_eq!(cfg.linked[0].wp_auto_login_user(), Some("editor"));
-
-        apply(
-            &mut cfg,
-            &r,
-            &Request::SetWordpressAutoLogin {
-                name: "blog".into(),
-                enabled: false,
-                user: None,
-            },
-            None,
-            v(8, 3),
-        )
-        .unwrap();
-        assert!(!cfg.linked[0].wp_auto_login());
-        assert_eq!(cfg.linked[0].wp_auto_login_user(), None);
-    }
-
-    #[test]
-    fn set_wordpress_auto_login_records_override_keeping_parked() {
-        let mut cfg = Config::default();
-        let r = router_with_parked("blog", "/srv/blog");
-        let a = apply(
-            &mut cfg,
-            &r,
-            &Request::SetWordpressAutoLogin {
-                name: "blog".into(),
-                enabled: true,
-                user: Some("editor".into()),
-            },
-            None,
-            v(8, 3),
-        )
-        .unwrap();
-        assert!(!a.summary.contains("linked"));
-        assert!(cfg.linked.is_empty());
-        let ov = cfg.overrides.get("/srv/blog").expect("override stored");
-        assert_eq!(ov.wp_auto_login, Some(true));
-        assert_eq!(ov.wp_auto_login_user.as_deref(), Some("editor"));
-    }
-
-    #[test]
-    fn set_wordpress_auto_login_unknown_is_not_found() {
-        let mut cfg = Config::default();
-        let r = empty_router();
-        match apply(
-            &mut cfg,
-            &r,
-            &Request::SetWordpressAutoLogin {
-                name: "ghost".into(),
-                enabled: true,
-                user: None,
-            },
-            None,
-            v(8, 3),
-        ) {
-            Err(MutateError::NotFound(_)) => {}
-            other => panic!("expected NotFound, got {other:?}"),
-        }
-    }
-
-    #[test]
     fn set_front_controller_updates_linked_in_place() {
         let mut cfg = Config::default();
         let r = empty_router();
@@ -1970,37 +1739,6 @@ mod tests {
             Err(MutateError::NotFound(_)) => {}
             other => panic!("expected NotFound, got {other:?}"),
         }
-    }
-
-    #[test]
-    fn mixed_case_name_resolves_lowercased_site() {
-        let mut cfg = Config::default();
-        let r = router_with_parked("blog", "/srv/blog");
-        apply(
-            &mut cfg,
-            &r,
-            &Request::SetPhp {
-                name: "Blog".into(),
-                version: v(8, 4),
-            },
-            None,
-            v(8, 3),
-        )
-        .unwrap();
-        assert!(cfg.linked.is_empty());
-        assert_eq!(cfg.overrides.get("/srv/blog").unwrap().php, Some(v(8, 4)));
-
-        cfg.linked
-            .push(Site::linked("foo", "/srv/foo", v(8, 3)).unwrap());
-        apply(
-            &mut cfg,
-            &r,
-            &Request::Unlink { name: "FOO".into() },
-            None,
-            v(8, 3),
-        )
-        .unwrap();
-        assert!(cfg.linked.iter().all(|s| s.name() != "foo"));
     }
 
     // ------------------ groups ------------------
@@ -2663,32 +2401,6 @@ mod tests {
     }
 
     #[test]
-    fn set_php_on_a_proxy_name_says_it_is_a_proxy() {
-        let mut cfg = cfg_with_proxy("reverb");
-        let r = empty_router();
-        match apply(
-            &mut cfg,
-            &r,
-            &Request::SetPhp {
-                name: "Reverb".into(),
-                version: v(8, 4),
-            },
-            None,
-            v(8, 3),
-        ) {
-            Err(MutateError::NotFound(msg)) => assert_eq!(
-                msg,
-                "no site named reverb (reverb is a proxy - this command applies only to sites)"
-            ),
-            other => panic!("expected NotFound, got {other:?}"),
-        }
-        assert!(matches!(
-            not_found_site(&Config::default(), "ghost"),
-            MutateError::NotFound(ref m) if m == "no site named ghost"
-        ));
-    }
-
-    #[test]
     fn add_proxy_rejects_an_apex_already_routed_to_a_site() {
         let mut cfg = Config::default();
         let r = router_with_domains(&[("foo", "/srv/foo", &["foo", "api.foo"])]);
@@ -2827,5 +2539,36 @@ mod tests {
             error_code(&MutateError::Invalid("x".into())),
             ErrorCode::InvalidPath
         );
+    }
+
+    #[test]
+    fn mixed_case_name_resolves_lowercased_site() {
+        let mut cfg = Config::default();
+        let r = router_with_parked("blog", "/srv/blog");
+        apply(
+            &mut cfg,
+            &r,
+            &Request::SetSecure {
+                name: "Blog".into(),
+                secure: true,
+            },
+            None,
+            v(8, 3),
+        )
+        .unwrap();
+        assert!(cfg.linked.is_empty());
+        assert_eq!(cfg.overrides.get("/srv/blog").unwrap().secure, Some(true));
+
+        cfg.linked
+            .push(Site::linked("foo", "/srv/foo", v(8, 3)).unwrap());
+        apply(
+            &mut cfg,
+            &r,
+            &Request::Unlink { name: "FOO".into() },
+            None,
+            v(8, 3),
+        )
+        .unwrap();
+        assert!(cfg.linked.iter().all(|s| s.name() != "foo"));
     }
 }

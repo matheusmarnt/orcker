@@ -266,10 +266,7 @@ mod tests {
             })
         };
         let proxy_handle = {
-            let resolver = Arc::new(orckerd::backend_resolver::DaemonBackendResolver {
-                php_manager: daemon.php_manager.clone(),
-                wordpress_sites: daemon.state.wordpress_sites.clone(),
-            });
+            let resolver = Arc::new(orckerd::backend_resolver::DaemonBackendResolver);
             let https = orcker_proxy::HttpsBinding {
                 listener: daemon
                     .https_listener
@@ -278,8 +275,8 @@ mod tests {
                 cert_store: daemon.cert_store.clone(),
             };
             let router = daemon.state.router.clone();
-            let login_tokens = daemon.state.wordpress_login_tokens.clone();
-            let login_prepend_script = daemon.state.wordpress_login_prepend_script.clone();
+            let login_tokens = Arc::new(orckerd::backend_resolver::NoLoginTokens);
+            let login_prepend_script = None;
             let mut rx = shutdown_rx.clone();
             tokio::spawn(orcker_proxy::ProxyServer::serve(
                 daemon
@@ -311,10 +308,6 @@ mod tests {
         let _ = tokio::time::timeout(Duration::from_secs(10), proxy_handle).await;
         let _ = tokio::time::timeout(Duration::from_secs(5), ipc_handle).await;
 
-        {
-            let mut mgr = daemon.php_manager.lock().await;
-            let _ = mgr.shutdown().await;
-        }
         drop(daemon.lock);
         let _ = (
             daemon.config_path,

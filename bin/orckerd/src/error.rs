@@ -31,9 +31,6 @@ pub enum DaemonError {
     /// rustls client-config build failure (proxy upstream TLS trust anchors).
     #[error("client tls: {0}")]
     ClientTls(#[from] rustls::Error),
-    /// PHP-FPM supervisor failure.
-    #[error("php: {0}")]
-    Php(#[from] orcker_php::PhpError),
     /// IPC codec failure.
     #[error("ipc: {0}")]
     Ipc(#[from] orcker_ipc::IpcError),

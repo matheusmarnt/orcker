@@ -164,3 +164,96 @@ Deviations, clarifications and trade-offs recorded by implementation cycles
 - Impact: the branch-per-spec rule bends for a cycle whose acceptance depends on
   CI that only exists on another branch. Per-spec commit atomicity is preserved:
   the pull request carries two commits, one per spec.
+
+- Decision: SPEC-0002 deletes `orcker-supervise` by **folding** its five modules
+  into `crates/orcker-tunnel/src/supervise/`, rather than keeping the crate.
+- Why: PRD FR-002 names all three crates and its AC1 requires the workspace green
+  "sem as três crates", but `orcker-tunnel` — kept by the spec's Out of scope and
+  scheduled by FR-120/SPEC-0026 — is a live compile-level consumer. Keeping the
+  crate was proposed first and withdrawn: it fails FR-002's main clause (the
+  substrate would stay in the runtime graph via the tunnel) and AC1 literally,
+  and `docs/PRD.md:246` bars agents from editing the PRD, so it would have
+  required a `docs/rfc/` proposal and a PRD minor bump before this spec could be
+  accepted. Folding satisfies FR-002 AC1 and AC2, keeps the tunnel, and needs no
+  PRD change.
+- Impact: `orcker-tunnel` absorbs the `tokio` features, `async-trait` and `nix`
+  that `orcker-supervise` declared — no new workspace dependency, all three are
+  already pinned in `[workspace.dependencies]`. If a second consumer appears
+  (SPEC-0010's compose lifecycle is the plausible one), the substrate is
+  extracted back into its own crate by that spec, not carried speculatively.
+
+- Decision: grant SPEC-0002 an explicit exception to SDD §8.1 **DT5**
+  ("wire-stability tests untouched; protocol changes additive only") for its R4
+  wire reset: `PROTOCOL_VERSION` 1 -> 2 and deletion of the removed variants'
+  assertions.
+- Why: PRD FR-002 permits "comandos/mensagens IPC correspondentes **removidos**
+  ou marcados `deprecated` de forma aditiva", and SDD §5 gives the PRD precedence
+  on the *what*. The additive alternative would keep ~45 zombie request variants
+  alive, each needing an `unsupported` arm in the daemon, plus `PhpPoolStatus`,
+  `ServiceStatus` and `DatabaseSummary` alive so `StatusReport` still
+  deserializes — permanent complexity for zero consumers: the workspace is
+  `version = "0.0.0"`, `publish = false`, no release exists, and SPEC-0001
+  renamed the IPC endpoint (`io.yerd.Yerd` -> `io.orcker.Orcker`), so no daemon
+  in the field speaks this protocol.
+- Impact: the exception is narrow and comes with two guardrails.
+  (1) `tests/wire_stability.rs` is edited by deletion only — surviving literals
+  stay byte-identical and the file is never regenerated, because a regenerated
+  baseline can bury a typo in a kept variant and ship a silent protocol bug.
+  One named exception, added at S7 after the supervisor caught the guardrail
+  overstating what the diff does: a test pinning a **surviving** response whose
+  payload is a **removed** enum variant cannot stay byte-identical, since the
+  variant is gone. It is retargeted rather than deleted, because deleting it
+  would drop coverage of a surviving response. Exactly one test qualifies —
+  `response_doctor_fix_byte_shape`, whose `FixResult.code` moves from
+  `fpm_pool_failed` to `resolver_not_installed`. Final diff: 8 added lines,
+  1403 removed; five of the eight are within-line deletions (four import-list reflows and the status literal); the other three are the one authorized `response_doctor_fix_byte_shape` retarget.
+  (2) `PROTOCOL_VERSION` does not travel on the wire and has no handshake, so
+  the bump is informational; its doc says so until
+  `specs/SPEC-0034-ipc-version-skew-handshake.md` closes the gap. A future spec
+  wanting to touch the wire needs its own decision here, not this precedent.
+
+## D14 — SPEC-0002 split at `attempts = 3`: runtime removal lands, coverage becomes SPEC-0037
+
+- Date: 2026-08-22 · Decided by: the human, at the ESCALATE the SDD forces at
+  `attempts = 3` (SDD §117, §245). Options offered were re-derive mechanically,
+  split, or abort; the human chose **split**.
+- Context: three consecutive supervisor passes returned REWORK, all on DT7, each
+  naming tests the previous pass had not caught - and the second naming two the
+  first had explicitly cleared. Every finding had the same shape: a test deleted
+  during the removal that still covered surviving behaviour.
+- Measurement that settled it (reproducible; method in `specs/logs/SPEC-0002.md`
+  S7 attempt 3):
+  - 671 test fns deleted in total; 445 died with their file (R1/R2 deleted the
+    crate or module - authorized), 90 were `wire_stability.rs` pins (R4
+    reset, verified byte-identical for every surviving literal).
+  - **136 were deleted from files that still exist.** That is the whole DT7
+    surface. 26 have been dispositioned across the three attempts; 110 had never
+    been individually read by anyone.
+  - A compiler-based classifier ("restore everything, delete only what fails to
+    compile") was built and validated against the supervisor's proven-alive set:
+    it discards **4 live tests out of 5**. A symbol-based refinement fails
+    identically. Root cause: the unit of judgement is the **assertion**, not the
+    test - a 12-row table with 5 dead rows fails to compile as a whole while 7
+    rows still cover surviving tools. The single most common missing symbol in
+    those failures is `PhpVersion`, which R6 explicitly **keeps**; it is absent
+    only because an automated import-pruner removed the `use` line.
+- Decision: SPEC-0002 is accepted on runtime removal alone. Its Test plan clause
+  requiring a per-case written justification for each deletion outside the removed
+  crates is **withdrawn** and replaced by a delegation to SPEC-0037, which makes
+  the disposition of all 136 its acceptance criterion. The enumerated list is
+  `specs/logs/SPEC-0002-deleted-tests.md`.
+- Why not the alternatives: mechanical re-derivation was refuted by the
+  measurement above. Splitting by surface (IPC / daemon / CLI / GUI) does not
+  reduce the review - the 136 span 12 files across every surface - it only
+  spreads it across more cycles.
+- Impact and guardrails: SPEC-0037 is queued immediately after SPEC-0002 and
+  **blocks SPEC-0003**, so no Docker work starts on a suite whose coverage is
+  unaudited. SPEC-0037's AC1 is mechanically checkable (no row left unmarked),
+  which the withdrawn clause never was - that is the actual defect this decision
+  repairs. The `attempts = 3` on SPEC-0002 stands in the record; the history is
+  not rewritten.
+- What this precedent does **not** authorize: it is not a licence to defer test
+  coverage out of any spec that finds it inconvenient. It applies where coverage
+  is a bounded, enumerated set that the spec's own acceptance criteria cannot
+  express, and it requires the follow-up spec to exist and block before the work
+  it protects.

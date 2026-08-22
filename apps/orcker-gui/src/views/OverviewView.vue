@@ -2,7 +2,6 @@
 import {
   ArrowRight,
   ArrowUpRight,
-  Database,
   Info,
   LayoutGrid,
   Lock,
@@ -13,12 +12,10 @@ import {
   ShieldAlert,
   ShieldCheck,
   Square,
-  SquareCode,
 } from "lucide-vue-next";
 import type { Component } from "vue";
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { RouterLink } from "vue-router";
-
 import DaemonDownHero from "@/components/DaemonDownHero.vue";
 import PageHeader from "@/components/PageHeader.vue";
 import StatusPill, { type Tone } from "@/components/StatusPill.vue";
@@ -49,21 +46,17 @@ import { useToast } from "@/composables/useToast";
 import type { StatusReport } from "@/ipc/types";
 import { openTitle, siteUrl } from "@/lib/siteUrl";
 import { humaniseUptime } from "@/lib/utils";
-
 // The home/dashboard. It reads the shared daemon report (no poller of its own)
 // and shows the shared daemon-down hero, so it stays useful when the socket is
 // gone - the same surface that celebrates "serving N sites" becomes the start button.
 const { report, connected, refresh } = useDaemon();
 const { relaunch } = useOnboarding();
 const toast = useToast();
-
 const r = computed(() => report.value);
 const running = computed(() => connected.value === true);
 const daemonPid = computed(() => report.value?.daemon_pid ?? null);
-
 // ── daemon lifecycle (Stop / Restart; Start lives in the daemon-down hero) ──
 const busy = ref<string | null>(null);
-
 const stopDaemonOpen = ref(false);
 async function confirmStopDaemon(close: () => void): Promise<void> {
   busy.value = "daemon";
@@ -78,7 +71,6 @@ async function confirmStopDaemon(close: () => void): Promise<void> {
     await refresh();
   }
 }
-
 const restartDaemonOpen = ref(false);
 /**
  * Restart is fire-and-forget: the daemon acknowledges before it re-execs, so a
@@ -100,7 +92,6 @@ async function confirmRestartDaemon(close: () => void): Promise<void> {
 // First paint, before the poll has resolved either way.
 const connecting = computed(() => connected.value === null && !report.value);
 const tld = computed(() => r.value?.tld ?? "test");
-
 // ── live site list (for the console chips) ──
 // Shared "sites" cache (same key + fetcher as the Sites view and the command
 // palette). `immediate:false` so it never fetches while the daemon is down (the
@@ -111,12 +102,10 @@ const { data: sitesData, refresh: reloadSites } = useResource("sites", sitesAndP
 });
 const sites = computed(() => sitesData.value?.sites ?? []);
 const sitesLoaded = computed(() => sitesData.value !== null);
-
 // macOS: set when this (older) GUI refused to reconfigure a NEWER registered
 // daemon. A GUI-vs-registered-daemon condition (independent of reachability), so
 // it shows above every branch below.
 const versionConflict = ref<string | null>(null);
-
 onMounted(() => {
   if (running.value) void reloadSites();
   daemonVersionConflict()
@@ -130,7 +119,6 @@ watch(running, (up) => {
   if (up) void reloadSites();
 });
 usePoll(() => (running.value ? reloadSites() : Promise.resolve()), 5000);
-
 onUnmounted(
   registerViewActions({
     refresh: () => {
@@ -138,7 +126,6 @@ onUnmounted(
     },
   }),
 );
-
 // Once the real list is in, drive every count from it so the headline and the
 // chips never disagree; fall back to the report's counts until then.
 const siteCount = computed(() =>
@@ -153,7 +140,6 @@ const securedCount = computed(() =>
     ? sites.value.filter((s) => s.secure).length
     : (r.value?.sites.secured ?? 0),
 );
-
 const SITE_CHIP_LIMIT = 14;
 const sitePreview = computed(() => {
   // Secured first, then alphabetical - a stable, scannable order.
@@ -164,8 +150,6 @@ const sitePreview = computed(() => {
 const moreCount = computed(() =>
   Math.max(0, sites.value.length - sitePreview.value.length),
 );
-
-
 // ── stat tiles ──
 interface Tile {
   to: string;
@@ -180,14 +164,6 @@ const tiles = computed<Tile[]>(() => {
   if (!x) return [];
   const out: Tile[] = [
     {
-      to: "/php",
-      icon: SquareCode,
-      label: "PHP",
-      value: String(x.php.length),
-      unit: x.php.length === 1 ? "version" : "versions",
-      sub: `default ${x.default_php}`,
-    },
-    {
       to: "/sites",
       icon: LayoutGrid,
       label: "Sites",
@@ -196,17 +172,6 @@ const tiles = computed<Tile[]>(() => {
       sub: `${x.sites.parked} parked · ${x.sites.linked} linked`,
     },
   ];
-  if (x.services && x.services.length) {
-    const up = x.services.filter((s) => s.state === "running").length;
-    out.push({
-      to: "/services",
-      icon: Database,
-      label: "Services",
-      value: String(up),
-      unit: `/ ${x.services.length} up`,
-      sub: x.services.map((s) => (s.site ? `${s.display_name} (${s.site})` : s.display_name)).join(" · "),
-    });
-  }
   if (x.mail) {
     out.push({
       to: "/mail",
@@ -219,7 +184,6 @@ const tiles = computed<Tile[]>(() => {
   }
   return out;
 });
-
 // ── system health (the three OS privileges, summarised) ──
 const PRIVILEGED_PORT_CEILING = 1024;
 function portsReady(x: StatusReport): boolean {
@@ -250,10 +214,8 @@ const health = computed<Health[]>(() => {
   ];
 });
 const anyUnhealthy = computed(() => health.value.some((h) => h.value !== true));
-
 const uptime = computed(() => (r.value ? humaniseUptime(r.value.uptime_secs) : ""));
 const version = computed(() => r.value?.daemon_version ?? "");
-
 // Nothing installed and nothing parked → the environment looks freshly set up
 // (or wiped). Offer to re-run the guided onboarding. Driven off the live report,
 // so it only evaluates while the daemon is up (the down branch shows the hero).
@@ -265,7 +227,6 @@ const emptyEnvironment = computed(
     r.value.sites.linked === 0,
 );
 </script>
-
 <template>
   <div class="flex h-full flex-col">
     <PageHeader
@@ -273,7 +234,6 @@ const emptyEnvironment = computed(
       subtitle="Your local environment at a glance"
       docs="/guide/desktop-app"
     />
-
     <div class="flex-1 space-y-4 overflow-y-auto p-6">
       <!-- Version conflict: this GUI is OLDER than the registered daemon. Shown
            above every branch - it's independent of daemon reachability. -->
@@ -292,15 +252,12 @@ const emptyEnvironment = computed(
           </p>
         </div>
       </div>
-
       <!-- Connecting: first probe hasn't resolved yet. -->
       <div v-if="connecting" class="flex justify-center py-24">
         <Spinner class="size-6" />
       </div>
-
       <!-- Daemon down: the shared start affordance (also used on every blocked page). -->
       <DaemonDownHero v-else-if="!running" />
-
       <!-- Daemon up: the serving console. -->
       <template v-else>
         <!-- Degraded: the daemon couldn't bind its web ports, so nothing serves. -->
@@ -325,7 +282,6 @@ const emptyEnvironment = computed(
             Change ports
           </RouterLink>
         </div>
-
         <!-- Empty environment (no PHP, nothing parked) → re-run guided setup. -->
         <div
           v-else-if="emptyEnvironment"
@@ -344,7 +300,6 @@ const emptyEnvironment = computed(
             <Rocket class="size-4" /> Load onboarding
           </Button>
         </div>
-
         <!-- Stat tiles → each links to its page. -->
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <RouterLink
@@ -379,7 +334,6 @@ const emptyEnvironment = computed(
             </p>
           </RouterLink>
         </div>
-
         <Card class="relative overflow-hidden">
           <!-- A soft brand wash - the only place indigo gets a hero surface.
                A gradient fade rather than a blurred circle: `filter: blur()`
@@ -392,7 +346,6 @@ const emptyEnvironment = computed(
             class="pointer-events-none absolute -right-24 -top-24 size-72 rounded-full bg-[radial-gradient(circle,hsl(var(--brand)/0.08)_0%,transparent_70%)]"
             aria-hidden="true"
           />
-
           <div class="relative">
             <div class="flex items-center gap-2">
               <span class="relative flex size-2.5">
@@ -407,7 +360,6 @@ const emptyEnvironment = computed(
                 Serving
               </span>
             </div>
-
             <h2 class="mt-2 text-2xl font-semibold tracking-tight">
               {{ siteCount }} {{ siteCount === 1 ? "site" : "sites" }}
               <span class="font-mono text-xl font-normal text-muted-foreground">
@@ -425,7 +377,6 @@ const emptyEnvironment = computed(
               </template>
               <template v-if="uptime"> · up {{ uptime }}</template>
             </p>
-
             <!-- Console chips: every served domain, click to open. -->
             <div v-if="sitePreview.length" class="mt-5 flex flex-wrap gap-1.5">
               <button
@@ -448,7 +399,6 @@ const emptyEnvironment = computed(
                 <ArrowRight class="size-3" />
               </RouterLink>
             </div>
-
             <!-- No sites: an invitation, not a blank. -->
             <div
               v-else-if="sitesLoaded"
@@ -462,7 +412,6 @@ const emptyEnvironment = computed(
             </div>
           </div>
         </Card>
-
         <!-- Daemon control - Stop/Restart. Start is owned by the daemon-down
              hero above (this branch only renders while the daemon is up). -->
         <Card class="p-4">
@@ -503,7 +452,6 @@ const emptyEnvironment = computed(
             </div>
           </div>
         </Card>
-
         <!-- System health summary → Doctor, which owns the fixes for these checks. -->
         <Card>
           <div class="flex items-center justify-between">
@@ -535,7 +483,6 @@ const emptyEnvironment = computed(
         </Card>
       </template>
     </div>
-
     <Modal v-model:open="stopDaemonOpen" title="Stop daemon">
       <p class="text-sm text-muted-foreground">
         This stops all <strong class="text-foreground">.test</strong> sites, DNS,
@@ -546,7 +493,6 @@ const emptyEnvironment = computed(
         <Button @click="confirmStopDaemon(close)">Stop</Button>
       </template>
     </Modal>
-
     <Modal v-model:open="restartDaemonOpen" title="Restart daemon">
       <p class="text-sm text-muted-foreground">
         This briefly stops all <strong class="text-foreground">.test</strong> sites,

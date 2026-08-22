@@ -20,7 +20,6 @@
 //! trip) and pass the result in, so the lock only ever wraps the menu-building
 //! and `set_menu`/`set_icon` marshalling it was meant to serialize.
 
-use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, MutexGuard};
 use std::time::Duration;
@@ -29,10 +28,9 @@ use tauri::menu::{IconMenuItem, IsMenuItem, Menu, MenuEvent, MenuItem, Predefine
 use tauri::tray::TrayIconBuilder;
 use tauri::{AppHandle, Emitter, Wry};
 
-use orcker_core::PhpVersion;
-use orcker_ipc::{PhpPoolStatus, Request, Response};
+use orcker_ipc::{Request, Response};
 
-use crate::ipc::{exchange, exchange_timeout};
+use crate::ipc::exchange_timeout;
 
 const TRAY_ID: &str = "orcker-tray";
 /// Background poll cadence. Modest because the tray is rarely open; diff-gating
@@ -57,7 +55,6 @@ const SETTLE_PROBE_TIMEOUT: Duration = Duration::from_millis(400);
 mod icons {
     pub const OPEN: &[u8] = include_bytes!("../icons/menu/app-window.png");
     pub const UPDATE: &[u8] = include_bytes!("../icons/menu/download.png");
-    pub const UPDATE_PHP: &[u8] = include_bytes!("../icons/menu/arrow-down-to-line.png");
     pub const NEW_SITE: &[u8] = include_bytes!("../icons/menu/rocket.png");
     pub const LINK: &[u8] = include_bytes!("../icons/menu/link.png");
     pub const PARK: &[u8] = include_bytes!("../icons/menu/folder-plus.png");
@@ -68,16 +65,15 @@ mod icons {
     pub const MAIL: &[u8] = include_bytes!("../icons/menu/mail.png");
     pub const DUMPS: &[u8] = include_bytes!("../icons/menu/clipboard-list.png");
     pub const SITES: &[u8] = include_bytes!("../icons/menu/layout-grid.png");
-    pub const SERVICES: &[u8] = include_bytes!("../icons/menu/database.png");
     pub const ABOUT: &[u8] = include_bytes!("../icons/menu/info.png");
     pub const QUIT: &[u8] = include_bytes!("../icons/menu/power.png");
 }
 
-/// The navigable pages the tray links to (demoted below the direct actions). PHP
-/// is listed inline and Mail/Dumps have their own openers, so they aren't here.
+/// The navigable pages the tray links to (demoted below the direct actions).
+/// Mail and Dumps have their own openers, so they aren't here. Every path must
+/// resolve in `router.ts`; `tests/routeTargets.test.ts` enforces that.
 const NAV_ITEMS: &[(&str, &str, &[u8])] = &[
     ("nav:/sites", "Sites", icons::SITES),
-    ("nav:/services", "Services", icons::SERVICES),
     ("nav:/about", "About", icons::ABOUT),
 ];
 
@@ -112,14 +108,10 @@ fn lock_menu() -> MutexGuard<'static, ()> {
 #[derive(Clone, Default, PartialEq, Eq)]
 struct TrayState {
     running: bool,
-    default_php: Option<String>,
-    installed: Vec<String>,
     http: Option<u16>,
     https: Option<u16>,
     /// The Orcker self-update target version, when one is available.
     update_target: Option<String>,
-    /// True when any installed PHP version has a newer patch available.
-    php_update: bool,
     /// Captured emails not yet marked read.
     unread: u32,
 }
@@ -224,17 +216,6 @@ pub(crate) fn spawn_tray_poller(app: AppHandle) {
     });
 }
 
-/// The installed versions the "Default PHP:" block may offer, newest-last in
-/// daemon order. Legacy (< 8.2) versions are dropped: the daemon refuses them as
-/// the global default (`LegacyRestricted`), so listing one would only ever
-/// produce an error toast on click. They stay installable and usable per-site.
-fn default_php_choices(php: &[PhpPoolStatus]) -> Vec<String> {
-    php.iter()
-        .filter(|p| !p.version.is_legacy())
-        .map(|p| p.version.to_string())
-        .collect()
-}
-
 /// Fetch daemon status into a snapshot, plus the cached (network-free) update
 /// target. An unreachable daemon yields the "stopped" snapshot.
 async fn fetch_state() -> TrayState {
@@ -252,12 +233,9 @@ async fn fetch_state() -> TrayState {
     };
     TrayState {
         running: true,
-        default_php: Some(report.default_php.to_string()),
-        installed: default_php_choices(&report.php),
         http: Some(report.http.bound),
         https: Some(report.https.bound),
         update_target,
-        php_update: report.php.iter().any(|p| p.update_available.is_some()),
         unread: report.mail.as_ref().map_or(0, |m| m.unread),
     }
 }
@@ -290,7 +268,7 @@ fn apply(app: &AppHandle, state: &TrayState, dark: bool, variant: TrayIconVarian
     if let Some(tray) = app.tray_by_id(TRAY_ID) {
         let _ = tray.set_menu(Some(menu));
         let badges = Badges {
-            update: state.update_target.is_some() || state.php_update,
+            update: state.update_target.is_some(),
             unread: state.unread > 0,
         };
         if let Some(icon) = tray_icon(app, badges, variant, dark) {
@@ -548,168 +526,6 @@ fn mail_label(unread: u32) -> String {
     }
 }
 
-/// The full menu for the current daemon state. `dark` is a single
-/// `dark_menu_bar()` reading the caller took before taking `MENU_LOCK` (see the
-/// module concurrency note), threaded through every icon in this build.
-///
-/// Layout: a top zone (Open Orcker, plus Update Orcker / Update PHP while an update
-/// waits) before the status header, then the running- or stopped-daemon block,
-/// then Quit. In the running block the installed PHP versions sit under a
-/// "Default PHP:" label, each indented with a tick drawn into the label text
-/// itself (rather than the fixed native checkmark column) so it nests with the
-/// versions; picking one switches the default and the tick moves.
-fn build_menu(app: &AppHandle, state: &TrayState, dark: bool) -> tauri::Result<Menu<Wry>> {
-    let mut items: Vec<Box<dyn IsMenuItem<Wry>>> = Vec::new();
-
-    push(
-        &mut items,
-        action(app, "open", "Open Orcker", icons::OPEN, dark)?,
-    );
-    if state.update_target.is_some() {
-        push(
-            &mut items,
-            action(app, "update:apply", "Update Orcker", icons::UPDATE, dark)?,
-        );
-    }
-    if state.php_update {
-        push(
-            &mut items,
-            action(app, "update:php", "Update PHP", icons::UPDATE_PHP, dark)?,
-        );
-    }
-    push(&mut items, PredefinedMenuItem::separator(app)?);
-
-    if state.running {
-        push(
-            &mut items,
-            disabled(app, "noop:header", "● Daemon running")?,
-        );
-        if let (Some(http), Some(https)) = (state.http, state.https) {
-            push(
-                &mut items,
-                disabled(app, "noop:ports", format!("HTTP :{http} · HTTPS :{https}"))?,
-            );
-        }
-        if state.update_target.is_none() {
-            push(
-                &mut items,
-                action(
-                    app,
-                    "update:check",
-                    "Check for updates",
-                    icons::CHECK_UPDATES,
-                    dark,
-                )?,
-            );
-        }
-        push(
-            &mut items,
-            action(
-                app,
-                "daemon:restart",
-                "Restart daemon",
-                icons::RESTART,
-                dark,
-            )?,
-        );
-        push(
-            &mut items,
-            action(app, "daemon:stop", "Stop daemon", icons::STOP, dark)?,
-        );
-        push(&mut items, PredefinedMenuItem::separator(app)?);
-
-        if !state.installed.is_empty() {
-            push(&mut items, disabled(app, "noop:phplabel", "Default PHP:")?);
-            for v in &state.installed {
-                let checked = state.default_php.as_deref() == Some(v.as_str());
-                let label = format!("    {}PHP {v}", if checked { "✓ " } else { "  " });
-                push(
-                    &mut items,
-                    MenuItem::with_id(app, format!("php:set:{v}"), label, true, None::<&str>)?,
-                );
-            }
-            push(&mut items, PredefinedMenuItem::separator(app)?);
-        }
-
-        push(
-            &mut items,
-            action(app, "new-site", "New Laravel site…", icons::NEW_SITE, dark)?,
-        );
-        push(
-            &mut items,
-            action(app, "sites:link", "Link Site", icons::LINK, dark)?,
-        );
-        push(
-            &mut items,
-            action(app, "sites:park", "Park Directory", icons::PARK, dark)?,
-        );
-        push(&mut items, PredefinedMenuItem::separator(app)?);
-        push(
-            &mut items,
-            action(app, "mail", mail_label(state.unread), icons::MAIL, dark)?,
-        );
-        push(
-            &mut items,
-            action(app, "dumps", "Dumps", icons::DUMPS, dark)?,
-        );
-        push(&mut items, PredefinedMenuItem::separator(app)?);
-        for (id, label, icon) in NAV_ITEMS {
-            push(&mut items, action(app, *id, *label, icon, dark)?);
-        }
-        push(&mut items, PredefinedMenuItem::separator(app)?);
-    } else {
-        push(
-            &mut items,
-            disabled(app, "noop:header", "○ Daemon stopped")?,
-        );
-        push(
-            &mut items,
-            action(app, "daemon:start", "Start daemon", icons::START, dark)?,
-        );
-        push(&mut items, PredefinedMenuItem::separator(app)?);
-        push(
-            &mut items,
-            action(app, "mail", mail_label(state.unread), icons::MAIL, dark)?,
-        );
-        push(
-            &mut items,
-            action(app, "dumps", "Dumps", icons::DUMPS, dark)?,
-        );
-        push(&mut items, PredefinedMenuItem::separator(app)?);
-    }
-
-    push(
-        &mut items,
-        action(app, "quit", "Quit Orcker", icons::QUIT, dark)?,
-    );
-    finish_menu(app, &items)
-}
-
-/// The collapsed menu shown during a daemon transition: a disabled status line
-/// plus the always-safe actions. Crucially, **no** daemon-lifecycle items, so a
-/// second start/stop/restart can't fire mid-transition and clear `TRANSITION`.
-fn build_transient_menu(app: &AppHandle, label: &str) -> tauri::Result<Menu<Wry>> {
-    let mut items: Vec<Box<dyn IsMenuItem<Wry>>> = Vec::new();
-    let dark = dark_menu_bar();
-    push(&mut items, disabled(app, "noop:transient", label)?);
-    push(&mut items, PredefinedMenuItem::separator(app)?);
-    push(
-        &mut items,
-        action(app, "open", "Open Orcker", icons::OPEN, dark)?,
-    );
-    push(&mut items, action(app, "mail", "Mail", icons::MAIL, dark)?);
-    push(
-        &mut items,
-        action(app, "dumps", "Dumps", icons::DUMPS, dark)?,
-    );
-    push(&mut items, PredefinedMenuItem::separator(app)?);
-    push(
-        &mut items,
-        action(app, "quit", "Quit Orcker", icons::QUIT, dark)?,
-    );
-    finish_menu(app, &items)
-}
-
 /// A clickable item with a leading icon, recoloured per `dark` (see
 /// `menu_icon`).
 fn action(
@@ -780,18 +596,12 @@ fn on_menu_event(app: &AppHandle, event: MenuEvent) {
             crate::show_main(app);
             let _ = app.emit("navigate", "/about");
         }
-        "update:php" => {
-            crate::show_main(app);
-            let _ = app.emit("navigate", "/php");
-        }
         "update:check" => spawn_update_check(app.clone()),
         "daemon:start" => spawn_lifecycle(app.clone(), Lifecycle::Start),
         "daemon:restart" => spawn_lifecycle(app.clone(), Lifecycle::Restart),
         "daemon:stop" => spawn_lifecycle(app.clone(), Lifecycle::Stop),
         _ => {
-            if let Some(version) = id.strip_prefix("php:set:") {
-                spawn_set_default_php(app.clone(), version.to_string());
-            } else if let Some(route) = id.strip_prefix("nav:") {
+            if let Some(route) = id.strip_prefix("nav:") {
                 crate::show_main(app);
                 let _ = app.emit("navigate", route.to_string());
             }
@@ -864,18 +674,6 @@ fn spawn_lifecycle(app: AppHandle, kind: Lifecycle) {
         apply(&app, &state, dark, variant);
         TRANSITION.store(false, Ordering::Release);
         drop(guard);
-    });
-}
-
-/// Apply a tray PHP-version pick (`php:set:{v}`) and refresh the menu. A
-/// non-parseable id is ignored.
-fn spawn_set_default_php(app: AppHandle, version: String) {
-    let Ok(version) = PhpVersion::from_str(&version) else {
-        return;
-    };
-    tauri::async_runtime::spawn(async move {
-        let _ = exchange(&Request::SetDefaultPhp { version }).await;
-        refresh_now(&app).await;
     });
 }
 
@@ -967,35 +765,152 @@ async fn wait_until_restarted(prev: Option<u64>) {
     }
 }
 
+/// The full menu for the current daemon state. `dark` is a single
+/// `dark_menu_bar()` reading the caller took before taking `MENU_LOCK` (see the
+/// module concurrency note), threaded through every icon in this build.
+///
+/// Layout: a top zone (Open Orcker, plus Update Orcker / Update PHP while an update
+/// waits) before the status header, then the running- or stopped-daemon block,
+/// then Quit. In the running block the installed PHP versions sit under a
+/// "Default PHP:" label, each indented with a tick drawn into the label text
+/// itself (rather than the fixed native checkmark column) so it nests with the
+/// versions; picking one switches the default and the tick moves.
+fn build_menu(app: &AppHandle, state: &TrayState, dark: bool) -> tauri::Result<Menu<Wry>> {
+    let mut items: Vec<Box<dyn IsMenuItem<Wry>>> = Vec::new();
+
+    push(
+        &mut items,
+        action(app, "open", "Open Orcker", icons::OPEN, dark)?,
+    );
+    if state.update_target.is_some() {
+        push(
+            &mut items,
+            action(app, "update:apply", "Update Orcker", icons::UPDATE, dark)?,
+        );
+    }
+    push(&mut items, PredefinedMenuItem::separator(app)?);
+
+    if state.running {
+        push(
+            &mut items,
+            disabled(app, "noop:header", "● Daemon running")?,
+        );
+        if let (Some(http), Some(https)) = (state.http, state.https) {
+            push(
+                &mut items,
+                disabled(app, "noop:ports", format!("HTTP :{http} · HTTPS :{https}"))?,
+            );
+        }
+        if state.update_target.is_none() {
+            push(
+                &mut items,
+                action(
+                    app,
+                    "update:check",
+                    "Check for updates",
+                    icons::CHECK_UPDATES,
+                    dark,
+                )?,
+            );
+        }
+        push(
+            &mut items,
+            action(
+                app,
+                "daemon:restart",
+                "Restart daemon",
+                icons::RESTART,
+                dark,
+            )?,
+        );
+        push(
+            &mut items,
+            action(app, "daemon:stop", "Stop daemon", icons::STOP, dark)?,
+        );
+        push(&mut items, PredefinedMenuItem::separator(app)?);
+
+        push(
+            &mut items,
+            action(app, "new-site", "New Laravel site…", icons::NEW_SITE, dark)?,
+        );
+        push(
+            &mut items,
+            action(app, "sites:link", "Link Site", icons::LINK, dark)?,
+        );
+        push(
+            &mut items,
+            action(app, "sites:park", "Park Directory", icons::PARK, dark)?,
+        );
+        push(&mut items, PredefinedMenuItem::separator(app)?);
+        push(
+            &mut items,
+            action(app, "mail", mail_label(state.unread), icons::MAIL, dark)?,
+        );
+        push(
+            &mut items,
+            action(app, "dumps", "Dumps", icons::DUMPS, dark)?,
+        );
+        push(&mut items, PredefinedMenuItem::separator(app)?);
+        for (id, label, icon) in NAV_ITEMS {
+            push(&mut items, action(app, *id, *label, icon, dark)?);
+        }
+        push(&mut items, PredefinedMenuItem::separator(app)?);
+    } else {
+        push(
+            &mut items,
+            disabled(app, "noop:header", "○ Daemon stopped")?,
+        );
+        push(
+            &mut items,
+            action(app, "daemon:start", "Start daemon", icons::START, dark)?,
+        );
+        push(&mut items, PredefinedMenuItem::separator(app)?);
+        push(
+            &mut items,
+            action(app, "mail", mail_label(state.unread), icons::MAIL, dark)?,
+        );
+        push(
+            &mut items,
+            action(app, "dumps", "Dumps", icons::DUMPS, dark)?,
+        );
+        push(&mut items, PredefinedMenuItem::separator(app)?);
+    }
+
+    push(
+        &mut items,
+        action(app, "quit", "Quit Orcker", icons::QUIT, dark)?,
+    );
+    finish_menu(app, &items)
+}
+/// The collapsed menu shown during a daemon transition: a disabled status line
+/// plus the always-safe actions. Crucially, **no** daemon-lifecycle items, so a
+/// second start/stop/restart can't fire mid-transition and clear `TRANSITION`.
+fn build_transient_menu(app: &AppHandle, label: &str) -> tauri::Result<Menu<Wry>> {
+    let mut items: Vec<Box<dyn IsMenuItem<Wry>>> = Vec::new();
+    let dark = dark_menu_bar();
+    push(&mut items, disabled(app, "noop:transient", label)?);
+    push(&mut items, PredefinedMenuItem::separator(app)?);
+    push(
+        &mut items,
+        action(app, "open", "Open Orcker", icons::OPEN, dark)?,
+    );
+    push(&mut items, action(app, "mail", "Mail", icons::MAIL, dark)?);
+    push(
+        &mut items,
+        action(app, "dumps", "Dumps", icons::DUMPS, dark)?,
+    );
+    push(&mut items, PredefinedMenuItem::separator(app)?);
+    push(
+        &mut items,
+        action(app, "quit", "Quit Orcker", icons::QUIT, dark)?,
+    );
+    finish_menu(app, &items)
+}
+
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 mod tests {
-    use super::{default_php_choices, icons, menu_icon, recolor_opaque, y_glyph_rgba};
-    use super::{PhpPoolStatus, PhpVersion, TrayIconVariant};
-    use orcker_ipc::PoolRunState;
-
-    fn pool(major: u8, minor: u8) -> PhpPoolStatus {
-        PhpPoolStatus {
-            version: PhpVersion::new(major, minor),
-            installed_patch: None,
-            state: PoolRunState::Stopped,
-            pid: None,
-            listen: None,
-            rss_bytes: None,
-            update_available: None,
-        }
-    }
-
-    #[test]
-    fn default_php_choices_drops_legacy_versions() {
-        let pools = [pool(7, 4), pool(8, 1), pool(8, 2), pool(8, 4)];
-        assert_eq!(default_php_choices(&pools), vec!["8.2", "8.4"]);
-    }
-
-    #[test]
-    fn default_php_choices_is_empty_when_only_legacy_is_installed() {
-        assert!(default_php_choices(&[pool(7, 4), pool(8, 0)]).is_empty());
-    }
+    use super::{icons, menu_icon, recolor_opaque, y_glyph_rgba, TrayIconVariant};
 
     #[test]
     fn menu_icon_light_leaves_pixels_unchanged() {

@@ -19,8 +19,8 @@ use orcker_ipc::{
     CloudflaredStatus, ErrorCode, Response, TunnelInfo, TunnelKind as WireKind, TunnelRunState,
 };
 use orcker_platform::PlatformDirs;
-use orcker_supervise::{SystemClock, TokioProcessSpawner};
 use orcker_tunnel::manager::{TunnelSnapshot, TunnelState};
+use orcker_tunnel::supervise::{SystemClock, TokioProcessSpawner};
 use orcker_tunnel::{OriginTarget, Step, TunnelKind, TunnelManager};
 
 use crate::state::DaemonState;
@@ -387,7 +387,7 @@ pub async fn install_cloudflared_streamed(state: Arc<DaemonState>) -> Response {
         };
 
         state.jobs.set_phase(&id, "Installing cloudflared").await;
-        let dl = crate::php_install::ReqwestDownloader::new();
+        let dl = crate::download::ReqwestDownloader::new();
         let guard = tokio::select! {
             g = state.tunnel_mutate.lock() => g,
             _ = cancel.changed() => {

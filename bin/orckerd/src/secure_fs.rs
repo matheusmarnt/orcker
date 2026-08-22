@@ -11,6 +11,7 @@
 //! On non-Unix targets the mode operations are no-ops (Windows ACL hardening
 //! is a Phase-2 item); the directory is still created.
 
+use std::fs;
 use std::io;
 use std::path::Path;
 
@@ -109,4 +110,43 @@ mod tests {
         );
         assert_eq!(mode & 0o022, 0);
     }
+}
+
+/// Write `bytes` to `path` atomically (tempfile in the same directory, then
+/// `rename`), so a concurrent reader never sees a half-written file.
+///
+/// If `path`'s parent doesn't exist this returns an `io::Error` of kind
+/// `NotFound` rather than creating it: directory creation is the caller's
+/// contract, the same convention `PlatformDirs` documents.
+///
+/// # Errors
+///
+/// Any `io::Error` from creating, writing or renaming the temporary file.
+pub fn atomic_write(path: &Path, bytes: &[u8]) -> io::Result<()> {
+    use std::io::Write;
+    static SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let parent = path.parent().ok_or_else(|| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "atomic_write: path has no parent",
+        )
+    })?;
+    let name = path
+        .file_name()
+        .and_then(|s| s.to_str())
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "atomic_write: no file name"))?;
+    let seq = SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let tmp = parent.join(format!(".{name}.tmp-{}-{seq}", std::process::id()));
+    let mut f = fs::File::create(&tmp)?;
+    let r = f.write_all(bytes).and_then(|()| f.sync_all());
+    drop(f);
+    if let Err(e) = r {
+        let _ = fs::remove_file(&tmp);
+        return Err(e);
+    }
+    if let Err(e) = fs::rename(&tmp, path) {
+        let _ = fs::remove_file(&tmp);
+        return Err(e);
+    }
+    Ok(())
 }

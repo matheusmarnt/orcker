@@ -15,13 +15,13 @@
 //!
 //! ## Version compatibility
 //!
-//! [`PROTOCOL_VERSION`] is exposed for future use. Until a
-//! `Hello`/`Welcome` handshake is added, a client speaking a newer
-//! protocol against an older daemon surfaces as [`IpcError::Decode`]
-//! when an unknown `type` tag arrives.
+//! [`PROTOCOL_VERSION`] is **informational**: it never travels on the
+//! wire, so nothing reads it at runtime. Until SPEC-0034 adds a
+//! `Hello`/`Welcome` handshake, a client speaking a newer protocol
+//! against an older daemon surfaces as [`IpcError::Decode`] when an
+//! unknown `type` tag arrives.
 
 mod create;
-mod dump;
 mod error;
 mod frame;
 mod message;
@@ -33,30 +33,29 @@ mod update;
 #[cfg(feature = "transport")]
 mod transport;
 
-/// The current IPC protocol version. Bump on any breaking change;
-/// add a handshake before doing so.
-pub const PROTOCOL_VERSION: u32 = 1;
+/// The current IPC protocol version. Bump on any breaking change.
+///
+/// `2` marks the fork's one authorized contract reset: SPEC-0002 removed the
+/// native-runtime requests rather than deprecating them additively, which is
+/// safe only because no released daemon speaks version `1` under this name.
+/// The constant does not travel on the wire yet, so the bump has no runtime
+/// effect; SPEC-0034 puts it on the wire and this doc line goes with it.
+pub const PROTOCOL_VERSION: u32 = 2;
 
 pub use create::{
     AuthProvider, CreateSiteSpec, Database, Framework, JobId, JobState, JsRuntime, LaravelOptions,
     StarterKit, Testing, WordPressDatabase, WordPressDbEngine, WordPressOptions,
 };
-pub use dump::{DumpCategory, DumpCounts, DumpEvent, DumpExtStatus};
 pub use error::{FrameError, IpcError, IpcErrorKind};
 pub use frame::{encode_frame, FrameDecoder, DEFAULT_MAX_FRAME};
 pub use message::{decode_message, encode_message};
 pub use request::Request;
-pub use response::{
-    ErrorCode, PhpExtInfo, PhpUpdate, ProxyEntry, ProxyRuleEntry, Response, RouteRuleEntry,
-    SiteEntry, WordPressAdminUser,
-};
+pub use response::{ErrorCode, ProxyEntry, ProxyRuleEntry, Response, RouteRuleEntry, SiteEntry};
 pub use status::{
-    AddableServiceType, BrowserTrust, CaStatus, CloudflaredSource, CloudflaredStatus,
-    DatabaseSummary, Diagnosis, DiagnosisCode, DomainShadow, FixReport, FixResult, MailAttachment,
-    MailDetail, MailHeader, MailStatus, MailSummary, NamedTunnelMeta, PhpPoolStatus, PoolRunState,
-    PortRedirectTargets, PortStatus, ServiceAvailability, ServiceRunState, ServiceStatus, Severity,
-    SiteCounts, SiteHostname, StatusReport, ToolStatus, TunnelInfo, TunnelKind, TunnelRunState,
-    UnboundWeb, WordPressVersionInfo,
+    BrowserTrust, CaStatus, CloudflaredSource, CloudflaredStatus, Diagnosis, DiagnosisCode,
+    DomainShadow, FixReport, FixResult, MailAttachment, MailDetail, MailHeader, MailStatus,
+    MailSummary, NamedTunnelMeta, PortRedirectTargets, PortStatus, Severity, SiteCounts,
+    SiteHostname, StatusReport, ToolStatus, TunnelInfo, TunnelKind, TunnelRunState, UnboundWeb,
 };
 pub use update::{Channel, StagedArtifact, UpdateSource};
 
@@ -82,6 +81,6 @@ mod tests {
 
     #[test]
     fn protocol_version_pinned() {
-        assert_eq!(PROTOCOL_VERSION, 1);
+        assert_eq!(PROTOCOL_VERSION, 2);
     }
 }

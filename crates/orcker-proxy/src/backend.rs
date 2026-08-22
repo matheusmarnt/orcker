@@ -6,9 +6,9 @@ use std::path::PathBuf;
 
 /// Per-site forwarding target.
 ///
-/// `From<orcker_php::Listen>` is intentionally **not** implemented - the
+/// A `From` impl for a runtime's own listen address is intentionally absent - the
 /// daemon's [`crate::traits::BackendResolver`] impl translates between the
-/// two so `orcker-proxy` doesn't depend on `orcker-php`.
+/// two so `orcker-proxy` depends on no runtime crate.
 #[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Backend {

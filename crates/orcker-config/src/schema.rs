@@ -309,7 +309,7 @@ pub const DEFAULT_DUMP_PORT: u16 = 2304;
 /// Dump-telemetry settings.
 ///
 /// The daemon writes a runtime mirror of these to a state file the
-/// `orcker-php-ext` extension reads each request; the config here is the durable
+/// dump extension reads each request; the config here is the durable
 /// source of truth. Defaults are off, port [`DEFAULT_DUMP_PORT`], and no
 /// per-feature overrides (every feature on when interception is enabled).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -612,7 +612,7 @@ pub struct ServicesSection {
     ///
     /// `BTreeMap` so the serialiser yields stable lexicographic table order.
     /// Strings as keys (rather than a typed enum) keep the canonical typed
-    /// registry in `orcker-services` (downstream of this crate) and allow
+    /// registry downstream of this crate and allow
     /// forward-compatibility with experimental services without a release.
     pub instances: BTreeMap<String, ServiceInstance>,
 }

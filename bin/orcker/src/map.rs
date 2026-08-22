@@ -9,12 +9,11 @@ use std::fmt::Write as _;
 
 use orcker_core::{PhpVersion, Site, SiteKind};
 use orcker_ipc::{
-    Channel, CloudflaredStatus, Diagnosis, FixReport, PhpPoolStatus, PoolRunState, PortStatus,
-    Request, Response, ServiceAvailability, ServiceRunState, ServiceStatus, Severity, SiteEntry,
-    StatusReport, ToolStatus, TunnelInfo, TunnelRunState, UpdateSource,
+    Channel, CloudflaredStatus, Diagnosis, FixReport, PortStatus, Request, Response, Severity,
+    SiteEntry, StatusReport, ToolStatus, TunnelInfo, TunnelRunState, UpdateSource,
 };
 
-use crate::cli::{Command, DbAction, MailAction, ServiceAction, TunnelAction};
+use crate::cli::{Command, MailAction, TunnelAction};
 use crate::error::ClientError;
 
 /// Map a parsed [`Command`] to the wire [`Request`], validating site names and
@@ -32,107 +31,12 @@ pub fn to_request(cmd: &Command) -> Result<Request, ClientError> {
         Command::Unpark { path } => Request::Unpark {
             path: path.to_string_lossy().into_owned(),
         },
-        Command::Use {
-            first,
-            version: None,
-        } => {
-            let version = parse_php(first)?;
-            if version.is_legacy() {
-                return Err(ClientError::Usage(format!(
-                    "PHP {version} is an out-of-support legacy version and cannot be the global \
-                     default (`orcker use`). It can still serve individual sites (`orcker use <site> \
-                     {version}`) and run via `php{version}`."
-                )));
-            }
-            Request::SetDefaultPhp { version }
-        }
-        Command::Use {
-            first,
-            version: Some(version),
-        } => {
-            validate_name(first)?;
-            Request::SetPhp {
-                name: first.clone(),
-                version: parse_php(version)?,
-            }
-        }
-        Command::Set {
-            target:
-                crate::cli::SetTarget::Php {
-                    setting,
-                    value,
-                    only,
-                },
-        } => {
-            validate_php_setting(setting, Some(value))?;
-            let settings = std::collections::BTreeMap::from([(setting.clone(), value.clone())]);
-            match only {
-                Some(v) => Request::SetPhpVersionSettings {
-                    version: parse_php(v)?,
-                    settings,
-                },
-                None => Request::SetPhpSettings { settings },
-            }
-        }
-        Command::Unset {
-            target: crate::cli::UnsetTarget::Php { setting, only },
-        } => {
-            validate_php_setting(setting, None)?;
-            let settings = std::collections::BTreeMap::from([(setting.clone(), String::new())]);
-            match only {
-                Some(v) => Request::SetPhpVersionSettings {
-                    version: parse_php(v)?,
-                    settings,
-                },
-                None => Request::SetPhpSettings { settings },
-            }
-        }
-        Command::Php {
-            action: crate::cli::PhpAction::Ext { action },
-        } => php_ext_to_request(action)?,
-        Command::Php {
-            action: crate::cli::PhpAction::Ini { action },
-        } => php_ini_to_request(action)?,
-        Command::Php {
-            action: crate::cli::PhpAction::Pool { action },
-        } => php_pool_to_request(action)?,
-        Command::Install {
-            target: crate::cli::InstallTarget::Php { version, legacy },
-        } => {
-            let parsed = parse_php(version)?;
-            if parsed.is_legacy() && !*legacy {
-                return Err(ClientError::Usage(format!(
-                    "PHP {parsed} is an out-of-support legacy version. It may contain unpatched \
-                     security vulnerabilities, has no code coverage (phpcover) and no orcker-dumps, \
-                     and cannot be set as the default. Re-run with `--legacy` to install it \
-                     anyway: `orcker install php {parsed} --legacy`."
-                )));
-            }
-            Request::InstallPhp {
-                version: parsed,
-                confirm_legacy: *legacy,
-            }
-        }
         Command::Install {
             target: crate::cli::InstallTarget::Tool { id },
         } => Request::InstallTool { tool: id.clone() },
         Command::Restart {
-            target: crate::cli::RestartTarget::Php { version },
-        } => match version {
-            Some(v) => Request::RestartPhp {
-                version: parse_php(v)?,
-            },
-            None => Request::RestartAllPhp,
-        },
-        Command::Restart {
             target: crate::cli::RestartTarget::Daemon,
         } => Request::RestartDaemon,
-        Command::Uninstall {
-            target: Some(crate::cli::UninstallTarget::Php { version }),
-            ..
-        } => Request::UninstallPhp {
-            version: parse_php(version)?,
-        },
         Command::Uninstall {
             target: Some(crate::cli::UninstallTarget::Tool { id }),
             ..
@@ -144,52 +48,15 @@ pub fn to_request(cmd: &Command) -> Result<Request, ClientError> {
         }
         Command::Tools => Request::ListTools,
         Command::List {
-            target: crate::cli::ListTarget::Php { check, available },
-        } => {
-            if *available {
-                Request::AvailablePhp
-            } else if *check {
-                Request::CheckPhpUpdates
-            } else {
-                Request::ListPhp
-            }
-        }
-        Command::List {
             target: crate::cli::ListTarget::Parked,
         } => Request::ListParked,
-        Command::Update {
-            target: Some(crate::cli::UpdateTarget::Php { version }),
-            yes,
-            edge,
-            stable,
-            force,
-        } => {
-            if *yes || *edge || *stable || *force {
-                return Err(ClientError::Usage(
-                    "--yes/--edge/--stable/--force apply to `orcker update` (no subcommand); \
-                     `orcker update php` takes none of them"
-                        .to_owned(),
-                ));
-            }
-            Request::UpdatePhp {
-                version: version.as_deref().map(parse_php).transpose()?,
-            }
-        }
-        Command::Update {
-            target: None,
-            edge,
-            stable,
-            ..
-        } => Request::CheckUpdate {
+        Command::Update { edge, stable, .. } => Request::CheckUpdate {
             channel: channel_from_flags(*edge, *stable),
         },
-        Command::Services => Request::ListServices,
-        Command::Service { action } => service_override_to_request(action)?,
         Command::Domain { action } => domain_request(action)?,
         Command::Proxy { action } => proxy_request(action)?,
         Command::Route { action } => route_request(action)?,
         Command::Tunnel { action } => tunnel_request(action),
-        Command::Db { action } => db_request(action),
         Command::Mail { action } => match action {
             MailAction::List => Request::ListMails,
             MailAction::Show { id } => Request::GetMail { id: id.clone() },
@@ -243,21 +110,6 @@ pub fn to_request(cmd: &Command) -> Result<Request, ClientError> {
                 "path is handled locally, not over IPC".to_owned(),
             ));
         }
-        Command::Coverage { .. } => {
-            return Err(ClientError::Usage(
-                "coverage is handled locally, not over IPC".to_owned(),
-            ));
-        }
-        Command::Exec { .. } => {
-            return Err(ClientError::Usage(
-                "exec is handled locally, not over IPC".to_owned(),
-            ));
-        }
-        Command::Which { .. } => {
-            return Err(ClientError::Usage(
-                "which is handled locally, not over IPC".to_owned(),
-            ));
-        }
         Command::Mcp => {
             return Err(ClientError::Usage(
                 "mcp runs its own protocol loop, not a single IPC exchange".to_owned(),
@@ -276,127 +128,6 @@ pub fn to_request(cmd: &Command) -> Result<Request, ClientError> {
         } => Request::SetLanEnabled { enabled: false },
         Command::RemoteSetup => Request::MintRemoteSetupCode,
     })
-}
-
-/// Map a `orcker service <action>` to its wire request. Service ids are passed
-/// through verbatim - the daemon returns `NotFound` for an unknown id. The
-/// `set`/`unset` arms are only ever reached through
-/// [`service_override_to_request`], which runs the client-side pre-flight
-/// first.
-fn service_request(action: &ServiceAction) -> Request {
-    match action {
-        ServiceAction::Available => Request::AvailableServices,
-        ServiceAction::Install { service, version } => Request::InstallService {
-            service: service.clone(),
-            version: version.clone(),
-        },
-        ServiceAction::ChangeVersion { service, version } => Request::ChangeServiceVersion {
-            service: service.clone(),
-            version: version.clone(),
-        },
-        ServiceAction::Uninstall {
-            service,
-            version,
-            purge,
-        } => Request::UninstallService {
-            service: service.clone(),
-            version: version.clone(),
-            purge: *purge,
-        },
-        ServiceAction::Start { service } => Request::StartService {
-            service: service.clone(),
-        },
-        ServiceAction::Stop { service } => Request::StopService {
-            service: service.clone(),
-        },
-        ServiceAction::Restart { service } => Request::RestartService {
-            service: service.clone(),
-        },
-        ServiceAction::SetPort { service, port } => Request::SetServicePort {
-            service: service.clone(),
-            port: *port,
-        },
-        ServiceAction::Logs { service, lines } => Request::ServiceLogs {
-            service: service.clone(),
-            lines: *lines,
-        },
-        ServiceAction::Add {
-            type_id,
-            site,
-            port,
-            version,
-            autostart,
-        } => Request::AddService {
-            type_id: type_id.clone(),
-            site: site.clone(),
-            port: *port,
-            version: version.clone(),
-            autostart: autostart.map(super::cli::OnOff::is_on),
-        },
-        ServiceAction::Remove { service, purge } => Request::RemoveService {
-            service: service.clone(),
-            purge: *purge,
-        },
-        ServiceAction::SetAutostart { service, state } => Request::SetServiceAutostart {
-            service: service.clone(),
-            enabled: state.is_on(),
-        },
-        ServiceAction::SetSite { service, site } => Request::SetServiceSite {
-            service: service.clone(),
-            site: site.clone(),
-        },
-        ServiceAction::Set {
-            service,
-            key,
-            value,
-        } => Request::SetServiceOverrides {
-            service: service.clone(),
-            overrides: std::collections::BTreeMap::from([(key.clone(), value.clone())]),
-        },
-        ServiceAction::Unset { service, key } => Request::SetServiceOverrides {
-            service: service.clone(),
-            overrides: std::collections::BTreeMap::from([(key.clone(), String::new())]),
-        },
-        ServiceAction::Overrides { service } => Request::ServiceOverrides {
-            service: service.clone(),
-        },
-    }
-}
-
-/// Validate a `orcker service set|unset` override client-side so a bad argument
-/// fails before connect, then map it like every other service action. The
-/// pre-flight lives here because [`service_request`] is infallible; the daemon
-/// re-validates (it is the authority) and refuses the same cases.
-fn service_override_to_request(action: &ServiceAction) -> Result<Request, ClientError> {
-    let (service, key, value) = match action {
-        ServiceAction::Set {
-            service,
-            key,
-            value,
-        } => (service, key, Some(value.as_str())),
-        ServiceAction::Unset { service, key } => (service, key, None),
-        other => return Ok(service_request(other)),
-    };
-    let type_id = service
-        .split_once(':')
-        .map_or(service.as_str(), |(ty, _)| ty);
-    let Some(dialect) = orcker_core::service_directives::dialect_for(type_id) else {
-        return Err(ClientError::Usage(format!(
-            "{service} does not support configuration overrides"
-        )));
-    };
-    orcker_core::service_directives::validate_name(key)
-        .map_err(|e| ClientError::Usage(e.to_string()))?;
-    if let Some(hint) = orcker_core::service_directives::reserved(dialect, key) {
-        return Err(ClientError::Usage(format!(
-            "{key} is managed by Orcker: {hint}"
-        )));
-    }
-    if let Some(v) = value {
-        orcker_core::service_directives::validate_value(dialect, v)
-            .map_err(|e| ClientError::Usage(e.to_string()))?;
-    }
-    Ok(service_request(action))
 }
 
 /// Map a `orcker domain <action>` to its wire request, validating the target name
@@ -602,173 +333,6 @@ fn tunnel_request(action: &TunnelAction) -> Request {
     }
 }
 
-fn db_request(action: &DbAction) -> Request {
-    match action {
-        DbAction::List { service } => Request::ListDatabases {
-            service: service.clone(),
-        },
-        DbAction::Create { service, name } => Request::CreateDatabase {
-            service: service.clone(),
-            name: name.clone(),
-        },
-        DbAction::Drop { service, name } => Request::DropDatabase {
-            service: service.clone(),
-            name: name.clone(),
-        },
-        DbAction::Backup {
-            service,
-            name,
-            path,
-        } => Request::BackupDatabase {
-            service: service.clone(),
-            name: name.clone(),
-            path: path.clone(),
-        },
-        DbAction::Restore {
-            service,
-            name,
-            path,
-        } => Request::RestoreDatabase {
-            service: service.clone(),
-            name: name.clone(),
-            path: path.clone(),
-        },
-    }
-}
-
-fn parse_php(s: &str) -> Result<PhpVersion, ClientError> {
-    s.parse::<PhpVersion>()
-        .map_err(|e| ClientError::Usage(format!("invalid PHP version {s:?}: {e}")))
-}
-
-/// Map a `orcker php ext` action to its wire request, validating the version and
-/// (for `add`) the name/path client-side so a bad argument fails before connect.
-fn php_ext_to_request(action: &crate::cli::PhpExtAction) -> Result<Request, ClientError> {
-    use crate::cli::PhpExtAction;
-    Ok(match action {
-        PhpExtAction::Add {
-            version,
-            path,
-            zend,
-            name,
-        } => {
-            let v = parse_php(version)?;
-            let path_str = path
-                .to_str()
-                .ok_or_else(|| ClientError::Usage("extension path must be valid UTF-8".to_owned()))?
-                .to_owned();
-            let derived = name
-                .clone()
-                .or_else(|| orcker_core::php_extensions::default_name_from_path(&path_str))
-                .unwrap_or_default();
-            orcker_core::php_extensions::validate_entry(&derived, &path_str, *zend)
-                .map_err(|e| ClientError::Usage(e.to_string()))?;
-            Request::AddPhpExtension {
-                version: v,
-                path: path_str,
-                name: name.clone(),
-                zend: *zend,
-            }
-        }
-        PhpExtAction::Remove { version, name } => Request::RemovePhpExtension {
-            version: parse_php(version)?,
-            name: name.clone(),
-        },
-        PhpExtAction::List => Request::ListPhpExtensions,
-    })
-}
-
-/// Map a `orcker php ini` action to its wire request, validating the version,
-/// directive name, and value client-side so a bad argument fails before
-/// connect. The daemon re-validates (it is the authority).
-fn php_ini_to_request(action: &crate::cli::PhpIniAction) -> Result<Request, ClientError> {
-    use crate::cli::PhpIniAction;
-    let validate_directive = |name: &str, value: Option<&str>| -> Result<(), ClientError> {
-        orcker_core::php_directives::validate_name(name)
-            .map_err(|e| ClientError::Usage(e.to_string()))?;
-        if let Some(hint) = orcker_core::php_directives::reserved(name) {
-            return Err(ClientError::Usage(format!(
-                "{name} is managed by Orcker: {hint}"
-            )));
-        }
-        if let Some(v) = value {
-            orcker_core::php_directives::validate_value(v)
-                .map_err(|e| ClientError::Usage(e.to_string()))?;
-        }
-        Ok(())
-    };
-    Ok(match action {
-        PhpIniAction::Set {
-            version,
-            name,
-            value,
-        } => {
-            let v = parse_php(version)?;
-            validate_directive(name, Some(value))?;
-            Request::SetPhpDirectives {
-                version: v,
-                directives: std::collections::BTreeMap::from([(name.clone(), value.clone())]),
-            }
-        }
-        PhpIniAction::Unset { version, name } => {
-            let v = parse_php(version)?;
-            validate_directive(name, None)?;
-            Request::SetPhpDirectives {
-                version: v,
-                directives: std::collections::BTreeMap::from([(name.clone(), String::new())]),
-            }
-        }
-        PhpIniAction::List => Request::ListPhp,
-    })
-}
-
-/// Map `orcker php pool` onto its request, validating the version, setting name,
-/// and value client-side so a bad argument fails before connect. The daemon
-/// re-validates (it is the authority).
-fn php_pool_to_request(action: &crate::cli::PhpPoolAction) -> Result<Request, ClientError> {
-    use crate::cli::PhpPoolAction;
-    Ok(match action {
-        PhpPoolAction::Set {
-            version,
-            name,
-            value,
-        } => {
-            let v = parse_php(version)?;
-            orcker_core::php_pool::validate_name(name)
-                .map_err(|e| ClientError::Usage(e.to_string()))?;
-            orcker_core::php_pool::validate_value(value)
-                .map_err(|e| ClientError::Usage(e.to_string()))?;
-            Request::SetPhpPoolSettings {
-                version: v,
-                settings: std::collections::BTreeMap::from([(name.clone(), value.clone())]),
-            }
-        }
-        PhpPoolAction::Unset { version, name } => {
-            let v = parse_php(version)?;
-            orcker_core::php_pool::validate_name(name)
-                .map_err(|e| ClientError::Usage(e.to_string()))?;
-            Request::SetPhpPoolSettings {
-                version: v,
-                settings: std::collections::BTreeMap::from([(name.clone(), String::new())]),
-            }
-        }
-        PhpPoolAction::List => Request::ListPhp,
-    })
-}
-
-/// The channel override for a self-update check, from the `--edge`/`--stable`
-/// flags (mutually exclusive at the clap layer). `None` = use the saved default.
-#[must_use]
-pub fn channel_from_flags(edge: bool, stable: bool) -> Option<Channel> {
-    if edge {
-        Some(Channel::Edge)
-    } else if stable {
-        Some(Channel::Stable)
-    } else {
-        None
-    }
-}
-
 /// A site's effective domain set + primary FQDN, derived from a [`SiteEntry`] and
 /// the configured `tld`. For an effectively-default site the daemon omits the
 /// domain fields, so the primary/domains are synthesized as `{name}.{tld}`.
@@ -860,64 +424,6 @@ pub fn render_domains(
     Rendered::ok(out)
 }
 
-/// Lowercase display name for a wire channel.
-fn channel_str(c: Channel) -> &'static str {
-    match c {
-        Channel::Edge => "edge",
-        _ => "stable",
-    }
-}
-
-/// Render the `orcker update` report: current version, both channel latests, the
-/// active channel, the availability status, and whether the figures are live or
-/// cached. Both channel latests are always shown (per the feature spec).
-#[allow(clippy::too_many_arguments)]
-fn format_update_status(
-    current: &str,
-    latest_stable: Option<&str>,
-    latest_edge: Option<&str>,
-    channel: Channel,
-    available: bool,
-    target: Option<&str>,
-    ahead_of_stable: bool,
-    source: UpdateSource,
-) -> String {
-    let unknown = "unknown";
-    let mut out = String::new();
-    let _ = writeln!(out, "Current:       {current}");
-    let _ = writeln!(out, "Latest stable: {}", latest_stable.unwrap_or(unknown));
-    let _ = writeln!(out, "Latest edge:   {}", latest_edge.unwrap_or(unknown));
-    let _ = writeln!(out, "Channel:       {}", channel_str(channel));
-    let status = match (available, target) {
-        (true, Some(t)) => format!("update available: {t}"),
-        _ if ahead_of_stable => "up to date (on a pre-release ahead of stable)".to_owned(),
-        _ => "up to date".to_owned(),
-    };
-    let _ = writeln!(out, "Status:        {status}");
-    let src = match source {
-        UpdateSource::Cached => "cached (offline - last known values)",
-        _ => "live",
-    };
-    let _ = write!(out, "Source:        {src}");
-    out
-}
-
-/// Validate a PHP setting name (always) and value (when setting, not unsetting)
-/// client-side, so a typo is a clean usage error before connecting.
-fn validate_php_setting(setting: &str, value: Option<&str>) -> Result<(), ClientError> {
-    if !orcker_core::php_settings::is_supported(setting) {
-        return Err(ClientError::Usage(format!(
-            "unknown PHP setting {setting:?}; supported: {}",
-            orcker_core::php_settings::supported_names().join(", ")
-        )));
-    }
-    if let Some(v) = value {
-        orcker_core::php_settings::validate_value(setting, v)
-            .map_err(|e| ClientError::Usage(e.to_string()))?;
-    }
-    Ok(())
-}
-
 /// Validate a site name client-side by constructing a throwaway `Site` (the
 /// document root is irrelevant - only the name is checked).
 pub(crate) fn validate_name(name: &str) -> Result<(), ClientError> {
@@ -987,29 +493,6 @@ pub fn render(resp: &Response, json: bool) -> Rendered {
         Response::Ok => Rendered::ok("ok".to_owned()),
         Response::Sites { sites } => Rendered::ok(format_sites(sites)),
         Response::Parked { paths } => Rendered::ok(format_parked(paths)),
-        Response::PhpVersions {
-            installed,
-            default,
-            updates,
-            settings,
-            version_settings,
-            directives,
-            pool,
-        } => Rendered::ok(format_php_versions(
-            installed,
-            *default,
-            updates,
-            settings,
-            version_settings,
-            directives,
-            pool,
-        )),
-        Response::AvailablePhp {
-            available,
-            installed,
-            legacy,
-        } => Rendered::ok(format_available_php(available, installed, legacy)),
-        Response::PhpExtensions { by_version } => Rendered::ok(format_php_extensions(by_version)),
         Response::Error { code: c, message } => Rendered::err(format!("error ({c:?}): {message}")),
         Response::RemoteSetup {
             code: _,
@@ -1032,48 +515,6 @@ pub fn render(resp: &Response, json: bool) -> Rendered {
             stderr: String::new(),
             code,
         },
-        Response::Services { services } => Rendered::ok(format_services(services)),
-        Response::AvailableServices { services } => {
-            Rendered::ok(format_available_services(services))
-        }
-        Response::AddableServices { types } => Rendered::ok(
-            types
-                .iter()
-                .map(|t| {
-                    let installed = if t.already_installed {
-                        " (installed)"
-                    } else {
-                        ""
-                    };
-                    format!("{} - {}{installed}", t.type_id, t.display_name)
-                })
-                .collect::<Vec<_>>()
-                .join("\n"),
-        ),
-        Response::ServiceInstanceId { id } => Rendered::ok(id.clone()),
-        Response::ServiceLogs { lines } => Rendered::ok(if lines.is_empty() {
-            "no log output".to_owned()
-        } else {
-            lines.join("\n")
-        }),
-        Response::ServiceOverrides { overrides } => Rendered::ok(if overrides.is_empty() {
-            "no overrides".to_owned()
-        } else {
-            overrides
-                .iter()
-                .map(|(k, v)| format!("{k} = {v}"))
-                .collect::<Vec<_>>()
-                .join("\n")
-        }),
-        Response::Databases { databases } => Rendered::ok(if databases.is_empty() {
-            "no databases".to_owned()
-        } else {
-            databases
-                .iter()
-                .map(|d| d.name.as_str())
-                .collect::<Vec<_>>()
-                .join("\n")
-        }),
         Response::Mails { mails } => Rendered::ok(format_mails(mails)),
         Response::Mail { mail } => Rendered::ok(format_mail(mail)),
         Response::Tools { tools } => Rendered::ok(format_tools(tools)),
@@ -1321,15 +762,6 @@ fn format_remote_setup(url: &str, script_sha256: &str, expires_in_secs: u64) -> 
     )
 }
 
-fn format_service_state(s: ServiceRunState) -> &'static str {
-    match s {
-        ServiceRunState::Running => "running",
-        ServiceRunState::Stopped => "stopped",
-        ServiceRunState::Failed => "failed",
-        _ => "unknown",
-    }
-}
-
 /// Flatten tab/CR/LF in a value so a folded or multi-line mail header can't
 /// break the tab-separated `orcker mail list` table (the `--json` path needs no
 /// such treatment - serde already escapes control bytes).
@@ -1366,39 +798,6 @@ fn format_mail(mail: &orcker_ipc::MailDetail) -> String {
         (Some(text), _) => out.push_str(text),
         (None, Some(_)) => out.push_str("(HTML-only message - open it in the GUI viewer)"),
         (None, None) => out.push_str("(empty message)"),
-    }
-    out
-}
-
-fn format_services(services: &[ServiceStatus]) -> String {
-    if services.is_empty() {
-        return "no services".to_owned();
-    }
-    let mut out = String::from("SERVICE\tSTATE\tPORT\tVERSION\tENABLED\tINSTALLED");
-    for s in services {
-        if s.installed_versions.is_empty() {
-            let _ = write!(
-                out,
-                "\n{}\tnot installed\t-\t-\t{}\t-",
-                s.service, s.enabled
-            );
-            continue;
-        }
-        let version = s
-            .selected_version
-            .as_deref()
-            .or_else(|| s.installed_versions.last().map(String::as_str))
-            .unwrap_or("-");
-        let _ = write!(
-            out,
-            "\n{}\t{}\t{}\t{}\t{}\t{}",
-            s.service,
-            format_service_state(s.state),
-            s.port,
-            version,
-            s.enabled,
-            s.installed_versions.join(",")
-        );
     }
     out
 }
@@ -1479,161 +878,6 @@ fn format_named_tunnels(
         }
     }
     out
-}
-
-fn format_available_services(services: &[ServiceAvailability]) -> String {
-    if services.is_empty() {
-        return "no services available".to_owned();
-    }
-    let mut out = String::from("SERVICE\tAVAILABLE\tINSTALLED");
-    for s in services {
-        let available = if s.available.is_empty() {
-            "-".to_owned()
-        } else {
-            s.available.join(",")
-        };
-        let installed = if s.installed.is_empty() {
-            "-".to_owned()
-        } else {
-            s.installed.join(",")
-        };
-        let _ = write!(out, "\n{}\t{}\t{}", s.service, available, installed);
-    }
-    out
-}
-
-fn format_php_versions(
-    installed: &[PhpVersion],
-    default: PhpVersion,
-    updates: &[orcker_ipc::PhpUpdate],
-    settings: &std::collections::BTreeMap<String, String>,
-    version_settings: &std::collections::BTreeMap<
-        PhpVersion,
-        std::collections::BTreeMap<String, String>,
-    >,
-    directives: &std::collections::BTreeMap<PhpVersion, std::collections::BTreeMap<String, String>>,
-    pool: &std::collections::BTreeMap<PhpVersion, std::collections::BTreeMap<String, String>>,
-) -> String {
-    let versions = if installed.is_empty() {
-        format!("no PHP versions installed (default: {default}) - `orcker install php {default}`")
-    } else {
-        installed
-            .iter()
-            .map(|v| {
-                let mut line = if *v == default {
-                    format!("{v} (default)")
-                } else {
-                    v.to_string()
-                };
-                if let Some(u) = updates.iter().find(|u| u.version == *v) {
-                    let _ = write!(line, " - update available: {} → {}", u.installed, u.latest);
-                }
-                line
-            })
-            .collect::<Vec<_>>()
-            .join("\n")
-    };
-    let mut out = versions;
-    if !settings.is_empty() {
-        out.push_str("\n\nsettings:");
-        for (k, v) in settings {
-            let _ = write!(out, "\n  {k} = {v}");
-        }
-    }
-    for v in installed {
-        let overrides = version_settings.get(v);
-        let dirs = directives.get(v);
-        let _ = write!(out, "\n\nPHP {v}:");
-        if let Some(map) = overrides {
-            for (k, val) in map {
-                let _ = write!(
-                    out,
-                    "\n  {k} = {val}  (overrides {})",
-                    global_of(settings, k)
-                );
-            }
-        }
-        if let Some(map) = dirs {
-            for (k, val) in map {
-                let _ = write!(out, "\n  {k} = {val}");
-            }
-        }
-        let default = orcker_core::php_pool::DEFAULT_MAX_CHILDREN;
-        match orcker_core::php_pool::override_max_children(pool.get(v)) {
-            Some(n) => {
-                let _ = write!(
-                    out,
-                    "\n  pm.max_children = {n}  (overrides default {default})"
-                );
-            }
-            None => {
-                let _ = write!(out, "\n  pm.max_children = {default}  (default)");
-            }
-        }
-    }
-    out
-}
-
-/// The global value a per-version override shadows, for display; "PHP default"
-/// when the setting isn't set globally.
-fn global_of(settings: &std::collections::BTreeMap<String, String>, key: &str) -> String {
-    settings
-        .get(key)
-        .map_or_else(|| "PHP default".to_owned(), |v| format!("global {v}"))
-}
-
-/// Render the installable versions, tagging the ones already installed. Legacy
-/// (< 8.2) versions, when offered, are listed in a separate, clearly-warned
-/// section below the supported ones.
-fn format_available_php(
-    available: &[PhpVersion],
-    installed: &[PhpVersion],
-    legacy: &[PhpVersion],
-) -> String {
-    if available.is_empty() && legacy.is_empty() {
-        return "no installable PHP versions found for this platform".to_owned();
-    }
-    let tag = |v: &PhpVersion| {
-        if installed.contains(v) {
-            format!("{v} (installed)")
-        } else {
-            v.to_string()
-        }
-    };
-    let mut out = available.iter().map(&tag).collect::<Vec<_>>().join("\n");
-    if !legacy.is_empty() {
-        if !out.is_empty() {
-            out.push_str("\n\n");
-        }
-        out.push_str("Legacy (out of support - no coverage, no dumps, cannot be default):\n");
-        out.push_str(&legacy.iter().map(&tag).collect::<Vec<_>>().join("\n"));
-    }
-    out
-}
-
-/// Render the custom-extension registry, grouped by version, tagging any entry
-/// whose `.so` is missing on disk.
-fn format_php_extensions(
-    by_version: &std::collections::BTreeMap<PhpVersion, Vec<orcker_ipc::PhpExtInfo>>,
-) -> String {
-    use std::fmt::Write as _;
-    if by_version.is_empty() {
-        return "no custom PHP extensions registered".to_owned();
-    }
-    let mut out = String::new();
-    for (v, exts) in by_version {
-        let _ = writeln!(out, "PHP {v}:");
-        for e in exts {
-            let kind = if e.zend {
-                "zend_extension"
-            } else {
-                "extension"
-            };
-            let missing = if e.present { "" } else { "  (missing!)" };
-            let _ = writeln!(out, "  {} [{kind}] {}{missing}", e.name, e.path);
-        }
-    }
-    out.trim_end().to_owned()
 }
 
 /// Render a [`StatusReport`] as a human-readable block.
@@ -1725,45 +969,7 @@ fn format_status(r: &StatusReport) -> String {
         r.sites.parked, r.sites.linked, r.sites.secured
     );
 
-    if r.php.is_empty() {
-        let _ = write!(s, "\nphp       none installed");
-        return s;
-    }
-    let _ = write!(s, "\nphp");
-    for p in &r.php {
-        let _ = write!(s, "{}", format_php_pool_line(p, r.default_php));
-    }
     s
-}
-
-/// Render one PHP pool's status line (leading `"\n  "`), used by [`format_status`].
-fn format_php_pool_line(p: &PhpPoolStatus, default_php: PhpVersion) -> String {
-    use std::fmt::Write;
-    let default = if p.version == default_php {
-        " (default)"
-    } else {
-        ""
-    };
-    let state = match p.state {
-        PoolRunState::Running => "running",
-        PoolRunState::Stopped => "stopped",
-        PoolRunState::Failed => "failed",
-        _ => "?",
-    };
-    let mut line = format!("\n  {}{default}  {state}", p.version);
-    if let Some(pid) = p.pid {
-        let _ = write!(line, "  pid {pid}");
-    }
-    if let Some(listen) = &p.listen {
-        let _ = write!(line, "  {listen}");
-    }
-    if let Some(rss) = p.rss_bytes {
-        let _ = write!(line, "  rss {}", fmt_bytes(rss));
-    }
-    if let Some(update) = &p.update_available {
-        let _ = write!(line, "  update→{update}");
-    }
-    line
 }
 
 /// Render the doctor findings as ✓/⚠/✗ lines with remedies.
@@ -1894,6 +1100,60 @@ fn fmt_bytes(b: u64) -> String {
     format!("{mib_whole}.{mib_tenths} MiB")
 }
 
+/// The channel override implied by the `--edge` / `--stable` flags, or `None`
+/// when neither is set and the saved preference applies.
+pub fn channel_from_flags(edge: bool, stable: bool) -> Option<Channel> {
+    if edge {
+        Some(Channel::Edge)
+    } else if stable {
+        Some(Channel::Stable)
+    } else {
+        None
+    }
+}
+
+/// Lowercase display name for a wire channel.
+fn channel_str(c: Channel) -> &'static str {
+    match c {
+        Channel::Edge => "edge",
+        _ => "stable",
+    }
+}
+
+/// Render the `orcker update` report: current version, both channel latests, the
+/// active channel, the availability status, and whether the figures are live or
+/// cached. Both channel latests are always shown (per the feature spec).
+#[allow(clippy::too_many_arguments)]
+fn format_update_status(
+    current: &str,
+    latest_stable: Option<&str>,
+    latest_edge: Option<&str>,
+    channel: Channel,
+    available: bool,
+    target: Option<&str>,
+    ahead_of_stable: bool,
+    source: UpdateSource,
+) -> String {
+    let unknown = "unknown";
+    let mut out = String::new();
+    let _ = writeln!(out, "Current:       {current}");
+    let _ = writeln!(out, "Latest stable: {}", latest_stable.unwrap_or(unknown));
+    let _ = writeln!(out, "Latest edge:   {}", latest_edge.unwrap_or(unknown));
+    let _ = writeln!(out, "Channel:       {}", channel_str(channel));
+    let status = match (available, target) {
+        (true, Some(t)) => format!("update available: {t}"),
+        _ if ahead_of_stable => "up to date (on a pre-release ahead of stable)".to_owned(),
+        _ => "up to date".to_owned(),
+    };
+    let _ = writeln!(out, "Status:        {status}");
+    let src = match source {
+        UpdateSource::Cached => "cached (offline - last known values)",
+        _ => "live",
+    };
+    let _ = write!(out, "Source:        {src}");
+    out
+}
+
 #[cfg(test)]
 #[allow(
     clippy::unwrap_used,
@@ -1904,7 +1164,6 @@ fn fmt_bytes(b: u64) -> String {
 mod tests {
     use super::*;
     use orcker_ipc::ErrorCode;
-    use std::path::PathBuf;
 
     #[test]
     fn maps_lan_and_remote_setup_commands() {
@@ -1972,581 +1231,6 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::too_many_lines)]
-    fn maps_each_command_to_its_request() {
-        assert_eq!(to_request(&Command::Ping).unwrap(), Request::Ping);
-        assert_eq!(to_request(&Command::Sites).unwrap(), Request::ListSites);
-        assert_eq!(
-            to_request(&Command::Park {
-                path: PathBuf::from("/srv/sites")
-            })
-            .unwrap(),
-            Request::Park {
-                path: PathBuf::from("/srv/sites")
-            }
-        );
-        assert_eq!(
-            to_request(&Command::Unlink { name: "foo".into() }).unwrap(),
-            Request::Unlink { name: "foo".into() }
-        );
-        assert_eq!(
-            to_request(&Command::Unpark {
-                path: PathBuf::from("/srv/sites")
-            })
-            .unwrap(),
-            Request::Unpark {
-                path: "/srv/sites".into()
-            }
-        );
-        assert_eq!(
-            to_request(&Command::List {
-                target: crate::cli::ListTarget::Parked
-            })
-            .unwrap(),
-            Request::ListParked
-        );
-        assert_eq!(
-            to_request(&Command::Use {
-                first: "foo".into(),
-                version: Some("8.4".into())
-            })
-            .unwrap(),
-            Request::SetPhp {
-                name: "foo".into(),
-                version: PhpVersion::new(8, 4)
-            }
-        );
-        assert_eq!(
-            to_request(&Command::Use {
-                first: "8.5".into(),
-                version: None
-            })
-            .unwrap(),
-            Request::SetDefaultPhp {
-                version: PhpVersion::new(8, 5)
-            }
-        );
-        assert_eq!(
-            to_request(&Command::Set {
-                target: crate::cli::SetTarget::Php {
-                    setting: "memory_limit".into(),
-                    value: "512M".into(),
-                    only: None
-                }
-            })
-            .unwrap(),
-            Request::SetPhpSettings {
-                settings: std::collections::BTreeMap::from([(
-                    "memory_limit".to_string(),
-                    "512M".to_string()
-                )])
-            }
-        );
-        assert_eq!(
-            to_request(&Command::Set {
-                target: crate::cli::SetTarget::Php {
-                    setting: "memory_limit".into(),
-                    value: "1G".into(),
-                    only: Some("8.3".into())
-                }
-            })
-            .unwrap(),
-            Request::SetPhpVersionSettings {
-                version: PhpVersion::new(8, 3),
-                settings: std::collections::BTreeMap::from([(
-                    "memory_limit".to_string(),
-                    "1G".to_string()
-                )])
-            }
-        );
-        assert_eq!(
-            to_request(&Command::Unset {
-                target: crate::cli::UnsetTarget::Php {
-                    setting: "memory_limit".into(),
-                    only: None
-                }
-            })
-            .unwrap(),
-            Request::SetPhpSettings {
-                settings: std::collections::BTreeMap::from([(
-                    "memory_limit".to_string(),
-                    String::new()
-                )])
-            }
-        );
-        assert_eq!(
-            to_request(&Command::Unset {
-                target: crate::cli::UnsetTarget::Php {
-                    setting: "memory_limit".into(),
-                    only: Some("8.3".into())
-                }
-            })
-            .unwrap(),
-            Request::SetPhpVersionSettings {
-                version: PhpVersion::new(8, 3),
-                settings: std::collections::BTreeMap::from([(
-                    "memory_limit".to_string(),
-                    String::new()
-                )])
-            }
-        );
-        assert_eq!(
-            to_request(&Command::Install {
-                target: crate::cli::InstallTarget::Php {
-                    version: "8.5".into(),
-                    legacy: false,
-                }
-            })
-            .unwrap(),
-            Request::InstallPhp {
-                version: PhpVersion::new(8, 5),
-                confirm_legacy: false,
-            }
-        );
-        assert_eq!(
-            to_request(&Command::Restart {
-                target: crate::cli::RestartTarget::Php {
-                    version: Some("8.5".into())
-                }
-            })
-            .unwrap(),
-            Request::RestartPhp {
-                version: PhpVersion::new(8, 5)
-            }
-        );
-        assert_eq!(
-            to_request(&Command::Restart {
-                target: crate::cli::RestartTarget::Php { version: None }
-            })
-            .unwrap(),
-            Request::RestartAllPhp
-        );
-        assert_eq!(
-            to_request(&Command::Restart {
-                target: crate::cli::RestartTarget::Daemon
-            })
-            .unwrap(),
-            Request::RestartDaemon
-        );
-        assert_eq!(
-            to_request(&Command::Uninstall {
-                target: Some(crate::cli::UninstallTarget::Php {
-                    version: "8.5".into()
-                }),
-                yes: false
-            })
-            .unwrap(),
-            Request::UninstallPhp {
-                version: PhpVersion::new(8, 5)
-            }
-        );
-        assert_eq!(
-            to_request(&Command::List {
-                target: crate::cli::ListTarget::Php {
-                    check: false,
-                    available: false
-                }
-            })
-            .unwrap(),
-            Request::ListPhp
-        );
-        assert_eq!(to_request(&Command::Tools).unwrap(), Request::ListTools);
-        assert_eq!(
-            to_request(&Command::Install {
-                target: crate::cli::InstallTarget::Tool { id: "node".into() }
-            })
-            .unwrap(),
-            Request::InstallTool {
-                tool: "node".into()
-            }
-        );
-        assert_eq!(
-            to_request(&Command::Uninstall {
-                target: Some(crate::cli::UninstallTarget::Tool { id: "bun".into() }),
-                yes: false
-            })
-            .unwrap(),
-            Request::UninstallTool { tool: "bun".into() }
-        );
-        assert_eq!(
-            to_request(&Command::List {
-                target: crate::cli::ListTarget::Php {
-                    check: true,
-                    available: false
-                }
-            })
-            .unwrap(),
-            Request::CheckPhpUpdates
-        );
-        assert_eq!(
-            to_request(&Command::List {
-                target: crate::cli::ListTarget::Php {
-                    check: false,
-                    available: true
-                }
-            })
-            .unwrap(),
-            Request::AvailablePhp
-        );
-        assert_eq!(
-            to_request(&Command::List {
-                target: crate::cli::ListTarget::Php {
-                    check: true,
-                    available: true
-                }
-            })
-            .unwrap(),
-            Request::AvailablePhp
-        );
-        assert_eq!(
-            to_request(&Command::Update {
-                target: Some(crate::cli::UpdateTarget::Php { version: None }),
-                yes: false,
-                edge: false,
-                stable: false,
-                force: false,
-            })
-            .unwrap(),
-            Request::UpdatePhp { version: None }
-        );
-        assert_eq!(
-            to_request(&Command::Update {
-                target: Some(crate::cli::UpdateTarget::Php {
-                    version: Some("8.5".into())
-                }),
-                yes: false,
-                edge: false,
-                stable: false,
-                force: false,
-            })
-            .unwrap(),
-            Request::UpdatePhp {
-                version: Some(PhpVersion::new(8, 5))
-            }
-        );
-        assert_eq!(
-            to_request(&Command::Update {
-                target: None,
-                yes: false,
-                edge: false,
-                stable: false,
-                force: false,
-            })
-            .unwrap(),
-            Request::CheckUpdate { channel: None }
-        );
-        assert_eq!(
-            to_request(&Command::Update {
-                target: None,
-                yes: false,
-                edge: true,
-                stable: false,
-                force: false,
-            })
-            .unwrap(),
-            Request::CheckUpdate {
-                channel: Some(Channel::Edge)
-            }
-        );
-        assert!(matches!(
-            to_request(&Command::Update {
-                target: Some(crate::cli::UpdateTarget::Php { version: None }),
-                yes: true,
-                edge: false,
-                stable: false,
-                force: false,
-            }),
-            Err(ClientError::Usage(_))
-        ));
-        assert_eq!(
-            to_request(&Command::Secure { name: "foo".into() }).unwrap(),
-            Request::SetSecure {
-                name: "foo".into(),
-                secure: true
-            }
-        );
-        assert_eq!(
-            to_request(&Command::Unsecure { name: "foo".into() }).unwrap(),
-            Request::SetSecure {
-                name: "foo".into(),
-                secure: false
-            }
-        );
-        assert_eq!(
-            to_request(&Command::FrontController {
-                name: "foo".into(),
-                state: crate::cli::OnOff::On,
-            })
-            .unwrap(),
-            Request::SetFrontController {
-                name: "foo".into(),
-                enabled: true
-            }
-        );
-        assert_eq!(
-            to_request(&Command::FrontController {
-                name: "foo".into(),
-                state: crate::cli::OnOff::Off,
-            })
-            .unwrap(),
-            Request::SetFrontController {
-                name: "foo".into(),
-                enabled: false
-            }
-        );
-        assert_eq!(
-            to_request(&Command::Root {
-                name: "foo".into(),
-                path: Some("public".into()),
-                auto: false,
-            })
-            .unwrap(),
-            Request::SetWebRoot {
-                name: "foo".into(),
-                path: Some("public".into()),
-            }
-        );
-        assert_eq!(
-            to_request(&Command::Root {
-                name: "foo".into(),
-                path: Some("public".into()),
-                auto: true,
-            })
-            .unwrap(),
-            Request::SetWebRoot {
-                name: "foo".into(),
-                path: None,
-            }
-        );
-        assert_eq!(
-            to_request(&Command::Root {
-                name: "foo".into(),
-                path: None,
-                auto: false,
-            })
-            .unwrap(),
-            Request::SetWebRoot {
-                name: "foo".into(),
-                path: None,
-            }
-        );
-    }
-
-    #[test]
-    fn rejects_bad_version_and_name_before_connect() {
-        match to_request(&Command::Use {
-            first: "foo".into(),
-            version: Some("not-a-version".into()),
-        }) {
-            Err(ClientError::Usage(_)) => {}
-            other => panic!("expected Usage error, got {other:?}"),
-        }
-        match to_request(&Command::Use {
-            first: "not-a-version".into(),
-            version: None,
-        }) {
-            Err(ClientError::Usage(_)) => {}
-            other => panic!("expected Usage error, got {other:?}"),
-        }
-        match to_request(&Command::Unlink {
-            name: "bad/name".into(),
-        }) {
-            Err(ClientError::Usage(_)) => {}
-            other => panic!("expected Usage error, got {other:?}"),
-        }
-        match to_request(&Command::Secure {
-            name: "bad name".into(),
-        }) {
-            Err(ClientError::Usage(_)) => {}
-            other => panic!("expected Usage error, got {other:?}"),
-        }
-        match to_request(&Command::Set {
-            target: crate::cli::SetTarget::Php {
-                setting: "not_a_setting".into(),
-                value: "1".into(),
-                only: None,
-            },
-        }) {
-            Err(ClientError::Usage(_)) => {}
-            other => panic!("expected Usage error, got {other:?}"),
-        }
-        match to_request(&Command::Set {
-            target: crate::cli::SetTarget::Php {
-                setting: "memory_limit".into(),
-                value: "bogus".into(),
-                only: None,
-            },
-        }) {
-            Err(ClientError::Usage(_)) => {}
-            other => panic!("expected Usage error, got {other:?}"),
-        }
-        match to_request(&Command::Set {
-            target: crate::cli::SetTarget::Php {
-                setting: "memory_limit".into(),
-                value: "1G".into(),
-                only: Some("bogus".into()),
-            },
-        }) {
-            Err(ClientError::Usage(_)) => {}
-            other => panic!("expected Usage error, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn php_ini_actions_map_and_validate() {
-        assert_eq!(
-            to_request(&Command::Php {
-                action: crate::cli::PhpAction::Ini {
-                    action: crate::cli::PhpIniAction::Set {
-                        version: "8.3".into(),
-                        name: "xdebug.mode".into(),
-                        value: "debug".into(),
-                    }
-                }
-            })
-            .unwrap(),
-            Request::SetPhpDirectives {
-                version: PhpVersion::new(8, 3),
-                directives: std::collections::BTreeMap::from([(
-                    "xdebug.mode".to_string(),
-                    "debug".to_string()
-                )])
-            }
-        );
-        assert_eq!(
-            to_request(&Command::Php {
-                action: crate::cli::PhpAction::Ini {
-                    action: crate::cli::PhpIniAction::Unset {
-                        version: "8.3".into(),
-                        name: "xdebug.mode".into(),
-                    }
-                }
-            })
-            .unwrap(),
-            Request::SetPhpDirectives {
-                version: PhpVersion::new(8, 3),
-                directives: std::collections::BTreeMap::from([(
-                    "xdebug.mode".to_string(),
-                    String::new()
-                )])
-            }
-        );
-        assert_eq!(
-            to_request(&Command::Php {
-                action: crate::cli::PhpAction::Ini {
-                    action: crate::cli::PhpIniAction::List
-                }
-            })
-            .unwrap(),
-            Request::ListPhp
-        );
-
-        for (name, value) in [
-            ("memory_limit", "1G"),
-            ("extension", "/evil.so"),
-            ("1bad", "x"),
-            ("xdebug.mode", "debug; evil"),
-        ] {
-            match to_request(&Command::Php {
-                action: crate::cli::PhpAction::Ini {
-                    action: crate::cli::PhpIniAction::Set {
-                        version: "8.3".into(),
-                        name: name.into(),
-                        value: value.into(),
-                    },
-                },
-            }) {
-                Err(ClientError::Usage(_)) => {}
-                other => panic!("expected Usage error for {name}={value}, got {other:?}"),
-            }
-        }
-    }
-
-    #[test]
-    fn php_pool_actions_map_and_validate() {
-        assert_eq!(
-            to_request(&Command::Php {
-                action: crate::cli::PhpAction::Pool {
-                    action: crate::cli::PhpPoolAction::Set {
-                        version: "8.3".into(),
-                        name: "max_children".into(),
-                        value: "32".into(),
-                    }
-                }
-            })
-            .unwrap(),
-            Request::SetPhpPoolSettings {
-                version: PhpVersion::new(8, 3),
-                settings: std::collections::BTreeMap::from([(
-                    "max_children".to_string(),
-                    "32".to_string()
-                )])
-            }
-        );
-        assert_eq!(
-            to_request(&Command::Php {
-                action: crate::cli::PhpAction::Pool {
-                    action: crate::cli::PhpPoolAction::Unset {
-                        version: "8.3".into(),
-                        name: "max_children".into(),
-                    }
-                }
-            })
-            .unwrap(),
-            Request::SetPhpPoolSettings {
-                version: PhpVersion::new(8, 3),
-                settings: std::collections::BTreeMap::from([(
-                    "max_children".to_string(),
-                    String::new()
-                )])
-            }
-        );
-        assert_eq!(
-            to_request(&Command::Php {
-                action: crate::cli::PhpAction::Pool {
-                    action: crate::cli::PhpPoolAction::List
-                }
-            })
-            .unwrap(),
-            Request::ListPhp
-        );
-
-        for (name, value) in [
-            ("max_children", "0"),
-            ("max_children", "1025"),
-            ("max_children", "abc"),
-            ("max_children", ""),
-            ("start_servers", "4"),
-            ("pm.max_children", "32"),
-        ] {
-            match to_request(&Command::Php {
-                action: crate::cli::PhpAction::Pool {
-                    action: crate::cli::PhpPoolAction::Set {
-                        version: "8.3".into(),
-                        name: name.into(),
-                        value: value.into(),
-                    },
-                },
-            }) {
-                Err(ClientError::Usage(_)) => {}
-                other => panic!("expected Usage error for {name}={value}, got {other:?}"),
-            }
-        }
-
-        match to_request(&Command::Php {
-            action: crate::cli::PhpAction::Pool {
-                action: crate::cli::PhpPoolAction::Unset {
-                    version: "8.3".into(),
-                    name: "start_servers".into(),
-                },
-            },
-        }) {
-            Err(ClientError::Usage(_)) => {}
-            other => panic!("expected Usage error for an unknown unset name, got {other:?}"),
-        }
-    }
-
-    #[test]
     fn renders_update_status_with_all_rows() {
         let resp = Response::UpdateStatus {
             current: "2.0.0".into(),
@@ -2591,114 +1275,6 @@ mod tests {
     }
 
     #[test]
-    fn renders_human_responses_and_exit_codes() {
-        assert_eq!(render(&Response::Pong, false).stdout, "pong");
-        assert_eq!(render(&Response::Pong, false).code, 0);
-        assert_eq!(render(&Response::Ok, false).code, 0);
-
-        let empty = render(&Response::Sites { sites: vec![] }, false);
-        assert_eq!(empty.stdout, "no sites");
-        assert_eq!(empty.code, 0);
-
-        let tools = render(
-            &Response::Tools {
-                tools: vec![
-                    ToolStatus {
-                        id: "node".into(),
-                        display_name: "Node.js".into(),
-                        installed: true,
-                        version: Some("v24.17.0".into()),
-                        binaries: vec!["node".into(), "npm".into(), "npx".into()],
-                        external: false,
-                        external_path: None,
-                    },
-                    ToolStatus {
-                        id: "bun".into(),
-                        display_name: "Bun".into(),
-                        installed: false,
-                        version: None,
-                        binaries: vec!["bun".into(), "bunx".into()],
-                        external: true,
-                        external_path: Some("/opt/homebrew/bin/bun".into()),
-                    },
-                ],
-            },
-            false,
-        );
-        assert!(tools.stdout.contains("node"));
-        assert!(tools.stdout.contains("v24.17.0"));
-        assert!(tools.stdout.contains("npm"));
-        assert!(tools.stdout.contains("external"));
-        assert!(tools.stdout.contains("/opt/homebrew/bin/bun"));
-        assert_eq!(tools.code, 0);
-
-        let site = Site::linked("foo", "/srv/foo", PhpVersion::new(8, 3)).unwrap();
-        let listed = render(
-            &Response::Sites {
-                sites: vec![SiteEntry {
-                    site,
-                    is_wordpress: false,
-                    primary_domain: None,
-                    domains: vec![],
-                    apex_shadowed_by: None,
-                    uses_front_controller: true,
-                    is_laravel: false,
-                }],
-            },
-            false,
-        );
-        assert!(listed.stdout.contains("foo"));
-        assert!(listed.stdout.contains("linked"));
-        assert!(listed.stdout.contains("8.3"));
-        assert!(
-            !listed.stdout.contains("WORDPRESS"),
-            "no WORDPRESS column when nothing listed is WordPress"
-        );
-        assert!(
-            listed.stdout.contains("FRONT-CTRL"),
-            "front-controller column header"
-        );
-        assert!(
-            listed.stdout.contains("index.php"),
-            "uses_front_controller=true renders as index.php"
-        );
-        assert_eq!(listed.code, 0);
-
-        let blog = Site::parked("blog", "/srv/blog", PhpVersion::new(8, 3)).unwrap();
-        let with_wp = render(
-            &Response::Sites {
-                sites: vec![SiteEntry {
-                    site: blog,
-                    is_wordpress: true,
-                    primary_domain: None,
-                    domains: vec![],
-                    apex_shadowed_by: None,
-                    uses_front_controller: false,
-                    is_laravel: false,
-                }],
-            },
-            false,
-        );
-        assert!(with_wp.stdout.contains("WORDPRESS"));
-        assert!(with_wp.stdout.contains("yes"));
-        assert!(
-            with_wp.stdout.contains("direct"),
-            "uses_front_controller=false renders as direct"
-        );
-
-        let err = render(
-            &Response::Error {
-                code: ErrorCode::NotFound,
-                message: "nope".into(),
-            },
-            false,
-        );
-        assert!(err.stdout.is_empty());
-        assert!(err.stderr.contains("nope"));
-        assert_eq!(err.code, 1);
-    }
-
-    #[test]
     fn renders_parked_folders() {
         let empty = render(&Response::Parked { paths: vec![] }, false);
         assert_eq!(empty.stdout, "no parked folders");
@@ -2716,333 +1292,6 @@ mod tests {
     }
 
     #[test]
-    fn renders_php_versions_marking_default() {
-        let r = render(
-            &Response::PhpVersions {
-                installed: vec![PhpVersion::new(8, 3), PhpVersion::new(8, 5)],
-                default: PhpVersion::new(8, 5),
-                updates: vec![orcker_ipc::PhpUpdate {
-                    version: PhpVersion::new(8, 3),
-                    installed: "8.3.6".into(),
-                    latest: "8.3.31".into(),
-                }],
-                settings: std::collections::BTreeMap::new(),
-                version_settings: Box::new(std::collections::BTreeMap::new()),
-                directives: Box::new(std::collections::BTreeMap::new()),
-                pool: Box::new(std::collections::BTreeMap::new()),
-            },
-            false,
-        );
-        assert_eq!(r.code, 0);
-        assert!(r.stdout.contains("8.5 (default)"));
-        assert!(!r.stdout.contains("8.3 (default)"));
-        assert!(r.stdout.contains("8.3 - update available: 8.3.6 → 8.3.31"));
-        assert!(!r.stdout.contains("8.5 - update available"));
-        assert!(!r.stdout.contains("settings:"));
-
-        let empty = render(
-            &Response::PhpVersions {
-                installed: vec![],
-                default: PhpVersion::new(8, 3),
-                updates: vec![],
-                settings: std::collections::BTreeMap::new(),
-                version_settings: Box::new(std::collections::BTreeMap::new()),
-                directives: Box::new(std::collections::BTreeMap::new()),
-                pool: Box::new(std::collections::BTreeMap::new()),
-            },
-            false,
-        );
-        assert!(empty.stdout.contains("no PHP versions installed"));
-    }
-
-    #[test]
-    fn renders_php_versions_with_per_version_overrides_and_directives() {
-        let v83 = PhpVersion::new(8, 3);
-        let r = render(
-            &Response::PhpVersions {
-                installed: vec![v83, PhpVersion::new(8, 5)],
-                default: PhpVersion::new(8, 5),
-                updates: vec![],
-                settings: std::collections::BTreeMap::from([(
-                    "memory_limit".to_string(),
-                    "512M".to_string(),
-                )]),
-                version_settings: Box::new(std::collections::BTreeMap::from([(
-                    v83,
-                    std::collections::BTreeMap::from([
-                        ("memory_limit".to_string(), "1G".to_string()),
-                        ("display_errors".to_string(), "Off".to_string()),
-                    ]),
-                )])),
-                directives: Box::new(std::collections::BTreeMap::from([(
-                    v83,
-                    std::collections::BTreeMap::from([(
-                        "xdebug.mode".to_string(),
-                        "debug".to_string(),
-                    )]),
-                )])),
-                pool: Box::new(std::collections::BTreeMap::from([(
-                    v83,
-                    std::collections::BTreeMap::from([(
-                        "max_children".to_string(),
-                        "32".to_string(),
-                    )]),
-                )])),
-            },
-            false,
-        );
-        assert_eq!(r.code, 0);
-        assert!(r.stdout.contains("PHP 8.3:"), "got: {}", r.stdout);
-        assert!(
-            r.stdout
-                .contains("memory_limit = 1G  (overrides global 512M)"),
-            "got: {}",
-            r.stdout
-        );
-        assert!(
-            r.stdout
-                .contains("display_errors = Off  (overrides PHP default)"),
-            "got: {}",
-            r.stdout
-        );
-        assert!(
-            r.stdout.contains("xdebug.mode = debug"),
-            "got: {}",
-            r.stdout
-        );
-        assert!(
-            r.stdout
-                .contains("pm.max_children = 32  (overrides default 16)"),
-            "got: {}",
-            r.stdout
-        );
-        assert!(r.stdout.contains("PHP 8.5:"), "got: {}", r.stdout);
-        assert!(
-            r.stdout.contains("pm.max_children = 16  (default)"),
-            "8.5 has no override, so it reports the default; got: {}",
-            r.stdout
-        );
-    }
-
-    #[test]
-    fn php_ext_add_maps_and_defaults_name() {
-        let req = to_request(&Command::Php {
-            action: crate::cli::PhpAction::Ext {
-                action: crate::cli::PhpExtAction::Add {
-                    version: "8.5".into(),
-                    path: "/opt/php/pecl/scrypt.so".into(),
-                    zend: false,
-                    name: None,
-                },
-            },
-        })
-        .unwrap();
-        assert_eq!(
-            req,
-            Request::AddPhpExtension {
-                version: PhpVersion::new(8, 5),
-                path: "/opt/php/pecl/scrypt.so".to_string(),
-                name: None,
-                zend: false,
-            }
-        );
-    }
-
-    #[test]
-    fn php_ext_add_rejects_non_absolute_path_client_side() {
-        let err = to_request(&Command::Php {
-            action: crate::cli::PhpAction::Ext {
-                action: crate::cli::PhpExtAction::Add {
-                    version: "8.5".into(),
-                    path: "relative/scrypt.so".into(),
-                    zend: false,
-                    name: None,
-                },
-            },
-        });
-        assert!(matches!(err, Err(ClientError::Usage(_))));
-    }
-
-    #[test]
-    fn php_ext_list_and_remove_map() {
-        assert_eq!(
-            to_request(&Command::Php {
-                action: crate::cli::PhpAction::Ext {
-                    action: crate::cli::PhpExtAction::List
-                }
-            })
-            .unwrap(),
-            Request::ListPhpExtensions
-        );
-        assert_eq!(
-            to_request(&Command::Php {
-                action: crate::cli::PhpAction::Ext {
-                    action: crate::cli::PhpExtAction::Remove {
-                        version: "8.5".into(),
-                        name: "scrypt".into(),
-                    }
-                }
-            })
-            .unwrap(),
-            Request::RemovePhpExtension {
-                version: PhpVersion::new(8, 5),
-                name: "scrypt".into(),
-            }
-        );
-    }
-
-    #[test]
-    fn renders_php_extensions_grouped_with_missing_flag() {
-        let r = render(
-            &Response::PhpExtensions {
-                by_version: std::collections::BTreeMap::from([(
-                    PhpVersion::new(8, 5),
-                    vec![
-                        orcker_ipc::PhpExtInfo {
-                            name: "scrypt".into(),
-                            path: "/a/scrypt.so".into(),
-                            zend: false,
-                            present: true,
-                        },
-                        orcker_ipc::PhpExtInfo {
-                            name: "xdebug".into(),
-                            path: "/a/xdebug.so".into(),
-                            zend: true,
-                            present: false,
-                        },
-                    ],
-                )]),
-            },
-            false,
-        );
-        assert_eq!(r.code, 0);
-        assert!(r.stdout.contains("PHP 8.5:"));
-        assert!(r.stdout.contains("scrypt [extension] /a/scrypt.so"));
-        assert!(r
-            .stdout
-            .contains("xdebug [zend_extension] /a/xdebug.so  (missing!)"));
-    }
-
-    #[test]
-    fn renders_empty_php_extensions() {
-        let r = render(
-            &Response::PhpExtensions {
-                by_version: std::collections::BTreeMap::new(),
-            },
-            false,
-        );
-        assert!(r.stdout.contains("no custom PHP extensions registered"));
-    }
-
-    #[test]
-    fn renders_php_settings_block() {
-        let r = render(
-            &Response::PhpVersions {
-                installed: vec![PhpVersion::new(8, 5)],
-                default: PhpVersion::new(8, 5),
-                updates: vec![],
-                settings: std::collections::BTreeMap::from([
-                    ("memory_limit".to_string(), "512M".to_string()),
-                    ("display_errors".to_string(), "On".to_string()),
-                ]),
-                version_settings: Box::new(std::collections::BTreeMap::new()),
-                directives: Box::new(std::collections::BTreeMap::new()),
-                pool: Box::new(std::collections::BTreeMap::new()),
-            },
-            false,
-        );
-        assert_eq!(r.code, 0);
-        assert!(r.stdout.contains("settings:"));
-        assert!(r.stdout.contains("memory_limit = 512M"));
-        assert!(r.stdout.contains("display_errors = On"));
-    }
-
-    #[test]
-    fn renders_available_php_tagging_installed() {
-        let r = render(
-            &Response::AvailablePhp {
-                available: vec![
-                    PhpVersion::new(8, 3),
-                    PhpVersion::new(8, 4),
-                    PhpVersion::new(8, 5),
-                ],
-                installed: vec![PhpVersion::new(8, 4)],
-                legacy: vec![],
-            },
-            false,
-        );
-        assert_eq!(r.code, 0);
-        assert!(r.stdout.contains("8.4 (installed)"));
-        assert!(r.stdout.contains("\n8.3") || r.stdout.starts_with("8.3"));
-        assert!(!r.stdout.contains("8.3 (installed)"));
-        assert!(!r.stdout.contains("8.5 (installed)"));
-        assert!(!r.stdout.contains("Legacy"), "no legacy section when empty");
-
-        let empty = render(
-            &Response::AvailablePhp {
-                available: vec![],
-                installed: vec![],
-                legacy: vec![],
-            },
-            false,
-        );
-        assert!(empty.stdout.contains("no installable PHP versions"));
-    }
-
-    #[test]
-    fn renders_available_php_legacy_section() {
-        let r = render(
-            &Response::AvailablePhp {
-                available: vec![PhpVersion::new(8, 4), PhpVersion::new(8, 5)],
-                installed: vec![PhpVersion::new(8, 1)],
-                legacy: vec![PhpVersion::new(7, 4), PhpVersion::new(8, 1)],
-            },
-            false,
-        );
-        assert_eq!(r.code, 0);
-        assert!(r.stdout.contains("Legacy (out of support"));
-        assert!(r.stdout.contains("7.4"));
-        assert!(r.stdout.contains("8.1 (installed)"));
-    }
-
-    #[test]
-    fn use_rejects_legacy_default() {
-        match to_request(&Command::Use {
-            first: "7.4".into(),
-            version: None,
-        }) {
-            Err(ClientError::Usage(msg)) => assert!(msg.contains("legacy")),
-            other => panic!("expected Usage error, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn install_legacy_requires_flag() {
-        match to_request(&Command::Install {
-            target: crate::cli::InstallTarget::Php {
-                version: "7.4".into(),
-                legacy: false,
-            },
-        }) {
-            Err(ClientError::Usage(msg)) => assert!(msg.contains("--legacy")),
-            other => panic!("expected Usage error, got {other:?}"),
-        }
-        assert_eq!(
-            to_request(&Command::Install {
-                target: crate::cli::InstallTarget::Php {
-                    version: "7.4".into(),
-                    legacy: true,
-                },
-            })
-            .unwrap(),
-            Request::InstallPhp {
-                version: PhpVersion::new(7, 4),
-                confirm_legacy: true,
-            }
-        );
-    }
-
-    #[test]
     fn maps_status_and_doctor_commands() {
         assert_eq!(to_request(&Command::Status).unwrap(), Request::Status);
         assert_eq!(
@@ -3056,68 +1305,6 @@ mod tests {
             .unwrap(),
             Request::DoctorFix
         );
-    }
-
-    fn sample_report() -> orcker_ipc::StatusReport {
-        orcker_ipc::StatusReport {
-            daemon_pid: 4242,
-            uptime_secs: 65,
-            daemon_rss_bytes: Some(12_000_000),
-            tld: "test".into(),
-            http: PortStatus {
-                requested: 80,
-                bound: 8080,
-                fell_back: true,
-            },
-            https: PortStatus {
-                requested: 443,
-                bound: 443,
-                fell_back: false,
-            },
-            dns_addr: "127.0.0.1:1053".parse().unwrap(),
-            ca: orcker_ipc::CaStatus {
-                path: "/x/ca.cert.pem".into(),
-                fingerprint: "ab".repeat(32),
-                trusted_system: Some(false),
-                php_trusts_ca: None,
-                browser_trust: None,
-            },
-            resolver_installed: None,
-            port_redirect: None,
-            foreign_web_listener: None,
-            resolver_backup: None,
-            default_php: PhpVersion::new(8, 5),
-            php: vec![orcker_ipc::PhpPoolStatus {
-                version: PhpVersion::new(8, 5),
-                installed_patch: Some("8.5.6".into()),
-                state: PoolRunState::Running,
-                pid: Some(99),
-                listen: Some("/run/fpm.sock".into()),
-                rss_bytes: Some(3_200_000),
-                update_available: None,
-            }],
-            sites: orcker_ipc::SiteCounts {
-                parked: 2,
-                linked: 1,
-                secured: 1,
-            },
-            load_avg: Some([152, 48, 5]),
-            daemon_version: "2.0.1".into(),
-            services: vec![],
-            mail: None,
-            web_unbound: None,
-            dns_unbound: None,
-            boot_id: None,
-            shared_sites: 0,
-            symlink_protection: true,
-            shadows: vec![],
-            mcp_enabled: false,
-            lan_enabled: false,
-            lan_ip: None,
-            lan_setup_bound: None,
-            port_redirect_targets: None,
-            lan_redirect_targets: None,
-        }
     }
 
     #[test]
@@ -3269,38 +1456,6 @@ mod tests {
     }
 
     #[test]
-    fn render_domains_marks_primary_and_shadow() {
-        let e = SiteEntry {
-            site: Site::linked("blog", "/srv/blog", PhpVersion::new(8, 3)).unwrap(),
-            is_wordpress: false,
-            primary_domain: Some("corp.test".into()),
-            domains: vec!["corp.test".into(), "*.blog.test".into()],
-            apex_shadowed_by: Some("shop".into()),
-            uses_front_controller: false,
-            is_laravel: false,
-        };
-        let r = render_domains(&[e], "test", None, false);
-        assert!(r.stdout.contains("corp.test (primary)"));
-        assert!(r.stdout.contains("*.blog.test"));
-        assert!(r.stdout.contains("apex shadowed by shop"));
-    }
-
-    #[test]
-    fn render_domains_synthesizes_default_domain() {
-        let e = SiteEntry {
-            site: Site::linked("foo", "/srv/foo", PhpVersion::new(8, 3)).unwrap(),
-            is_wordpress: false,
-            primary_domain: None,
-            domains: vec![],
-            apex_shadowed_by: None,
-            uses_front_controller: false,
-            is_laravel: false,
-        };
-        let r = render_domains(&[e], "test", None, false);
-        assert!(r.stdout.contains("foo.test (primary)"));
-    }
-
-    #[test]
     fn render_domains_unknown_site_filter_errors() {
         let r = render_domains(&[], "test", Some("ghost"), false);
         assert_eq!(r.code, 1);
@@ -3328,111 +1483,6 @@ mod tests {
     }
 
     #[test]
-    fn status_shows_stale_redirect_lines() {
-        let mut r = sample_report();
-        r.http.bound = 8080;
-        r.https.bound = 8443;
-
-        r.port_redirect_targets = Some(orcker_ipc::PortRedirectTargets {
-            http: 9090,
-            https: 9443,
-        });
-        let out = format_status(&r);
-        assert!(out.contains("stale redirect"), "{out}");
-        assert!(out.contains("elevate ports"), "{out}");
-
-        r.port_redirect_targets = Some(orcker_ipc::PortRedirectTargets {
-            http: 8080,
-            https: 8443,
-        });
-        r.lan_enabled = true;
-        r.lan_redirect_targets = Some(orcker_ipc::PortRedirectTargets {
-            http: 80,
-            https: 443,
-        });
-        let out = format_status(&r);
-        assert!(out.contains("stale LAN redirect"), "{out}");
-
-        r.lan_redirect_targets = Some(orcker_ipc::PortRedirectTargets {
-            http: 8080,
-            https: 8443,
-        });
-        let out = format_status(&r);
-        assert!(!out.contains("stale"), "{out}");
-    }
-
-    #[test]
-    fn status_degraded_web_ports_shows_not_serving() {
-        let mut r = sample_report();
-        r.http = PortStatus {
-            requested: 80,
-            bound: 0,
-            fell_back: true,
-        };
-        r.https = PortStatus {
-            requested: 443,
-            bound: 0,
-            fell_back: true,
-        };
-        r.web_unbound = Some(orcker_ipc::UnboundWeb {
-            http: 8080,
-            https: 8443,
-        });
-        let out = format_status(&r);
-        assert!(out.contains("not serving - couldn't bind 8080"), "{out}");
-        assert!(out.contains("not serving - couldn't bind 8443"), "{out}");
-        assert!(!out.contains("→ 0"), "{out}");
-    }
-
-    #[test]
-    fn status_degraded_dns_shows_not_resolving() {
-        let mut r = sample_report();
-        r.dns_unbound = Some(1053);
-        let out = format_status(&r);
-        assert!(
-            out.contains("not resolving - couldn't bind port 1053"),
-            "{out}"
-        );
-        assert!(!out.contains("dns       127.0.0.1:1053"), "{out}");
-    }
-
-    #[test]
-    fn renders_status_human_block() {
-        let out = render(
-            &Response::Status {
-                report: Box::new(sample_report()),
-            },
-            false,
-        );
-        assert_eq!(out.code, 0);
-        assert!(out.stdout.contains("pid 4242"));
-        assert!(out.stdout.contains("version   2.0.1"));
-        assert!(out.stdout.contains("80 → 8080 (fallback)"));
-        assert!(out.stdout.contains("trusted: no"));
-        assert!(out.stdout.contains("installed: unknown"));
-        assert!(out.stdout.contains("1.52 0.48 0.05"));
-        assert!(out.stdout.contains("8.5 (default)  running"));
-        assert!(out.stdout.contains("pid 99"));
-    }
-
-    #[test]
-    fn status_shows_unknown_for_empty_daemon_version() {
-        let mut report = sample_report();
-        report.daemon_version = String::new();
-        let out = render(
-            &Response::Status {
-                report: Box::new(report),
-            },
-            false,
-        );
-        assert!(
-            out.stdout.contains("version   unknown"),
-            "got: {}",
-            out.stdout
-        );
-    }
-
-    #[test]
     fn renders_doctor_and_sets_exit_code_on_fail() {
         let warn_only = Response::Diagnoses {
             items: vec![Diagnosis {
@@ -3450,9 +1500,9 @@ mod tests {
 
         let with_fail = Response::Diagnoses {
             items: vec![Diagnosis {
-                code: orcker_ipc::DiagnosisCode::NoPhpInstalled,
+                code: orcker_ipc::DiagnosisCode::CaNotTrusted,
                 severity: Severity::Fail,
-                title: "No PHP".into(),
+                title: "CA not trusted".into(),
                 detail: "d".into(),
                 remedy: None,
             }],
@@ -3466,9 +1516,9 @@ mod tests {
         let resp = Response::DoctorFix {
             report: FixReport {
                 performed: vec![orcker_ipc::FixResult {
-                    code: orcker_ipc::DiagnosisCode::FpmPoolFailed,
+                    code: orcker_ipc::DiagnosisCode::ResolverNotInstalled,
                     ok: true,
-                    message: "restarted PHP 8.5 FPM pool".into(),
+                    message: "installed the resolver".into(),
                 }],
                 manual: vec![Diagnosis {
                     code: orcker_ipc::DiagnosisCode::ResolverNotInstalled,
@@ -3481,7 +1531,7 @@ mod tests {
         };
         let r = render(&resp, false);
         assert_eq!(r.code, 0);
-        assert!(r.stdout.contains("✓ restarted PHP 8.5 FPM pool"));
+        assert!(r.stdout.contains("✓ installed the resolver"));
         assert!(r.stdout.contains("still needs attention"));
         assert!(r.stdout.contains("sudo orcker elevate resolver"));
     }
@@ -3736,374 +1786,6 @@ mod tests {
     }
 
     #[test]
-    fn maps_services_command() {
-        assert_eq!(
-            to_request(&Command::Services).unwrap(),
-            Request::ListServices
-        );
-    }
-
-    #[test]
-    #[allow(clippy::too_many_lines)]
-    fn maps_every_service_action() {
-        use crate::cli::ServiceAction;
-        assert_eq!(
-            to_request(&Command::Service {
-                action: ServiceAction::Available
-            })
-            .unwrap(),
-            Request::AvailableServices
-        );
-        assert_eq!(
-            to_request(&Command::Service {
-                action: ServiceAction::Install {
-                    service: "redis".into(),
-                    version: "8".into()
-                }
-            })
-            .unwrap(),
-            Request::InstallService {
-                service: "redis".into(),
-                version: "8".into()
-            }
-        );
-        assert_eq!(
-            to_request(&Command::Service {
-                action: ServiceAction::ChangeVersion {
-                    service: "mysql".into(),
-                    version: "9.1.0".into()
-                }
-            })
-            .unwrap(),
-            Request::ChangeServiceVersion {
-                service: "mysql".into(),
-                version: "9.1.0".into()
-            }
-        );
-        assert_eq!(
-            to_request(&Command::Service {
-                action: ServiceAction::Uninstall {
-                    service: "mariadb".into(),
-                    version: "11".into(),
-                    purge: true
-                }
-            })
-            .unwrap(),
-            Request::UninstallService {
-                service: "mariadb".into(),
-                version: "11".into(),
-                purge: true
-            }
-        );
-        assert_eq!(
-            to_request(&Command::Service {
-                action: ServiceAction::Start {
-                    service: "redis".into()
-                }
-            })
-            .unwrap(),
-            Request::StartService {
-                service: "redis".into()
-            }
-        );
-        assert_eq!(
-            to_request(&Command::Service {
-                action: ServiceAction::Stop {
-                    service: "redis".into()
-                }
-            })
-            .unwrap(),
-            Request::StopService {
-                service: "redis".into()
-            }
-        );
-        assert_eq!(
-            to_request(&Command::Service {
-                action: ServiceAction::Restart {
-                    service: "redis".into()
-                }
-            })
-            .unwrap(),
-            Request::RestartService {
-                service: "redis".into()
-            }
-        );
-        assert_eq!(
-            to_request(&Command::Service {
-                action: ServiceAction::SetPort {
-                    service: "redis".into(),
-                    port: 6380
-                }
-            })
-            .unwrap(),
-            Request::SetServicePort {
-                service: "redis".into(),
-                port: 6380
-            }
-        );
-        assert_eq!(
-            to_request(&Command::Service {
-                action: ServiceAction::Logs {
-                    service: "mysql".into(),
-                    lines: 50
-                }
-            })
-            .unwrap(),
-            Request::ServiceLogs {
-                service: "mysql".into(),
-                lines: 50
-            }
-        );
-        assert_eq!(
-            to_request(&Command::Service {
-                action: ServiceAction::Add {
-                    type_id: "reverb".into(),
-                    site: Some("blog".into()),
-                    port: Some(8081),
-                    version: None,
-                    autostart: Some(crate::cli::OnOff::Off),
-                }
-            })
-            .unwrap(),
-            Request::AddService {
-                type_id: "reverb".into(),
-                site: Some("blog".into()),
-                port: Some(8081),
-                version: None,
-                autostart: Some(false),
-            }
-        );
-        assert_eq!(
-            to_request(&Command::Service {
-                action: ServiceAction::Remove {
-                    service: "reverb:blog".into(),
-                    purge: true,
-                }
-            })
-            .unwrap(),
-            Request::RemoveService {
-                service: "reverb:blog".into(),
-                purge: true,
-            }
-        );
-        assert_eq!(
-            to_request(&Command::Service {
-                action: ServiceAction::SetAutostart {
-                    service: "redis".into(),
-                    state: crate::cli::OnOff::On,
-                }
-            })
-            .unwrap(),
-            Request::SetServiceAutostart {
-                service: "redis".into(),
-                enabled: true,
-            }
-        );
-        assert_eq!(
-            to_request(&Command::Service {
-                action: ServiceAction::SetSite {
-                    service: "reverb:blog".into(),
-                    site: "shop".into(),
-                }
-            })
-            .unwrap(),
-            Request::SetServiceSite {
-                service: "reverb:blog".into(),
-                site: "shop".into(),
-            }
-        );
-        assert_eq!(
-            to_request(&Command::Service {
-                action: ServiceAction::Overrides {
-                    service: "mysql".into()
-                }
-            })
-            .unwrap(),
-            Request::ServiceOverrides {
-                service: "mysql".into()
-            }
-        );
-    }
-
-    #[test]
-    fn maps_service_set_and_unset_to_a_single_entry_override_map() {
-        use crate::cli::ServiceAction;
-        assert_eq!(
-            to_request(&Command::Service {
-                action: ServiceAction::Set {
-                    service: "mysql".into(),
-                    key: "max_connections".into(),
-                    value: "500".into(),
-                }
-            })
-            .unwrap(),
-            Request::SetServiceOverrides {
-                service: "mysql".into(),
-                overrides: std::collections::BTreeMap::from([(
-                    "max_connections".to_string(),
-                    "500".to_string()
-                )]),
-            }
-        );
-        assert_eq!(
-            to_request(&Command::Service {
-                action: ServiceAction::Unset {
-                    service: "mysql".into(),
-                    key: "max_connections".into(),
-                }
-            })
-            .unwrap(),
-            Request::SetServiceOverrides {
-                service: "mysql".into(),
-                overrides: std::collections::BTreeMap::from([(
-                    "max_connections".to_string(),
-                    String::new()
-                )]),
-            }
-        );
-    }
-
-    #[test]
-    fn service_set_refuses_a_reserved_key_in_either_spelling() {
-        use crate::cli::ServiceAction;
-        for key in ["bind-address", "bind_address"] {
-            match to_request(&Command::Service {
-                action: ServiceAction::Set {
-                    service: "mysql".into(),
-                    key: key.into(),
-                    value: "0.0.0.0".into(),
-                },
-            }) {
-                Err(ClientError::Usage(m)) => {
-                    assert!(m.contains("managed by Orcker"), "{key}: {m}");
-                    assert!(m.contains("loopback"), "{key}: {m}");
-                }
-                other => panic!("expected Usage error for {key}, got {other:?}"),
-            }
-        }
-    }
-
-    #[test]
-    fn service_set_refuses_a_bad_shape_and_a_service_without_overrides() {
-        use crate::cli::ServiceAction;
-        match to_request(&Command::Service {
-            action: ServiceAction::Set {
-                service: "mysql".into(),
-                key: "1bad".into(),
-                value: "500".into(),
-            },
-        }) {
-            Err(ClientError::Usage(_)) => {}
-            other => panic!("expected Usage error, got {other:?}"),
-        }
-        match to_request(&Command::Service {
-            action: ServiceAction::Set {
-                service: "mysql".into(),
-                key: "max_connections".into(),
-                value: "500 # evil".into(),
-            },
-        }) {
-            Err(ClientError::Usage(_)) => {}
-            other => panic!("expected Usage error, got {other:?}"),
-        }
-        match to_request(&Command::Service {
-            action: ServiceAction::Set {
-                service: "meilisearch".into(),
-                key: "max_connections".into(),
-                value: "500".into(),
-            },
-        }) {
-            Err(ClientError::Usage(m)) => {
-                assert_eq!(m, "meilisearch does not support configuration overrides");
-            }
-            other => panic!("expected Usage error, got {other:?}"),
-        }
-        match to_request(&Command::Service {
-            action: ServiceAction::Unset {
-                service: "reverb:blog".into(),
-                key: "max_connections".into(),
-            },
-        }) {
-            Err(ClientError::Usage(m)) => {
-                assert_eq!(m, "reverb:blog does not support configuration overrides");
-            }
-            other => panic!("expected Usage error, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn maps_every_db_action() {
-        use crate::cli::DbAction;
-        assert_eq!(
-            to_request(&Command::Db {
-                action: DbAction::List {
-                    service: "mysql".into()
-                }
-            })
-            .unwrap(),
-            Request::ListDatabases {
-                service: "mysql".into()
-            }
-        );
-        assert_eq!(
-            to_request(&Command::Db {
-                action: DbAction::Create {
-                    service: "mysql".into(),
-                    name: "app".into()
-                }
-            })
-            .unwrap(),
-            Request::CreateDatabase {
-                service: "mysql".into(),
-                name: "app".into()
-            }
-        );
-        assert_eq!(
-            to_request(&Command::Db {
-                action: DbAction::Drop {
-                    service: "mysql".into(),
-                    name: "app".into()
-                }
-            })
-            .unwrap(),
-            Request::DropDatabase {
-                service: "mysql".into(),
-                name: "app".into()
-            }
-        );
-        assert_eq!(
-            to_request(&Command::Db {
-                action: DbAction::Backup {
-                    service: "mysql".into(),
-                    name: "app".into(),
-                    path: PathBuf::from("dump.sql")
-                }
-            })
-            .unwrap(),
-            Request::BackupDatabase {
-                service: "mysql".into(),
-                name: "app".into(),
-                path: PathBuf::from("dump.sql")
-            }
-        );
-        assert_eq!(
-            to_request(&Command::Db {
-                action: DbAction::Restore {
-                    service: "mysql".into(),
-                    name: "app".into(),
-                    path: PathBuf::from("dump.sql")
-                }
-            })
-            .unwrap(),
-            Request::RestoreDatabase {
-                service: "mysql".into(),
-                name: "app".into(),
-                path: PathBuf::from("dump.sql")
-            }
-        );
-    }
-
-    #[test]
     fn maps_every_mail_action() {
         use crate::cli::MailAction;
         assert_eq!(
@@ -4130,61 +1812,6 @@ mod tests {
     }
 
     #[test]
-    fn install_php_rejects_bad_version() {
-        match to_request(&Command::Install {
-            target: crate::cli::InstallTarget::Php {
-                version: "not-a-version".into(),
-                legacy: false,
-            },
-        }) {
-            Err(ClientError::Usage(_)) => {}
-            other => panic!("expected Usage error, got {other:?}"),
-        }
-        match to_request(&Command::Restart {
-            target: crate::cli::RestartTarget::Php {
-                version: Some("xx".into()),
-            },
-        }) {
-            Err(ClientError::Usage(_)) => {}
-            other => panic!("expected Usage error, got {other:?}"),
-        }
-        match to_request(&Command::Uninstall {
-            target: Some(crate::cli::UninstallTarget::Php {
-                version: "xx".into(),
-            }),
-            yes: false,
-        }) {
-            Err(ClientError::Usage(_)) => {}
-            other => panic!("expected Usage error, got {other:?}"),
-        }
-        match to_request(&Command::Update {
-            target: Some(crate::cli::UpdateTarget::Php {
-                version: Some("xx".into()),
-            }),
-            yes: false,
-            edge: false,
-            stable: false,
-            force: false,
-        }) {
-            Err(ClientError::Usage(_)) => {}
-            other => panic!("expected Usage error, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn unset_unknown_php_setting_is_usage_error() {
-        match to_request(&Command::Unset {
-            target: crate::cli::UnsetTarget::Php {
-                setting: "not_a_setting".into(),
-                only: None,
-            },
-        }) {
-            Err(ClientError::Usage(_)) => {}
-            other => panic!("expected Usage error, got {other:?}"),
-        }
-    }
-
-    #[test]
     fn root_rejects_bad_name() {
         match to_request(&Command::Root {
             name: "bad name".into(),
@@ -4197,34 +1824,9 @@ mod tests {
     }
 
     #[test]
-    fn update_php_with_self_update_flags_each_error() {
-        for (yes, edge, stable, force) in [
-            (true, false, false, false),
-            (false, true, false, false),
-            (false, false, true, false),
-            (false, false, false, true),
-        ] {
-            assert!(
-                matches!(
-                    to_request(&Command::Update {
-                        target: Some(crate::cli::UpdateTarget::Php { version: None }),
-                        yes,
-                        edge,
-                        stable,
-                        force,
-                    }),
-                    Err(ClientError::Usage(_))
-                ),
-                "flags y={yes} e={edge} s={stable} f={force} should be a usage error"
-            );
-        }
-    }
-
-    #[test]
     fn bare_update_stable_flag_overrides_channel() {
         assert_eq!(
             to_request(&Command::Update {
-                target: None,
                 yes: false,
                 edge: false,
                 stable: true,
@@ -4255,21 +1857,6 @@ mod tests {
             Command::Path {
                 action: crate::cli::PathAction::Install,
             },
-            Command::Coverage { args: vec![] },
-            Command::Exec {
-                site: None,
-                tool: crate::cli::ExecTool::Php,
-                args: vec![],
-            },
-            Command::Which {
-                tool: crate::cli::WhichTool::Php,
-                site: None,
-            },
-            Command::Mcp,
-            Command::Link {
-                name_or_path: None,
-                path: None,
-            },
         ] {
             match to_request(&cmd) {
                 Err(ClientError::Usage(_)) => {}
@@ -4284,161 +1871,6 @@ mod tests {
         assert_eq!(channel_from_flags(false, true), Some(Channel::Stable));
         assert_eq!(channel_from_flags(false, false), None);
         assert_eq!(channel_from_flags(true, true), Some(Channel::Edge));
-    }
-
-    fn service_status(installed: Vec<String>) -> ServiceStatus {
-        ServiceStatus {
-            service: "redis".into(),
-            display_name: "Redis".into(),
-            installed_versions: installed,
-            selected_version: None,
-            state: ServiceRunState::Running,
-            pid: Some(42),
-            listen: Some("127.0.0.1:6379".into()),
-            port: 6379,
-            enabled: true,
-            supports_databases: false,
-            type_id: String::new(),
-            site: None,
-            error: None,
-            supports_overrides: false,
-        }
-    }
-
-    #[test]
-    fn renders_services_table_and_states() {
-        let empty = render(&Response::Services { services: vec![] }, false);
-        assert_eq!(empty.stdout, "no services");
-        assert_eq!(empty.code, 0);
-
-        let installed = render(
-            &Response::Services {
-                services: vec![service_status(vec!["7".into(), "8".into()])],
-            },
-            false,
-        );
-        assert!(installed.stdout.contains("SERVICE\tSTATE\tPORT"));
-        assert!(installed.stdout.contains("redis\trunning\t6379"));
-        assert!(installed.stdout.contains("\t8\t"), "{}", installed.stdout);
-        assert!(installed.stdout.contains("7,8"));
-
-        let not_installed = render(
-            &Response::Services {
-                services: vec![service_status(vec![])],
-            },
-            false,
-        );
-        assert!(not_installed.stdout.contains("redis\tnot installed\t-\t-"));
-
-        let mut stopped = service_status(vec!["8".into()]);
-        stopped.state = ServiceRunState::Stopped;
-        stopped.selected_version = Some("8".into());
-        assert!(render(
-            &Response::Services {
-                services: vec![stopped]
-            },
-            false
-        )
-        .stdout
-        .contains("redis\tstopped"));
-
-        let mut failed = service_status(vec!["8".into()]);
-        failed.state = ServiceRunState::Failed;
-        assert!(render(
-            &Response::Services {
-                services: vec![failed]
-            },
-            false
-        )
-        .stdout
-        .contains("redis\tfailed"));
-    }
-
-    #[test]
-    fn renders_available_services() {
-        let empty = render(&Response::AvailableServices { services: vec![] }, false);
-        assert_eq!(empty.stdout, "no services available");
-
-        let listed = render(
-            &Response::AvailableServices {
-                services: vec![
-                    ServiceAvailability {
-                        service: "redis".into(),
-                        available: vec!["7".into(), "8".into()],
-                        installed: vec!["8".into()],
-                    },
-                    ServiceAvailability {
-                        service: "mysql".into(),
-                        available: vec![],
-                        installed: vec![],
-                    },
-                ],
-            },
-            false,
-        );
-        assert!(listed.stdout.contains("SERVICE\tAVAILABLE\tINSTALLED"));
-        assert!(listed.stdout.contains("redis\t7,8\t8"));
-        assert!(listed.stdout.contains("mysql\t-\t-"));
-    }
-
-    #[test]
-    fn renders_service_logs() {
-        let empty = render(&Response::ServiceLogs { lines: vec![] }, false);
-        assert_eq!(empty.stdout, "no log output");
-
-        let lines = render(
-            &Response::ServiceLogs {
-                lines: vec!["line one".into(), "line two".into()],
-            },
-            false,
-        );
-        assert_eq!(lines.stdout, "line one\nline two");
-        assert_eq!(lines.code, 0);
-    }
-
-    #[test]
-    fn renders_service_overrides() {
-        let empty = render(
-            &Response::ServiceOverrides {
-                overrides: std::collections::BTreeMap::new(),
-            },
-            false,
-        );
-        assert_eq!(empty.stdout, "no overrides");
-
-        let listed = render(
-            &Response::ServiceOverrides {
-                overrides: std::collections::BTreeMap::from([
-                    ("max_connections".to_string(), "500".to_string()),
-                    ("sql_mode".to_string(), "STRICT_ALL_TABLES".to_string()),
-                ]),
-            },
-            false,
-        );
-        assert_eq!(
-            listed.stdout,
-            "max_connections = 500\nsql_mode = STRICT_ALL_TABLES"
-        );
-        assert_eq!(listed.code, 0);
-    }
-
-    #[test]
-    fn renders_databases() {
-        let empty = render(&Response::Databases { databases: vec![] }, false);
-        assert_eq!(empty.stdout, "no databases");
-
-        let listed = render(
-            &Response::Databases {
-                databases: vec![
-                    orcker_ipc::DatabaseSummary { name: "app".into() },
-                    orcker_ipc::DatabaseSummary {
-                        name: "blog".into(),
-                    },
-                ],
-            },
-            false,
-        );
-        assert_eq!(listed.stdout, "app\nblog");
     }
 
     #[test]
@@ -4525,5 +1957,190 @@ mod tests {
         )
         .stdout
         .contains("(empty message)"));
+    }
+
+    fn sample_report() -> orcker_ipc::StatusReport {
+        orcker_ipc::StatusReport {
+            daemon_pid: 4242,
+            uptime_secs: 65,
+            daemon_rss_bytes: Some(12_000_000),
+            tld: "test".into(),
+            http: PortStatus {
+                requested: 80,
+                bound: 8080,
+                fell_back: true,
+            },
+            https: PortStatus {
+                requested: 443,
+                bound: 443,
+                fell_back: false,
+            },
+            dns_addr: "127.0.0.1:1053".parse().unwrap(),
+            ca: orcker_ipc::CaStatus {
+                path: "/x/ca.cert.pem".into(),
+                fingerprint: "ab".repeat(32),
+                trusted_system: Some(false),
+                browser_trust: None,
+            },
+            resolver_installed: None,
+            port_redirect: None,
+            foreign_web_listener: None,
+            resolver_backup: None,
+            sites: orcker_ipc::SiteCounts {
+                parked: 2,
+                linked: 1,
+                secured: 1,
+            },
+            load_avg: Some([152, 48, 5]),
+            daemon_version: "2.0.1".into(),
+            mail: None,
+            web_unbound: None,
+            dns_unbound: None,
+            boot_id: None,
+            shared_sites: 0,
+            symlink_protection: true,
+            shadows: vec![],
+            mcp_enabled: false,
+            lan_enabled: false,
+            lan_ip: None,
+            lan_setup_bound: None,
+            port_redirect_targets: None,
+            lan_redirect_targets: None,
+        }
+    }
+
+    #[test]
+    fn renders_status_human_block() {
+        let out = render(
+            &Response::Status {
+                report: Box::new(sample_report()),
+            },
+            false,
+        );
+        assert_eq!(out.code, 0);
+        assert!(out.stdout.contains("pid 4242"));
+        assert!(out.stdout.contains("version   2.0.1"));
+        assert!(out.stdout.contains("80 → 8080 (fallback)"));
+        assert!(out.stdout.contains("trusted: no"));
+        assert!(out.stdout.contains("installed: unknown"));
+        assert!(out.stdout.contains("1.52 0.48 0.05"));
+    }
+
+    #[test]
+    fn status_shows_stale_redirect_lines() {
+        let mut r = sample_report();
+        r.http.bound = 8080;
+        r.https.bound = 8443;
+
+        r.port_redirect_targets = Some(orcker_ipc::PortRedirectTargets {
+            http: 9090,
+            https: 9443,
+        });
+        let out = format_status(&r);
+        assert!(out.contains("stale redirect"), "{out}");
+        assert!(out.contains("elevate ports"), "{out}");
+
+        r.port_redirect_targets = Some(orcker_ipc::PortRedirectTargets {
+            http: 8080,
+            https: 8443,
+        });
+        r.lan_enabled = true;
+        r.lan_redirect_targets = Some(orcker_ipc::PortRedirectTargets {
+            http: 80,
+            https: 443,
+        });
+        let out = format_status(&r);
+        assert!(out.contains("stale LAN redirect"), "{out}");
+
+        r.lan_redirect_targets = Some(orcker_ipc::PortRedirectTargets {
+            http: 8080,
+            https: 8443,
+        });
+        let out = format_status(&r);
+        assert!(!out.contains("stale"), "{out}");
+    }
+
+    #[test]
+    fn status_degraded_web_ports_shows_not_serving() {
+        let mut r = sample_report();
+        r.http = PortStatus {
+            requested: 80,
+            bound: 0,
+            fell_back: true,
+        };
+        r.https = PortStatus {
+            requested: 443,
+            bound: 0,
+            fell_back: true,
+        };
+        r.web_unbound = Some(orcker_ipc::UnboundWeb {
+            http: 8080,
+            https: 8443,
+        });
+        let out = format_status(&r);
+        assert!(out.contains("not serving - couldn't bind 8080"), "{out}");
+        assert!(out.contains("not serving - couldn't bind 8443"), "{out}");
+        assert!(!out.contains("→ 0"), "{out}");
+    }
+
+    #[test]
+    fn status_degraded_dns_shows_not_resolving() {
+        let mut r = sample_report();
+        r.dns_unbound = Some(1053);
+        let out = format_status(&r);
+        assert!(
+            out.contains("not resolving - couldn't bind port 1053"),
+            "{out}"
+        );
+        assert!(!out.contains("dns       127.0.0.1:1053"), "{out}");
+    }
+
+    #[test]
+    fn status_shows_unknown_for_empty_daemon_version() {
+        let mut report = sample_report();
+        report.daemon_version = String::new();
+        let out = render(
+            &Response::Status {
+                report: Box::new(report),
+            },
+            false,
+        );
+        assert!(
+            out.stdout.contains("version   unknown"),
+            "got: {}",
+            out.stdout
+        );
+    }
+
+    #[test]
+    fn render_domains_marks_primary_and_shadow() {
+        let e = SiteEntry {
+            site: Site::linked("blog", "/srv/blog", PhpVersion::new(8, 3)).unwrap(),
+            is_wordpress: false,
+            primary_domain: Some("corp.test".into()),
+            domains: vec!["corp.test".into(), "*.blog.test".into()],
+            apex_shadowed_by: Some("shop".into()),
+            uses_front_controller: false,
+            is_laravel: false,
+        };
+        let r = render_domains(&[e], "test", None, false);
+        assert!(r.stdout.contains("corp.test (primary)"));
+        assert!(r.stdout.contains("*.blog.test"));
+        assert!(r.stdout.contains("apex shadowed by shop"));
+    }
+
+    #[test]
+    fn render_domains_synthesizes_default_domain() {
+        let e = SiteEntry {
+            site: Site::linked("foo", "/srv/foo", PhpVersion::new(8, 3)).unwrap(),
+            is_wordpress: false,
+            primary_domain: None,
+            domains: vec![],
+            apex_shadowed_by: None,
+            uses_front_controller: false,
+            is_laravel: false,
+        };
+        let r = render_domains(&[e], "test", None, false);
+        assert!(r.stdout.contains("foo.test (primary)"));
     }
 }

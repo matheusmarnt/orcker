@@ -20,8 +20,8 @@ use crate::ConfigError;
 
 /// Single-instance service type ids (keyed in `[services]` by the type id alone).
 ///
-/// Duplicated here rather than read from the `orcker-services` registry: this crate
-/// sits *below* `orcker-services` in the dependency order and must not depend on it.
+/// Duplicated here rather than read from a service registry: this crate sits at the
+/// bottom of the dependency order and must not depend on a layer above it.
 pub(crate) const KNOWN_SINGLE_SERVICES: &[&str] =
     &["mysql", "mariadb", "meilisearch", "postgres", "redis"];
 

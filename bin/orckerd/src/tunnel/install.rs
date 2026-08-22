@@ -20,9 +20,10 @@ use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::time::Duration;
 
+use crate::download::Downloader;
 use async_trait::async_trait;
-use orcker_php::{current_os_arch, Arch, Downloader, Os};
 use orcker_platform::PlatformDirs;
+use orcker_platform::{current_target, Arch, Os};
 use serde::Deserialize;
 
 use super::ProgressTx;
@@ -324,7 +325,7 @@ pub async fn resolve<P: VersionProbe, S: PathSearch>(
 ///
 /// macOS ships a `.tgz` wrapping a single `cloudflared`; Linux ships a bare
 /// ungzipped executable. Cloudflare uses `amd64`/`arm64` arch tokens (not the
-/// `x86_64`/`aarch64` that `orcker-php`'s `Arch::as_str` renders), so the mapping
+/// `x86_64`/`aarch64` that `orcker_platform::Arch::as_str` renders), so the mapping
 /// is explicit here.
 fn host_asset(os: Os, arch: Arch) -> (String, bool) {
     let token = match arch {
@@ -351,7 +352,7 @@ pub async fn install(
     dl: &dyn Downloader,
     progress: Option<&ProgressTx>,
 ) -> Result<(), CloudflaredInstallError> {
-    let (os, arch) = current_os_arch().map_err(|_| CloudflaredInstallError::UnsupportedHost)?;
+    let (os, arch) = current_target().map_err(|_| CloudflaredInstallError::UnsupportedHost)?;
     let (asset_name, is_tgz) = host_asset(os, arch);
 
     note(progress, "Fetching cloudflared release info…");

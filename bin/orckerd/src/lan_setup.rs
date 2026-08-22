@@ -743,6 +743,23 @@ mod endpoint_tests {
     }
 
     #[tokio::test]
+    async fn wrong_guesses_do_not_revoke_the_minted_code() {
+        let tmp = tempfile::tempdir().unwrap();
+        let state = Arc::new(state_in(tmp.path()));
+        seed(&state, "good").await;
+        let ctx = ctx_with_code(Arc::clone(&state));
+
+        for _ in 0..50 {
+            let _ = decide(&ctx, true, "/remote-setup", Some("code=bad")).await;
+        }
+        assert_eq!(
+            decide(&ctx, true, "/remote-setup", Some("code=good")).await,
+            Decision::Script,
+            "an unauthenticated peer's wrong guesses must not lock out the legit device"
+        );
+    }
+
+    #[tokio::test]
     async fn endpoint_serves_the_exact_bytes_that_were_hashed_for_advertisement() {
         let tmp = tempfile::tempdir().unwrap();
         let state = Arc::new(state_in(tmp.path()));
@@ -756,7 +773,7 @@ mod endpoint_tests {
             "-----BEGIN CERTIFICATE-----\nMIIBorckerSAMPLE\n-----END CERTIFICATE-----\n",
         );
         *state.lan_setup_script_sha256.lock().await =
-            Some(crate::ext_install::sha256_hex(script.as_bytes()));
+            Some(crate::download::sha256_hex(script.as_bytes()));
         let ctx = SetupContext {
             script: script.into_bytes(),
             state: Arc::clone(&state),
@@ -774,7 +791,7 @@ mod endpoint_tests {
         // the value published for the device to verify. These flow from separate
         // fields (ctx.script vs lan_setup_script_sha256), so a serving path that
         // ever returned different bytes than were hashed would fail here.
-        let served = crate::ext_install::sha256_hex(&ctx.script);
+        let served = crate::download::sha256_hex(&ctx.script);
         let advertised = state
             .lan_setup_script_sha256
             .lock()
@@ -784,23 +801,6 @@ mod endpoint_tests {
         assert_eq!(
             served, advertised,
             "the endpoint must serve the exact bytes whose SHA-256 mint hands out"
-        );
-    }
-
-    #[tokio::test]
-    async fn wrong_guesses_do_not_revoke_the_minted_code() {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = Arc::new(state_in(tmp.path()));
-        seed(&state, "good").await;
-        let ctx = ctx_with_code(Arc::clone(&state));
-
-        for _ in 0..50 {
-            let _ = decide(&ctx, true, "/remote-setup", Some("code=bad")).await;
-        }
-        assert_eq!(
-            decide(&ctx, true, "/remote-setup", Some("code=good")).await,
-            Decision::Script,
-            "an unauthenticated peer's wrong guesses must not lock out the legit device"
         );
     }
 }

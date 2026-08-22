@@ -141,7 +141,6 @@ mod tests {
             daemon.dns_bound,
             daemon.http_listener,
             daemon.https_listener,
-            daemon.php_manager,
         );
         tokio::time::sleep(Duration::from_millis(100)).await;
 
@@ -235,21 +234,9 @@ mod tests {
             other => panic!("expected Sites, got {other:?}"),
         }
 
-        assert!(matches!(
-            send(
-                &sock,
-                &Command::Use {
-                    first: "blog".into(),
-                    version: Some("8.4".into())
-                }
-            )
-            .await,
-            Response::Ok
-        ));
         match send(&sock, &Command::Sites).await {
             Response::Sites { sites } => {
                 let blog = sites.iter().find(|s| s.site.name() == "blog").unwrap();
-                assert_eq!(blog.site.php(), orcker_core::PhpVersion::new(8, 4));
                 assert_eq!(blog.site.kind(), orcker_core::SiteKind::Parked);
             }
             other => panic!("expected Sites, got {other:?}"),
@@ -262,7 +249,6 @@ mod tests {
                 assert_eq!(report.tld, "test");
                 assert_eq!(report.daemon_pid, std::process::id());
                 assert!(report.sites.linked >= 1);
-                assert!(report.php.is_empty());
             }
             other => panic!("expected Status, got {other:?}"),
         }
@@ -270,17 +256,14 @@ mod tests {
         let diag = send(&sock, &Command::Doctor { action: None }).await;
         match &diag {
             Response::Diagnoses { items } => {
-                assert!(items
-                    .iter()
-                    .any(|d| d.code == orcker_ipc::DiagnosisCode::NoPhpInstalled));
+                assert!(!items.is_empty(), "doctor always reports something");
             }
             other => panic!("expected Diagnoses, got {other:?}"),
         }
-        assert_eq!(map::render(&diag, false).code, 1, "FAIL → exit 1");
         assert_eq!(
+            map::render(&diag, false).code,
             map::render(&diag, true).code,
-            1,
-            "JSON path agrees on exit 1"
+            "text and JSON paths agree on the exit code"
         );
 
         match send(
@@ -292,11 +275,10 @@ mod tests {
         .await
         {
             Response::DoctorFix { report } => {
-                assert!(report.performed.is_empty());
-                assert!(report
-                    .manual
-                    .iter()
-                    .any(|d| d.severity == orcker_ipc::Severity::Fail));
+                assert!(
+                    report.performed.is_empty(),
+                    "phase 0 has no auto-fixable finding left"
+                );
             }
             other => panic!("expected DoctorFix, got {other:?}"),
         }
@@ -409,7 +391,6 @@ mod tests {
             daemon.dns_bound,
             daemon.http_listener,
             daemon.https_listener,
-            daemon.php_manager,
         );
         tokio::time::sleep(Duration::from_millis(100)).await;
 
@@ -500,200 +481,6 @@ mod tests {
             status.get("daemon_pid").is_none(),
             "status is trimmed for agents"
         );
-
-        shutdown_tx.send_replace(true);
-        let _ = tokio::time::timeout(Duration::from_secs(5), ipc_task).await;
-        drop(keep_alive);
-    }
-
-    /// Per-version PHP config over the socket: `orcker set php ... --only 8.3`,
-    /// `orcker php ini set/unset`, and the `NotFound` guard for an uninstalled
-    /// version. PHP 8.3 is faked on disk (binaries only; no pool is running).
-    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-    #[allow(clippy::too_many_lines)]
-    async fn php_version_config_round_trips_against_daemon() {
-        let tmp = tempfile::tempdir().unwrap();
-        let dirs = make_dirs(tmp.path());
-        let cfg_path = dirs.config.join("orcker.toml");
-
-        let base = dirs.data.join("php").join("php-8.3");
-        std::fs::create_dir_all(base.join("sbin")).unwrap();
-        std::fs::create_dir_all(base.join("bin")).unwrap();
-        std::fs::write(base.join("sbin").join("php-fpm"), b"x").unwrap();
-        std::fs::write(base.join("bin").join("php"), b"x").unwrap();
-
-        let daemon =
-            orckerd::startup::bring_up_with_dirs(dirs.clone(), valid_config(), cfg_path.clone())
-                .await
-                .expect("bring_up_with_dirs");
-        let sock = dirs.runtime.join("orcker.sock");
-
-        let (shutdown_tx, shutdown_rx) = watch::channel(false);
-        let state = daemon.state.clone();
-        let ipc_task = tokio::spawn(orckerd::ipc_server::run(
-            daemon.ipc_listener,
-            state,
-            shutdown_rx,
-        ));
-        let keep_alive = (
-            daemon.lock,
-            daemon.dns_bound,
-            daemon.http_listener,
-            daemon.https_listener,
-            daemon.php_manager,
-        );
-        tokio::time::sleep(Duration::from_millis(100)).await;
-
-        let v83 = orcker_core::PhpVersion::new(8, 3);
-        let set_override = Command::Set {
-            target: orcker::cli::SetTarget::Php {
-                setting: "memory_limit".into(),
-                value: "1G".into(),
-                only: Some("8.3".into()),
-            },
-        };
-        match send(&sock, &set_override).await {
-            Response::PhpVersions {
-                version_settings, ..
-            } => {
-                assert_eq!(
-                    version_settings
-                        .get(&v83)
-                        .and_then(|m| m.get("memory_limit"))
-                        .map(String::as_str),
-                    Some("1G")
-                );
-            }
-            other => panic!("expected PhpVersions, got {other:?}"),
-        }
-
-        match send(
-            &sock,
-            &Command::Set {
-                target: orcker::cli::SetTarget::Php {
-                    setting: "memory_limit".into(),
-                    value: "1G".into(),
-                    only: Some("8.4".into()),
-                },
-            },
-        )
-        .await
-        {
-            Response::Error { code, .. } => assert_eq!(code, ErrorCode::NotFound),
-            other => panic!("expected NotFound, got {other:?}"),
-        }
-
-        let ini_set = Command::Php {
-            action: orcker::cli::PhpAction::Ini {
-                action: orcker::cli::PhpIniAction::Set {
-                    version: "8.3".into(),
-                    name: "xdebug.mode".into(),
-                    value: "debug".into(),
-                },
-            },
-        };
-        match send(&sock, &ini_set).await {
-            Response::PhpVersions { directives, .. } => {
-                assert_eq!(
-                    directives
-                        .get(&v83)
-                        .and_then(|m| m.get("xdebug.mode"))
-                        .map(String::as_str),
-                    Some("debug")
-                );
-            }
-            other => panic!("expected PhpVersions, got {other:?}"),
-        }
-
-        let pool_set = Command::Php {
-            action: orcker::cli::PhpAction::Pool {
-                action: orcker::cli::PhpPoolAction::Set {
-                    version: "8.3".into(),
-                    name: "max_children".into(),
-                    value: "32".into(),
-                },
-            },
-        };
-        match send(&sock, &pool_set).await {
-            Response::PhpVersions { pool, .. } => {
-                assert_eq!(
-                    pool.get(&v83)
-                        .and_then(|m| m.get("max_children"))
-                        .map(String::as_str),
-                    Some("32")
-                );
-            }
-            other => panic!("expected PhpVersions, got {other:?}"),
-        }
-
-        let per_version_ini =
-            std::fs::read_to_string(dirs.data.join("php-cli-8.3.ini")).expect("per-version ini");
-        assert!(per_version_ini.contains("memory_limit = 1G\n"));
-        assert!(per_version_ini.contains("xdebug.mode = debug\n"));
-        assert!(
-            !per_version_ini.contains("max_children"),
-            "pool settings must not reach the CLI ini: {per_version_ini}"
-        );
-        let base_ini = std::fs::read_to_string(dirs.data.join("php-cli.ini")).expect("base ini");
-        assert!(!base_ini.contains("1G"));
-        assert!(!base_ini.contains("xdebug.mode"));
-
-        let on_disk = std::fs::read_to_string(&cfg_path).expect("config written");
-        assert!(
-            on_disk.contains("[php.version_settings.\"8.3\"]"),
-            "{on_disk}"
-        );
-        assert!(on_disk.contains("[php.directives.\"8.3\"]"), "{on_disk}");
-        assert!(on_disk.contains("[php.pool.\"8.3\"]"), "{on_disk}");
-
-        let pool_unset = Command::Php {
-            action: orcker::cli::PhpAction::Pool {
-                action: orcker::cli::PhpPoolAction::Unset {
-                    version: "8.3".into(),
-                    name: "max_children".into(),
-                },
-            },
-        };
-        match send(&sock, &pool_unset).await {
-            Response::PhpVersions { pool, .. } => {
-                assert!(!pool.contains_key(&v83));
-            }
-            other => panic!("expected PhpVersions, got {other:?}"),
-        }
-
-        let ini_unset = Command::Php {
-            action: orcker::cli::PhpAction::Ini {
-                action: orcker::cli::PhpIniAction::Unset {
-                    version: "8.3".into(),
-                    name: "xdebug.mode".into(),
-                },
-            },
-        };
-        match send(&sock, &ini_unset).await {
-            Response::PhpVersions { directives, .. } => {
-                assert!(!directives.contains_key(&v83));
-            }
-            other => panic!("expected PhpVersions, got {other:?}"),
-        }
-
-        match send(
-            &sock,
-            &Command::Unset {
-                target: orcker::cli::UnsetTarget::Php {
-                    setting: "memory_limit".into(),
-                    only: Some("8.3".into()),
-                },
-            },
-        )
-        .await
-        {
-            Response::PhpVersions {
-                version_settings, ..
-            } => {
-                assert!(!version_settings.contains_key(&v83));
-            }
-            other => panic!("expected PhpVersions, got {other:?}"),
-        }
 
         shutdown_tx.send_replace(true);
         let _ = tokio::time::timeout(Duration::from_secs(5), ipc_task).await;

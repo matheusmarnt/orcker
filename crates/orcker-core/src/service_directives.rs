@@ -61,7 +61,7 @@ pub enum OverrideDialect {
 /// is never override-capable).
 ///
 /// `type_id` is the service type part of a wire id, matching how
-/// `ServicesSection` is keyed. This lives here rather than in `orcker-services`
+/// `ServicesSection` is keyed. This lives here rather than in the service layer
 /// so `orcker-config` and the CLI can learn the capability without depending on
 /// that crate.
 #[must_use]

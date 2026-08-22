@@ -17,7 +17,6 @@
 use std::net::SocketAddr;
 use std::path::PathBuf;
 
-use orcker_core::PhpVersion;
 use serde::{Deserialize, Serialize};
 
 /// A read-only snapshot of daemon runtime health, returned for
@@ -71,10 +70,6 @@ pub struct StatusReport {
     /// skip_serializing_if)]`) so Linux/older clients are unaffected.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub resolver_backup: Option<String>,
-    /// The global default PHP version.
-    pub default_php: PhpVersion,
-    /// One entry per installed PHP version, with live FPM state.
-    pub php: Vec<PhpPoolStatus>,
     /// Site counts by kind.
     pub sites: SiteCounts,
     /// System load average for 1/5/15 minutes, each `× 100` (hundredths).
@@ -87,12 +82,6 @@ pub struct StatusReport {
     /// The daemon always sets a non-empty value, so it is always emitted.
     #[serde(default)]
     pub daemon_version: String,
-    /// Per-service status (databases / caches). `#[serde(default,
-    /// skip_serializing_if)]` keeps the wire additive: an older daemon (no
-    /// services) emits unchanged bytes and an older client decodes a newer
-    /// daemon by ignoring nothing (the field simply defaults to empty).
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub services: Vec<ServiceStatus>,
     /// Built-in mail-capture server status. `None` when the daemon predates the
     /// feature; `#[serde(default, skip_serializing_if)]` keeps the wire additive
     /// (an older daemon emits unchanged bytes; an older client ignores it).
@@ -352,14 +341,6 @@ pub struct CaStatus {
     /// (`security verify-cert`); Linux treats anchor-dir presence as trust.
     /// `None` = the probe could not determine it (**not** `false`).
     pub trusted_system: Option<bool>,
-    /// Whether the **bundled PHP** trusts the Orcker CA: the managed
-    /// `{data}/cacert.pem` exists and contains the CA. `Some(false)` means the
-    /// bundle is missing/stale (PHP HTTPS to `.test` fails); `None` = the
-    /// feature is off (no host roots found) or the probe could not run.
-    /// `#[serde(default, skip_serializing_if)]` keeps the wire additive for
-    /// older clients/daemons.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub php_trusts_ca: Option<bool>,
     /// Whether the per-user **browser** NSS stores (Brave/Chrome/Chromium/Edge
     /// and Firefox) trust the Orcker CA. On Linux these are independent of the
     /// system store, so a CA can be `trusted_system` yet not trusted here.
@@ -395,170 +376,6 @@ pub struct SiteCounts {
     pub linked: usize,
     /// Number of sites served over HTTPS.
     pub secured: usize,
-}
-
-/// Per-version PHP-FPM status.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct PhpPoolStatus {
-    /// The installed minor version.
-    pub version: PhpVersion,
-    /// The installed full patch (e.g. `"8.5.6"`), if recorded.
-    pub installed_patch: Option<String>,
-    /// Live FPM run state for this version.
-    pub state: PoolRunState,
-    /// FPM master PID when running.
-    pub pid: Option<u32>,
-    /// FPM listen address (socket path, or `127.0.0.1:<port>`) when running.
-    pub listen: Option<String>,
-    /// Resident memory of the FPM master in bytes, when measurable.
-    pub rss_bytes: Option<u64>,
-    /// Newest published patch when newer than installed (from the update cache).
-    pub update_available: Option<String>,
-}
-
-/// Live FPM run state for a single PHP version.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-#[non_exhaustive]
-pub enum PoolRunState {
-    /// FPM is supervised and its master process is alive.
-    Running,
-    /// No FPM pool for this version (installed but never started, or stopped).
-    Stopped,
-    /// A supervised pool's master process has died.
-    Failed,
-}
-
-/// Live run state of a supervised service. Mirrors [`PoolRunState`] but is a
-/// distinct type so services and PHP pools can evolve independently.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-#[non_exhaustive]
-pub enum ServiceRunState {
-    /// The server process is supervised and alive.
-    Running,
-    /// Not running (installed but never started, or stopped).
-    Stopped,
-    /// A supervised server process has died.
-    Failed,
-}
-
-/// Per-service status snapshot, returned in [`crate::Response::Services`] and in
-/// [`StatusReport::services`]. Every field is integer-only / string / bool so
-/// the enclosing `Response` keeps its `Eq` derive (no floats on the wire).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ServiceStatus {
-    /// Stable service id (`"redis"`, `"mysql"`, `"mariadb"`, `"postgres"`, `"meilisearch"`).
-    pub service: String,
-    /// Human-facing label (`"Redis (Valkey)"`, `"PostgreSQL"`, …).
-    pub display_name: String,
-    /// Versions installed on disk, ascending. Empty when the engine is not
-    /// installed.
-    pub installed_versions: Vec<String>,
-    /// The configured/selected version, if the user has chosen one.
-    pub selected_version: Option<String>,
-    /// Live run state.
-    pub state: ServiceRunState,
-    /// Server PID when running.
-    pub pid: Option<u32>,
-    /// Listen address (`"127.0.0.1:6379"`) when running.
-    pub listen: Option<String>,
-    /// The effective (configured or default) port.
-    pub port: u16,
-    /// Whether the daemon auto-starts this instance on boot.
-    pub enabled: bool,
-    /// Whether the engine hosts SQL databases (gates "Create Database" in the GUI).
-    pub supports_databases: bool,
-    /// The service *type* id (`"redis"`, `"reverb"`), distinct from `service`
-    /// (the instance wire id, e.g. `"reverb:blog"`). Additive: older daemons omit
-    /// it, so a client falls back to `service` when this is empty.
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub type_id: String,
-    /// The linked site name for a per-site instance (`Some("blog")`); `None` for
-    /// a single-instance engine. Additive.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub site: Option<String>,
-    /// The last failure message when `state` is `Failed`, for display in the UI;
-    /// `None` otherwise. Additive.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub error: Option<String>,
-    /// Whether the engine accepts free-form configuration overrides (gates the
-    /// overrides panel in the GUI, the way `supports_databases` gates "Create
-    /// Database"). Skipped on the wire when `false` so the byte shape is
-    /// unchanged for the services that don't, and defaulted on decode so an
-    /// older daemon's status reads as "no overrides" rather than failing.
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub supports_overrides: bool,
-}
-
-/// One installable service *type* for the "Add Service" dialog, returned in
-/// [`crate::Response::AddableServices`].
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct AddableServiceType {
-    /// Stable type id (`"redis"`, `"reverb"`, ...).
-    pub type_id: String,
-    /// Human-facing label.
-    pub display_name: String,
-    /// `"single"` (at most one instance) or `"per_site"` (one per linked site).
-    pub multiplicity: String,
-    /// Whether adding an instance requires choosing a linked site.
-    pub requires_site: bool,
-    /// Whether adding an instance installs a downloadable version.
-    pub requires_version: bool,
-    /// True for a single-instance type that is already installed - the GUI
-    /// disables its picker row.
-    pub already_installed: bool,
-    /// Installable versions for this platform, ascending (empty for a
-    /// version-less type).
-    pub available_versions: Vec<String>,
-    /// The type's default loopback port.
-    pub default_port: u16,
-    /// The daemon's suggested next-free port for a new instance (validated again
-    /// on submit).
-    pub suggested_port: u16,
-}
-
-/// What versions of a service are installed vs installable, returned in
-/// [`crate::Response::AvailableServices`].
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ServiceAvailability {
-    /// Stable service id.
-    pub service: String,
-    /// Installable versions published for this platform, ascending.
-    pub available: Vec<String>,
-    /// Versions already installed on disk, ascending.
-    pub installed: Vec<String>,
-}
-
-/// One `WordPress` core release line, returned in
-/// [`crate::Response::WordpressVersions`]. Sourced from the hand-maintained
-/// `meta/wordpress-versions.json` in the orcker repo (not wordpress.org - that
-/// API only exposes a minimum PHP floor, with no upper bound, which made very
-/// old `WordPress` branches look compatible with brand-new PHP releases they
-/// were never tested against).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct WordPressVersionInfo {
-    /// The major.minor release line (e.g. `"6.7"`), shown in the GUI.
-    pub branch: String,
-    /// The newest patch in this branch (e.g. `"6.7.5"`) - what actually gets
-    /// passed to `wp core download --version=`. Needed because that command
-    /// (and wordpress.org's download URLs) resolve a bare branch like `"6.7"`
-    /// to its original, unpatched release, not its latest patch.
-    pub latest: String,
-    /// Lowest PHP version this branch is compatible with.
-    pub min_php: PhpVersion,
-    /// Highest PHP version this branch has been tested against.
-    pub max_php: PhpVersion,
-}
-
-/// One user database in a SQL service, returned in [`crate::Response::Databases`].
-///
-/// A struct (not a bare `String`) so future fields (size, owner, encoding) can be
-/// added additively without a wire break.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct DatabaseSummary {
-    /// The database name.
-    pub name: String,
 }
 
 /// One installable dev tool, returned in [`crate::Response::Tools`].
@@ -649,14 +466,6 @@ pub enum DiagnosisCode {
     CaNotTrustedByBrowsers,
     /// The OS resolver does not route `*.<tld>` to Orcker.
     ResolverNotInstalled,
-    /// No PHP versions are installed.
-    NoPhpInstalled,
-    /// The configured default PHP version is not installed.
-    DefaultPhpNotInstalled,
-    /// A supervised FPM pool has failed.
-    FpmPoolFailed,
-    /// A newer PHP patch is available for an installed version.
-    PhpUpdateAvailable,
     /// A supervised service (database / cache) has failed.
     ServiceFailed,
     /// No sites are configured.
@@ -666,9 +475,6 @@ pub enum DiagnosisCode {
     /// A dev tool is installed but Orcker's `{data}/bin` isn't on the user's PATH,
     /// so the tool's commands won't resolve in the shell (remedy: `orcker path install`).
     BinDirNotOnPath,
-    /// The bundled PHP does not trust the Orcker CA: the managed `{data}/cacert.pem`
-    /// is missing or stale, so PHP HTTPS to `.test` fails (`cURL error 60`).
-    PhpCaNotTrusted,
     /// The global symlink-escape protection is turned off, so the proxy will serve
     /// files reached through symlinks that resolve outside a site's own folder.
     SymlinkProtectionDisabled,
@@ -688,11 +494,6 @@ pub enum DiagnosisCode {
     /// mode is on. Remedy: `sudo orcker elevate lan` (restart the daemon first if it
     /// still holds a privileged port). See [`StatusReport::lan_redirect_targets`].
     LanRedirectStale,
-    /// A hand-edited service override file (`conf.d/50-local.<ext>`, which Orcker
-    /// never rewrites) names a directive Orcker manages itself, or carries a line
-    /// the engine's option-file grammar won't parse. Remedy: edit the file, then
-    /// restart that service.
-    ServiceOverrideInvalid,
     /// Everything checks out.
     AllGood,
 }

@@ -24,6 +24,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod artifact;
 pub mod detect;
 pub mod error;
 pub mod helper;
@@ -42,6 +43,7 @@ pub mod trust_store;
 
 mod os;
 
+pub use artifact::{current_target, is_safe_member, target_from, Arch, Os, UnsupportedTarget};
 pub use detect::{gather_project_signals, FsSignalSource, ProjectSignalSource};
 pub use error::{
     BindPairErrorReason, IdeErrorReason, OpenErrorReason, PlatformError, ResolverErrorReason,

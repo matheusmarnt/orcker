@@ -11,29 +11,20 @@
 pub mod apply;
 pub mod cli;
 #[cfg(unix)]
-pub mod cli_shim;
 #[cfg(unix)]
-pub mod composer_shim;
 #[cfg(unix)]
-pub mod cover_shim;
 pub mod elevate;
 pub mod error;
 #[cfg(unix)]
-pub mod exec_cmd;
 #[cfg(unix)]
-pub mod laravel_shim;
 pub mod map;
 pub mod mcp_cmd;
 pub mod path_cmd;
 #[cfg(unix)]
-pub mod shim;
 #[cfg(unix)]
-pub mod site_scope;
 pub mod transport;
 pub mod uninstall;
 #[cfg(unix)]
-pub mod wp_shim;
-
 use std::process::ExitCode;
 
 pub use error::ClientError;
@@ -52,41 +43,8 @@ pub async fn run(cli: Cli) -> ExitCode {
         Command::Path { action } => return path_cmd::run(*action),
         Command::Mcp => return mcp_cmd::run().await,
         #[cfg_attr(not(unix), allow(unused_variables))]
-        Command::Coverage { args } => {
-            #[cfg(unix)]
-            {
-                return cover_shim::run_coverage(args);
-            }
-            #[cfg(not(unix))]
-            {
-                eprintln!("orcker: coverage is only available on macOS and Linux");
-                return ExitCode::from(2);
-            }
-        }
         #[cfg_attr(not(unix), allow(unused_variables))]
-        Command::Exec { site, tool, args } => {
-            #[cfg(unix)]
-            {
-                return exec_cmd::run_exec(*tool, site.as_deref(), args).await;
-            }
-            #[cfg(not(unix))]
-            {
-                eprintln!("orcker: exec is only available on macOS and Linux");
-                return ExitCode::from(2);
-            }
-        }
         #[cfg_attr(not(unix), allow(unused_variables))]
-        Command::Which { tool, site } => {
-            #[cfg(unix)]
-            {
-                return exec_cmd::run_which(*tool, site.as_deref(), cli.json).await;
-            }
-            #[cfg(not(unix))]
-            {
-                eprintln!("orcker: which is only available on macOS and Linux");
-                return ExitCode::from(2);
-            }
-        }
         Command::Domain {
             action: crate::cli::DomainAction::List { site },
         } => return run_domain_list(site.as_deref(), cli.json).await,
@@ -105,13 +63,6 @@ pub async fn run(cli: Cli) -> ExitCode {
         Command::Tunnel {
             action: crate::cli::TunnelAction::Login,
         } if !cli.json => return stream_tunnel_job(orcker_ipc::Request::CloudflaredLogin).await,
-        Command::Update {
-            target: None,
-            yes: true,
-            edge,
-            stable,
-            force,
-        } => return run_self_update_apply(cli.json, *edge, *stable, *force).await,
         Command::Lan {
             action: crate::cli::LanAction::Enable,
         } => return run_lan_toggle(true, cli.json).await,
@@ -121,6 +72,12 @@ pub async fn run(cli: Cli) -> ExitCode {
         Command::Lan {
             action: crate::cli::LanAction::Status,
         } => return run_lan_status(cli.json).await,
+        Command::Update {
+            yes: true,
+            edge,
+            stable,
+            force,
+        } => return run_self_update_apply(cli.json, *edge, *stable, *force).await,
         _ => {}
     }
 
@@ -130,7 +87,6 @@ pub async fn run(cli: Cli) -> ExitCode {
         }
         _ => map::to_request(&cli.command)
             .map(canonicalize_unpark)
-            .and_then(canonicalize_db_paths)
             .and_then(canonicalize_park_path),
     };
     let req = match req {
@@ -149,53 +105,6 @@ pub async fn run(cli: Cli) -> ExitCode {
             }
             if !r.stderr.is_empty() {
                 eprintln!("{}", r.stderr);
-            }
-            if !cli.json
-                && r.code == 0
-                && matches!(
-                    &cli.command,
-                    Command::Service {
-                        action: crate::cli::ServiceAction::ChangeVersion { service, .. }
-                    } if service == "meilisearch"
-                )
-            {
-                eprintln!(
-                    "warning: Meilisearch indexes do not transfer between versions; \
-                     rebuild them with Laravel Scout (scout:sync-index-settings and scout:import). \
-                     The previous version's data is retained until uninstall --purge."
-                );
-            }
-            if !cli.json && r.code == 0 {
-                if let Command::Service {
-                    action:
-                        crate::cli::ServiceAction::Set { service, .. }
-                        | crate::cli::ServiceAction::Unset { service, .. },
-                } = &cli.command
-                {
-                    println!("saved - restart to apply: orcker service restart {service}");
-                }
-            }
-            if !cli.json && r.code == 0 && matches!(cli.command, Command::Use { version: None, .. })
-            {
-                print_php_path_hint();
-            }
-            if !cli.json && r.code == 0 {
-                if let Command::Update {
-                    target: None,
-                    yes: false,
-                    edge,
-                    stable,
-                    ..
-                } = &cli.command
-                {
-                    if *edge || *stable {
-                        let ch = if *edge { "edge" } else { "stable" };
-                        println!(
-                            "\norcker: showing the {ch} channel; your saved preference is \
-                             unchanged - add --yes to switch"
-                        );
-                    }
-                }
             }
             if r.code == 0
                 && matches!(
@@ -835,43 +744,6 @@ fn canonicalize_unpark(req: orcker_ipc::Request) -> orcker_ipc::Request {
     req
 }
 
-/// Absolutise the file path of a `BackupDatabase`/`RestoreDatabase` request against
-/// the user's current directory before it reaches the daemon - the daemon's own cwd
-/// differs from the user's shell, so a relative path would otherwise resolve in the
-/// wrong place. Done here, at the I/O boundary, to keep `map::to_request` pure.
-///
-/// Restore requires the source file to exist (canonicalise, fail loudly if missing);
-/// backup's destination does not exist yet, so it is merely made absolute.
-fn canonicalize_db_paths(req: orcker_ipc::Request) -> Result<orcker_ipc::Request, ClientError> {
-    use orcker_ipc::Request;
-    match req {
-        Request::RestoreDatabase {
-            service,
-            name,
-            path,
-        } => {
-            let path = std::fs::canonicalize(&path).map_err(|e| {
-                ClientError::Usage(format!("cannot read backup file {}: {e}", path.display()))
-            })?;
-            Ok(Request::RestoreDatabase {
-                service,
-                name,
-                path,
-            })
-        }
-        Request::BackupDatabase {
-            service,
-            name,
-            path,
-        } => Ok(Request::BackupDatabase {
-            service,
-            name,
-            path: absolutise(&path)?,
-        }),
-        other => Ok(other),
-    }
-}
-
 /// Absolutise and canonicalise a `Park` request against the user's current
 /// directory before it reaches the daemon. The daemon's cwd differs from the
 /// user's shell, so a relative path like `.` would otherwise resolve there.
@@ -1001,39 +873,6 @@ fn daemon_down_response() -> orcker_ipc::Response {
     }
 }
 
-/// Print where the managed `php` shim lives and warn if another `php` already
-/// shadows it on `PATH`. Best-effort: silently does nothing if dirs can't be
-/// resolved.
-fn print_php_path_hint() {
-    use orcker_platform::{ActivePaths, Paths};
-    let Ok(dirs) = ActivePaths::new().resolve() else {
-        return;
-    };
-    let bin = dirs.data.join("bin");
-    println!(
-        "→ ensure {} is on your PATH for the `php` command",
-        bin.display()
-    );
-    println!("  (also provides `php<ver>` and `phpcover`/`php<ver>cover` for pcov coverage)");
-    if let Some(existing) = first_php_on_path() {
-        if existing != bin.join("php") {
-            println!(
-                "  note: `php` currently resolves to {} - put {} earlier on PATH to override",
-                existing.display(),
-                bin.display()
-            );
-        }
-    }
-}
-
-/// First `php` executable found on `PATH`, if any.
-fn first_php_on_path() -> Option<std::path::PathBuf> {
-    let path = std::env::var_os("PATH")?;
-    std::env::split_paths(&path)
-        .map(|dir| dir.join("php"))
-        .find(|candidate| candidate.is_file())
-}
-
 #[cfg(test)]
 #[allow(
     clippy::unwrap_used,
@@ -1129,81 +968,6 @@ mod tests {
     }
 
     // ─── canonicalize_db_paths ──────────────────────────────────────
-
-    #[test]
-    fn canonicalize_db_paths_restore_existing_file_is_canonicalised() {
-        let tmp = tempfile::tempdir().unwrap();
-        let file = tmp.path().join("dump.sql");
-        std::fs::write(&file, b"-- sql").unwrap();
-        let req = Request::RestoreDatabase {
-            service: "mysql".into(),
-            name: "app".into(),
-            path: file.clone(),
-        };
-        let out = canonicalize_db_paths(req).unwrap();
-        let Request::RestoreDatabase {
-            path,
-            service,
-            name,
-        } = out
-        else {
-            panic!("expected RestoreDatabase");
-        };
-        assert_eq!(service, "mysql");
-        assert_eq!(name, "app");
-        assert_eq!(path, std::fs::canonicalize(&file).unwrap());
-    }
-
-    #[test]
-    fn canonicalize_db_paths_restore_missing_file_is_usage_error() {
-        let req = Request::RestoreDatabase {
-            service: "mysql".into(),
-            name: "app".into(),
-            path: PathBuf::from("/no/such/backup-file-xyz.sql"),
-        };
-        let err = canonicalize_db_paths(req).unwrap_err();
-        assert!(matches!(err, ClientError::Usage(_)), "got: {err:?}");
-        assert!(err.to_string().contains("cannot read backup file"));
-    }
-
-    #[test]
-    fn canonicalize_db_paths_backup_relative_is_absolutised() {
-        let req = Request::BackupDatabase {
-            service: "mysql".into(),
-            name: "app".into(),
-            path: PathBuf::from("rel/app.sql"),
-        };
-        let out = canonicalize_db_paths(req).unwrap();
-        let Request::BackupDatabase { path, .. } = out else {
-            panic!("expected BackupDatabase");
-        };
-        assert!(
-            path.is_absolute(),
-            "backup path should be absolutised: {path:?}"
-        );
-        assert!(path.ends_with("rel/app.sql"));
-    }
-
-    #[test]
-    fn canonicalize_db_paths_backup_absolute_is_unchanged() {
-        let abs = PathBuf::from("/var/tmp/app.sql");
-        let req = Request::BackupDatabase {
-            service: "mysql".into(),
-            name: "app".into(),
-            path: abs.clone(),
-        };
-        let out = canonicalize_db_paths(req).unwrap();
-        match out {
-            Request::BackupDatabase { path, .. } => assert_eq!(path, abs),
-            _ => panic!("expected BackupDatabase"),
-        }
-    }
-
-    #[test]
-    fn canonicalize_db_paths_other_request_passes_through() {
-        let out = canonicalize_db_paths(Request::Ping).unwrap();
-        assert_eq!(out, Request::Ping);
-    }
 
     // ─── absolutise ─────────────────────────────────────────────────
 
@@ -1370,20 +1134,4 @@ mod tests {
     }
 
     // ─── PATH helpers ───────────────────────────────────────────────
-
-    /// The result depends on the host PATH, so any returned candidate (if one
-    /// exists) must end in `php` and be a file.
-    #[test]
-    fn first_php_on_path_returns_option() {
-        if let Some(p) = first_php_on_path() {
-            assert!(p.ends_with("php"));
-            assert!(p.is_file());
-        }
-    }
-
-    /// Best-effort printer; must not panic regardless of environment.
-    #[test]
-    fn print_php_path_hint_runs() {
-        print_php_path_hint();
-    }
 }

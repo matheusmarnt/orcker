@@ -1,7 +1,7 @@
 //! Site-creation request payloads and long-running-job progress types.
 //!
 //! Scaffolding a new project (e.g. `laravel new`) takes far longer than a
-//! single request/response round-trip, so [`crate::Request::CreateSite`] starts
+//! single request/response round-trip, so the request that starts one starts
 //! a background **job** on the daemon and returns immediately with a
 //! [`crate::Response::JobStarted`]. The client then polls
 //! [`crate::Request::JobStatus`] for the streamed log + phase until the job
@@ -190,7 +190,7 @@ pub struct WordPressDatabase {
     /// Which engine to provision.
     pub engine: WordPressDbEngine,
     /// The database name to create. Validated by the daemon against the
-    /// same allowlist [`crate::Request::CreateDatabase`] uses.
+    /// same allowlist the database-creation request used.
     pub name: String,
 }
 

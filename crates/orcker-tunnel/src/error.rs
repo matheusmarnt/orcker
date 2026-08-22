@@ -1,6 +1,6 @@
 //! Error type for tunnel supervision.
 
-use orcker_supervise::ExitReason;
+use crate::supervise::ExitReason;
 
 /// Failures from supervising a `cloudflared` tunnel.
 ///

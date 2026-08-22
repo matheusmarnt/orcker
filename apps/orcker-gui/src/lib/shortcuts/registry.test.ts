@@ -27,7 +27,7 @@ function fakeCtx(view: ViewActions = {}): ShortcutCtx {
 
 describe("VIEW_TARGETS", () => {
   it("covers the main views in sidebar order, About excluded", () => {
-    expect(VIEW_TARGETS).toHaveLength(11);
+    expect(VIEW_TARGETS).toHaveLength(9);
     expect(VIEW_TARGETS[0]?.path).toBe("/overview");
     expect(VIEW_TARGETS[VIEW_TARGETS.length - 1]?.path).toBe("/doctor");
     expect(VIEW_TARGETS.map((v) => v.path)).not.toContain("/about");
@@ -35,12 +35,19 @@ describe("VIEW_TARGETS", () => {
     expect(VIEW_TARGETS.map((v) => v.path)).toContain("/proxies");
   });
 
-  it("binds exactly nine digit chords (⌘1…⌘9); Share is palette-only", () => {
-    const withDigit = VIEW_TARGETS.filter((v) => v.digit !== undefined);
-    expect(withDigit).toHaveLength(9);
-    expect(withDigit.map((v) => v.digit)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  it("binds digit chords in an unbroken run from 1, with no duplicates", () => {
+    // Pins the *property* (consecutive from 1, unique) rather than the literal
+    // list. The old assertion hard-coded [1..9], so it cemented whichever
+    // targets happened to exist - including two whose routes had been deleted.
+    const digits = VIEW_TARGETS.filter((v) => v.digit !== undefined).map((v) => v.digit!);
+    expect(new Set(digits).size).toBe(digits.length);
+    expect([...digits].sort((a, b) => a - b)).toEqual(
+      Array.from({ length: digits.length }, (_, i) => i + 1),
+    );
     expect(VIEW_TARGETS.find((v) => v.path === "/integrations")?.digit).toBeUndefined();
   });
+
+
 });
 
 describe("nativeShortcuts", () => {
@@ -62,12 +69,17 @@ describe("nativeShortcuts", () => {
 describe("commandsForScope", () => {
   const all = buildCommands();
 
-  it("surfaces ⌘1…⌘9 navigation only in the main window", () => {
+  it("surfaces digit navigation only in the main window", () => {
     const main = commandsForScope(all, "main", false).filter((c) =>
       c.id.startsWith("nav:"),
     );
-    expect(main).toHaveLength(11);
-    expect(main.filter((c) => c.chord)).toHaveLength(9);
+    // Derived from VIEW_TARGETS rather than hard-coded: a literal count pins the
+    // list's current shape, so it breaks on every legitimate add or removal and
+    // says nothing about the property under test.
+    expect(main).toHaveLength(VIEW_TARGETS.length);
+    expect(main.filter((c) => c.chord)).toHaveLength(
+      VIEW_TARGETS.filter((v) => v.digit !== undefined).length,
+    );
     const integrations = main.find((c) => c.id === "nav:/integrations");
     const proxies = main.find((c) => c.id === "nav:/proxies");
     expect(integrations).toBeDefined();

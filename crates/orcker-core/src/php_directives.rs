@@ -9,7 +9,7 @@
 //! [`validate_name`] and [`validate_value`] are the **injection boundary**,
 //! run when a directive is set (CLI + daemon), when the config is loaded from
 //! disk (`orcker-config`, leniently: bad entries are dropped), and again
-//! defensively at render time (`orcker-php`, `bin/orckerd`).
+//! defensively at render time (`bin/orckerd`).
 //!
 //! A small denylist ([`reserved`]) keeps free-form entries from colliding with
 //! directives Orcker manages through typed paths (the settings allowlist,

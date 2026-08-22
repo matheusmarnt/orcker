@@ -19,7 +19,7 @@ use crate::{Asset, ReleaseMeta};
 pub const UPDATE_PUBLIC_KEY: &str = "RWRXUQIpU8uZ3B6SV3yFsK3+aAWZX+efytjc8F+8PTuViL8/nNPsQxpi";
 
 /// The minisign public key whose secret half signs the `php.json` manifest in
-/// `forjedio/orcker-php`. A **dedicated** key, distinct from [`UPDATE_PUBLIC_KEY`]:
+/// the PHP build distribution. A **dedicated** key, distinct from [`UPDATE_PUBLIC_KEY`]:
 /// PHP executes as the user, so the manifest is verified on the install critical
 /// path (not just app updates). Rotating it requires shipping a new orcker with the
 /// new key, since it is pinned in the binary.

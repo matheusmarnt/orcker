@@ -358,7 +358,7 @@ fn resolve_dirs() -> Option<orcker_platform::PlatformDirs> {
 }
 
 /// Whether any PHP version is installed under `{data}/php/php-*`. Dependency-free
-/// FS probe (the GUI host doesn't depend on `orcker-php`).
+/// FS probe (the GUI host has no runtime crate to ask).
 fn any_php_installed(data: &std::path::Path) -> bool {
     let Ok(entries) = std::fs::read_dir(data.join("php")) else {
         return false;

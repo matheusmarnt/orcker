@@ -32,9 +32,6 @@ orcker-ipc       = { path = "../../crates/orcker-ipc", features = ["transport"] 
 orcker-tls       = { path = "../../crates/orcker-tls" }
 orcker-platform  = { path = "../../crates/orcker-platform" }
 orcker-dns       = { path = "../../crates/orcker-dns" }
-orcker-php       = { path = "../../crates/orcker-php" }
-orcker-services  = { path = "../../crates/orcker-services" }
-orcker-supervise = { path = "../../crates/orcker-supervise" }
 orcker-tunnel    = { path = "../../crates/orcker-tunnel" }
 orcker-proxy     = { path = "../../crates/orcker-proxy" }
 orcker-doctor    = { path = "../../crates/orcker-doctor" }
@@ -66,7 +63,8 @@ hyper-util     = { workspace = true }
 http-body-util = { workspace = true }
 subtle         = { workspace = true }
 time           = { workspace = true }
-# PHP install path: fetch (rustls, no OpenSSL) + unpack prebuilt builds.
+# Artifact install path: fetch (rustls, no OpenSSL) + unpack prebuilt binaries
+# (self-update, cloudflared, the Node and Bun toolchains).
 reqwest        = { workspace = true }
 flate2         = { workspace = true }
 tar            = { workspace = true }

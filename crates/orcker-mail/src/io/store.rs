@@ -192,7 +192,7 @@ impl Store {
     /// Persist the index atomically: write a sibling temp file, then rename it
     /// over `index.json`. A crash or partial write can therefore never leave a
     /// truncated/corrupt index (same write-temp-then-rename discipline as
-    /// `orcker-config`/`orcker-php`). Rename is atomic on the same filesystem.
+    /// `orcker-config`). Rename is atomic on the same filesystem.
     async fn write_index(&self, entries: &[MailSummary]) -> Result<(), MailError> {
         let path = self.dir.join("index.json");
         let tmp = self.dir.join("index.json.tmp");

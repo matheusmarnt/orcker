@@ -1,46 +1,33 @@
-//! Dev-tool installer subsystem - Composer, Node (node/npm/npx), Bun (bun/bunx),
-//! the Laravel installer, and WP-CLI.
+//! Dev-tool installer subsystem - Node (node/npm/npx) and Bun (bun/bunx).
 //!
 //! Most tools ship as a self-contained, relocatable binary (no global install):
-//! Node's tarball, Bun's zip, Composer's phar. orcker downloads + sha256-verifies
+//! Node's tarball and Bun's zip. orcker downloads + sha256-verifies
 //! the latest release into `{data}/tools/<id>/` and symlinks the commands it
 //! provides into `{data}/bin` (on `PATH` via `orcker path`). Same I/O-edge pattern
 //! as `php_install`/`ext_install`: a `Downloader` trait is injected; the pure
-//! resolution bits are inline + unit-tested. The Laravel installer and WP-CLI
-//! are instead Composer packages, built via the managed Composer (see
-//! `laravel`/`wp_cli`).
+//! resolution bits are inline + unit-tested. The PHP-hosted tools this
+//! subsystem used to carry (Composer, the Laravel installer, WP-CLI) left with
+//! the native runtime; PRD FR-020 runs them inside the project container.
 
 pub mod bun;
-pub mod composer;
 pub mod external;
-pub mod laravel;
 pub mod node;
-pub mod wp_cli;
 
 use std::path::{Path, PathBuf};
 
+use crate::download::Downloader;
 use orcker_ipc::ToolStatus;
-use orcker_php::Downloader;
 use orcker_platform::PlatformDirs;
 
-use crate::ext_install::sha256_hex;
+use crate::download::sha256_hex;
 
 /// The dev tools orcker can install.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Tool {
-    /// Composer (PHP dependency manager) - a phar run via the managed PHP.
-    Composer,
     /// Node.js - `node`, `npm`, `npx`.
     Node,
     /// Bun - `bun`, `bunx`.
     Bun,
-    /// The Laravel installer (`laravel new`) - a Composer package run via the
-    /// managed PHP, exposed as the `laravel` multi-call shim.
-    Laravel,
-    /// WP-CLI (`wp`) - the WordPress command-line tool, a Composer package
-    /// (`wp-cli/wp-cli-bundle`) run via the managed PHP, exposed as the `wp`
-    /// multi-call shim.
-    WpCli,
 }
 
 /// Filename of the installed-version marker inside a tool's dir.
@@ -48,23 +35,14 @@ const VERSION_MARKER: &str = ".version";
 
 impl Tool {
     /// Every tool, for `list_status` / reconcile.
-    pub const ALL: [Tool; 5] = [
-        Tool::Composer,
-        Tool::Node,
-        Tool::Bun,
-        Tool::Laravel,
-        Tool::WpCli,
-    ];
+    pub const ALL: [Tool; 2] = [Tool::Node, Tool::Bun];
 
     /// Stable id used on the wire and as the on-disk dir name.
     #[must_use]
     pub const fn id(self) -> &'static str {
         match self {
-            Tool::Composer => "composer",
             Tool::Node => "node",
             Tool::Bun => "bun",
-            Tool::Laravel => "laravel",
-            Tool::WpCli => "wp-cli",
         }
     }
 
@@ -72,11 +50,8 @@ impl Tool {
     #[must_use]
     pub const fn display_name(self) -> &'static str {
         match self {
-            Tool::Composer => "Composer",
             Tool::Node => "Node.js",
             Tool::Bun => "Bun",
-            Tool::Laravel => "Laravel Installer",
-            Tool::WpCli => "WP-CLI",
         }
     }
 
@@ -85,11 +60,8 @@ impl Tool {
     #[must_use]
     pub const fn primary_bin(self) -> &'static str {
         match self {
-            Tool::Composer => "composer",
             Tool::Node => "node",
             Tool::Bun => "bun",
-            Tool::Laravel => "laravel",
-            Tool::WpCli => "wp",
         }
     }
 
@@ -97,11 +69,8 @@ impl Tool {
     #[must_use]
     pub const fn exposed_bins(self) -> &'static [&'static str] {
         match self {
-            Tool::Composer => &["composer"],
             Tool::Node => &["node", "npm", "npx"],
             Tool::Bun => &["bun", "bunx"],
-            Tool::Laravel => &["laravel"],
-            Tool::WpCli => &["wp"],
         }
     }
 
@@ -111,19 +80,9 @@ impl Tool {
     /// required: Tooling still offers **Install** either way, so orcker's own copy
     /// can always be added alongside an external one.
     ///
-    /// False for WP-CLI: every orcker path that runs `wp` (WordPress site
-    /// creation, the admin-user list, URL sync) execs the *managed*
-    /// `boot-fs.php` entry point directly rather than a PATH-resolved `wp`, so
-    /// an external copy satisfies none of them and must not pass preflight. When
-    /// one wrongly did, the WordPress wizard called the toolchain ready and a
-    /// site create reached `wp core download`, then failed spawning a
-    /// `boot-fs.php` that was never installed (issue #150).
     #[must_use]
     pub const fn accepts_external(self) -> bool {
-        match self {
-            Tool::Composer | Tool::Node | Tool::Bun | Tool::Laravel => true,
-            Tool::WpCli => false,
-        }
+        true
     }
 
     /// Parse a wire id back to a `Tool`.
@@ -216,8 +175,7 @@ fn note(progress: Option<&ProgressTx>, msg: impl Into<String>) {
 
 /// Download + install `tool`'s latest release. Idempotent (replaces in place via
 /// staging + atomic swap). Best-effort integrity is sha256-verified per asset.
-/// When `progress` is set, coarse status (and, for the Laravel installer, the
-/// live Composer output) is streamed to it.
+/// When `progress` is set, coarse status is streamed to it.
 pub async fn install(
     tool: Tool,
     dirs: &PlatformDirs,
@@ -226,11 +184,8 @@ pub async fn install(
 ) -> Result<(), ToolError> {
     note(progress, format!("Installing {}…", tool.display_name()));
     let result = match tool {
-        Tool::Composer => composer::install(dirs, dl).await,
         Tool::Node => node::install(dirs, dl).await,
         Tool::Bun => bun::install(dirs, dl).await,
-        Tool::Laravel => laravel::install(dirs, progress).await,
-        Tool::WpCli => wp_cli::install(dirs, progress).await,
     };
     match &result {
         Ok(()) => note(progress, format!("Installed {}", tool.display_name())),
@@ -252,13 +207,10 @@ pub fn uninstall(dirs: &PlatformDirs, tool: Tool) -> Result<(), ToolError> {
 /// The `(name_in_bin, symlink_target)` pairs for an installed `tool`. Empty if
 /// the tool isn't installed or its root can't be resolved.
 #[cfg(unix)]
-fn shim_links(dirs: &PlatformDirs, tool: Tool, orcker_bin: &Path) -> Vec<(String, PathBuf)> {
+fn shim_links(dirs: &PlatformDirs, tool: Tool) -> Vec<(String, PathBuf)> {
     match tool {
-        Tool::Composer => vec![("composer".to_owned(), orcker_bin.to_path_buf())],
         Tool::Node => node::shim_links(dirs),
         Tool::Bun => bun::shim_links(dirs),
-        Tool::Laravel => vec![("laravel".to_owned(), orcker_bin.to_path_buf())],
-        Tool::WpCli => vec![("wp".to_owned(), orcker_bin.to_path_buf())],
     }
 }
 
@@ -266,17 +218,16 @@ fn shim_links(dirs: &PlatformDirs, tool: Tool, orcker_bin: &Path) -> Vec<(String
 /// commands of installed tools, prune those of uninstalled tools. **Prunes by
 /// name-ownership** (gated on `is_symlink`, never `target.exists()`), so a
 /// dangling link after uninstall is still removed. Callers must hold the shared
-/// `shim_reconcile` mutex (this writes the same dir as `php_install::reconcile_shims`).
-/// Unix-only; no-op elsewhere.
+/// `shim_reconcile` mutex. Unix-only; no-op elsewhere.
 #[cfg(unix)]
-pub fn reconcile_tool_shims(dirs: &PlatformDirs, orcker_bin: &Path) -> Result<(), ToolError> {
+pub fn reconcile_tool_shims(dirs: &PlatformDirs) -> Result<(), ToolError> {
     let bin = bin_dir(dirs);
     std::fs::create_dir_all(&bin).map_err(|e| ToolError::Io(format!("{}: {e}", bin.display())))?;
 
     for &tool in &Tool::ALL {
         if installed_version(dirs, tool).is_some() {
-            for (name, target) in shim_links(dirs, tool, orcker_bin) {
-                crate::php_install::place_symlink(&bin.join(&name), &target)
+            for (name, target) in shim_links(dirs, tool) {
+                place_symlink(&bin.join(&name), &target)
                     .map_err(|e| ToolError::Io(e.to_string()))?;
             }
         } else {
@@ -294,7 +245,7 @@ pub fn reconcile_tool_shims(dirs: &PlatformDirs, orcker_bin: &Path) -> Result<()
 }
 
 #[cfg(not(unix))]
-pub fn reconcile_tool_shims(_dirs: &PlatformDirs, _orcker_bin: &Path) -> Result<(), ToolError> {
+pub fn reconcile_tool_shims(_dirs: &PlatformDirs) -> Result<(), ToolError> {
     Ok(())
 }
 
@@ -413,34 +364,25 @@ pub(crate) fn stage_and_swap(
     Ok(())
 }
 
-/// Stream a child pipe line-by-line into `progress` (no-op if either is
-/// absent). Used by the Composer-package tools (Laravel installer, WP-CLI) to
-/// forward `composer create-project` output.
-pub(crate) async fn drain<R: tokio::io::AsyncRead + Unpin>(
-    pipe: Option<R>,
-    progress: Option<ProgressTx>,
-) {
-    use tokio::io::{AsyncBufReadExt, BufReader};
-    let Some(pipe) = pipe else { return };
-    let mut lines = BufReader::new(pipe).lines();
-    while let Ok(Some(line)) = lines.next_line().await {
-        if let Some(tx) = &progress {
-            let _ = tx.send(line);
-        }
-    }
-}
-
-/// Move every entry of `from` into `to`. Both live under `{data}/tools`, so the
-/// renames stay on one filesystem and are atomic + instant.
-pub(crate) fn move_dir_contents(from: &Path, to: &Path) -> Result<(), ToolError> {
-    let entries =
-        std::fs::read_dir(from).map_err(|e| ToolError::Io(format!("{}: {e}", from.display())))?;
-    for entry in entries {
-        let entry = entry.map_err(|e| ToolError::Io(e.to_string()))?;
-        let dest = to.join(entry.file_name());
-        std::fs::rename(entry.path(), &dest)
-            .map_err(|e| ToolError::Io(format!("{}: {e}", dest.display())))?;
-    }
+/// Atomically create or replace the symlink `link` -> `target` (temp + rename,
+/// so a concurrent reader never sees a half-written link). The temp name embeds
+/// the link's filename, the pid and a process-global sequence, so two writers
+/// racing on the same link name never share a temp path.
+#[cfg(unix)]
+fn place_symlink(link: &Path, target: &Path) -> Result<(), std::io::Error> {
+    static SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let parent = link
+        .parent()
+        .ok_or_else(|| std::io::Error::other("shim link has no parent"))?;
+    let name = link
+        .file_name()
+        .and_then(|s| s.to_str())
+        .ok_or_else(|| std::io::Error::other("shim link has no file name"))?;
+    let seq = SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let tmp = parent.join(format!(".{name}.tmp-{}-{seq}", std::process::id()));
+    let _ = std::fs::remove_file(&tmp);
+    std::os::unix::fs::symlink(target, &tmp)?;
+    std::fs::rename(&tmp, link)?;
     Ok(())
 }
 
@@ -469,33 +411,23 @@ mod tests {
         }
         assert_eq!(Tool::Node.exposed_bins(), &["node", "npm", "npx"]);
         assert_eq!(Tool::Bun.exposed_bins(), &["bun", "bunx"]);
-        assert_eq!(Tool::Composer.primary_bin(), "composer");
-        assert_eq!(Tool::Laravel.display_name(), "Laravel Installer");
+        assert_eq!(Tool::Node.primary_bin(), "node");
+        assert_eq!(Tool::Bun.display_name(), "Bun");
     }
 
     /// Issue #150: an external `wp` can't stand in for the managed build, so
     /// Tooling must keep offering Install rather than reporting it external.
     #[test]
-    fn wp_cli_never_accepts_an_external_copy() {
-        assert!(!Tool::WpCli.accepts_external());
-        for t in Tool::ALL {
-            if t != Tool::WpCli {
-                assert!(t.accepts_external(), "{t:?} should accept an external copy");
-            }
-        }
-    }
-
-    #[test]
     fn installed_version_ignores_blank_marker() {
         let tmp = tempfile::tempdir().unwrap();
         let dirs = dirs_in(tmp.path());
-        let d = tool_dir(&dirs, Tool::Composer);
+        let d = tool_dir(&dirs, Tool::Node);
         std::fs::create_dir_all(&d).unwrap();
         std::fs::write(d.join(VERSION_MARKER), "   \n").unwrap();
-        assert_eq!(installed_version(&dirs, Tool::Composer), None);
+        assert_eq!(installed_version(&dirs, Tool::Node), None);
         std::fs::write(d.join(VERSION_MARKER), "  2.10.1\n").unwrap();
         assert_eq!(
-            installed_version(&dirs, Tool::Composer).as_deref(),
+            installed_version(&dirs, Tool::Node).as_deref(),
             Some("2.10.1")
         );
     }
@@ -599,15 +531,10 @@ mod tests {
         std::fs::write(node_root.join("bin").join("npm"), b"m").unwrap();
         std::fs::write(node_root.join("bin").join("npx"), b"x").unwrap();
         std::fs::write(tool_dir(&dirs, Tool::Node).join(VERSION_MARKER), "v24.17.0").unwrap();
-        let composer_dir = tool_dir(&dirs, Tool::Composer);
-        std::fs::create_dir_all(&composer_dir).unwrap();
-        std::fs::write(composer_dir.join("composer.phar"), b"phar").unwrap();
-        std::fs::write(composer_dir.join(VERSION_MARKER), "2.10.1").unwrap();
-
         std::fs::create_dir_all(&bin).unwrap();
         std::os::unix::fs::symlink(&orcker_bin, bin.join("bun")).unwrap();
 
-        reconcile_tool_shims(&dirs, &orcker_bin).unwrap();
+        reconcile_tool_shims(&dirs).unwrap();
 
         assert_eq!(
             std::fs::read_link(bin.join("node")).unwrap(),
@@ -615,10 +542,6 @@ mod tests {
         );
         assert!(bin.join("npm").exists());
         assert!(bin.join("npx").exists());
-        assert_eq!(
-            std::fs::read_link(bin.join("composer")).unwrap(),
-            orcker_bin
-        );
         assert!(!bin.join("bun").exists());
     }
 
@@ -647,18 +570,5 @@ mod tests {
             Some("bun-v1.1.0")
         );
         assert!(extract_root_dir(&tool_dir(&dirs, Tool::Bun)).is_ok());
-    }
-
-    #[test]
-    fn move_dir_contents_moves_all_entries() {
-        let tmp = tempfile::tempdir().unwrap();
-        let from = tmp.path().join("from");
-        let to = tmp.path().join("to");
-        std::fs::create_dir_all(from.join("vendor")).unwrap();
-        std::fs::write(from.join("composer.json"), b"{}").unwrap();
-        std::fs::create_dir_all(&to).unwrap();
-        move_dir_contents(&from, &to).unwrap();
-        assert!(to.join("vendor").is_dir());
-        assert!(to.join("composer.json").is_file());
     }
 }

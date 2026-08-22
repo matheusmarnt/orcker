@@ -70,7 +70,7 @@ export interface SiteEntry extends Site {
 }
 
 /** crates/orcker-ipc/src/response.rs - WordPressAdminUser, for the auto-login
- *  user picker (`Response::WordpressAdminUsers`). */
+ *  user picker. */
 export interface WordPressAdminUser {
   login: string;
   display_name: string;
@@ -373,7 +373,7 @@ export type DumpCategory =
 /**
  * crates/orcker-ipc/src/dump.rs - DumpEvent. `payload` is category-specific and
  * opaque to the daemon; the viewer renders it per `category` (see the
- * `orcker-php-ext` architecture doc for the per-category shape).
+ * dump extension architecture doc for the per-category shape).
  */
 export interface DumpEvent {
   id: number;

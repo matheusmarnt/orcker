@@ -1,6 +1,6 @@
 //! Shared `cargo metadata` dependency-graph assertions, used by every crate's
 //! and binary's `tests/no_runtime_deps.rs` guard (`crates/orcker-tls`,
-//! `crates/orcker-platform`, `crates/orcker-php`, `crates/orcker-proxy`,
+//! `crates/orcker-platform`, `crates/orcker-proxy`,
 //! `bin/orckerd`, `bin/orcker-helper`) to keep the workspace off OpenSSL/
 //! native-tls and free of accidental diamond-dependency version splits.
 //!

@@ -5,7 +5,7 @@ import { defineComponent, h, nextTick, ref } from "vue";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./index";
 
 /**
- * A two-tab harness mirroring how PhpView drives the rail.
+ * A two-tab harness mirroring how a settings view drives the rail.
  *
  * Options are spread in only when supplied, never passed as `undefined`:
  * reka's `useForwardProps` keys off whether a prop is *present*, so an
