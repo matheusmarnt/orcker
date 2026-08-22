@@ -1,9 +1,9 @@
 [workspace]
 resolver = "2"
-members  = ["crates/yerd-core", "crates/yerd-ipc", "crates/yerd-config", "crates/yerd-tls", "crates/yerd-platform", "crates/yerd-dns", "crates/yerd-supervise", "crates/yerd-php", "crates/yerd-services", "crates/yerd-tunnel", "crates/yerd-proxy", "crates/yerd-doctor", "crates/yerd-mail", "crates/yerd-mcp", "crates/yerd-update", "crates/yerd-release-manifest", "crates/yerd-service-ctl", "crates/yerd-depcheck", "bin/yerd-helper", "bin/yerdd", "bin/yerd", "apps/yerd-gui/src-tauri", "xtask"]
+members  = ["crates/orcker-core", "crates/orcker-ipc", "crates/orcker-config", "crates/orcker-tls", "crates/orcker-platform", "crates/orcker-dns", "crates/orcker-supervise", "crates/orcker-php", "crates/orcker-services", "crates/orcker-tunnel", "crates/orcker-proxy", "crates/orcker-doctor", "crates/orcker-mail", "crates/orcker-mcp", "crates/orcker-update", "crates/orcker-release-manifest", "crates/orcker-service-ctl", "crates/orcker-depcheck", "bin/orcker-helper", "bin/orckerd", "bin/orcker", "apps/orcker-gui/src-tauri", "xtask"]
 
 [workspace.package]
-version      = "2.1.0-rc.1"
+version      = "0.0.0"
 edition      = "2021"
 rust-version = "1.77"
 license      = "MIT"
@@ -50,7 +50,7 @@ bytes              = "1"
 tokio-rustls       = "0.26"
 rustls             = "0.23"
 # Mozilla trust anchors for the daemon's reverse-proxy client verifier (public
-# https upstreams). Kept out of yerd-proxy's runtime graph (see its
+# https upstreams). Kept out of orcker-proxy's runtime graph (see its
 # no_runtime_deps guard); the daemon builds the ClientConfig and injects it.
 webpki-roots       = "0.26"
 tracing            = { version = "0.1", default-features = false, features = ["std"] }
@@ -83,7 +83,7 @@ cast_possible_truncation = "allow"
 needless_pass_by_value   = "allow"
 
 # Strip symbols from release binaries so the packaged .deb stays small (debug
-# yerdd is ~139 MB). Trade-off: shipped panic backtraces lose symbol names —
+# orckerd is ~139 MB). Trade-off: shipped panic backtraces lose symbol names —
 # acceptable given the no-panic/unwrap rule. Use "debuginfo" if names are wanted.
 [profile.release]
 strip = "symbols"
@@ -108,16 +108,16 @@ strip = "symbols"
 #   * rcgen is patch-pinned to =0.13.2 not for MSRV but to convert silent
 #     additions to `rcgen::Error` (it is `#[non_exhaustive]` upstream) into a
 #     deliberate version bump that flips the `rcgen_error_detail_table_is_current`
-#     tripwire in yerd-tls.
+#     tripwire in orcker-tls.
 #   * hickory-proto/server/client are patch-pinned to =0.24.4 for the same
 #     reason (`ProtoErrorKind`, `RData` are #[non_exhaustive] upstream).
 #   * hyper-rustls 0.27.6+ requires rustc 1.85 (edition2024 in a transitive
 #     dep); Cargo.lock pins it to 0.27.5 via
 #     `cargo update -p hyper-rustls --precise 0.27.5`. Pulled by `reqwest`,
-#     which is only activated by yerd-php's optional `download` feature — so
+#     which is only activated by orcker-php's optional `download` feature — so
 #     this trap is invisible to the default build and only bites
 #     `--all-features`.
-#   * zip (bin/yerdd, for Bun's archive) is held at 2.x: zip 4+ requires
+#   * zip (bin/orckerd, for Bun's archive) is held at 2.x: zip 4+ requires
 #     edition2024 / rust-version 1.88. The `version = "2"` req keeps the resolver
 #     on the 2.x line; do not bump to 4 until MSRV moves past edition2024. Built
 #     with `default-features = false, features = ["deflate"]`: pure-Rust deflate

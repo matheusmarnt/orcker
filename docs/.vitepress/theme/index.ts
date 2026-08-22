@@ -6,7 +6,7 @@ import ShowcaseRow from './components/ShowcaseRow.vue'
 import YouTubeEmbed from './components/YouTubeEmbed.vue'
 import './custom.css'
 
-// Extends the VitePress default theme with Yerd's indigo brand palette and
+// Extends the VitePress default theme with Orcker's indigo brand palette and
 // hero styling (see custom.css), plus globals for light/dark screenshots
 // (<ThemedImage>, <ShowcaseRow>) and click-to-load video embeds (<YouTubeEmbed>).
 export default {

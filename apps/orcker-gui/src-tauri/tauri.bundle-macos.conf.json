@@ -1,0 +1,11 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "bundle": {
+    "externalBin": ["binaries/orcker", "binaries/orckerd", "binaries/orcker-helper"],
+    "macOS": {
+      "files": {
+        "Library/LaunchAgents/dev.orcker.daemon.plist": "launchagents/dev.orcker.daemon.plist"
+      }
+    }
+  }
+}

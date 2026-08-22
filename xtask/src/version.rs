@@ -152,9 +152,9 @@ mod tests {
         [workspace.dependencies]\n\
         serde = { version = \"1\" }\n";
 
-    const TAURI: &str = "{\n  \"productName\": \"Yerd\",\n  \"version\": \"2.0.1\",\n  \"identifier\": \"dev.yerd.gui\"\n}\n";
+    const TAURI: &str = "{\n  \"productName\": \"Orcker\",\n  \"version\": \"2.0.1\",\n  \"identifier\": \"dev.orcker.gui\"\n}\n";
     const PKG: &str =
-        "{\n  \"name\": \"yerd-gui\",\n  \"version\": \"2.0.1\",\n  \"type\": \"module\"\n}\n";
+        "{\n  \"name\": \"orcker-gui\",\n  \"version\": \"2.0.1\",\n  \"type\": \"module\"\n}\n";
 
     #[test]
     fn cargo_targets_workspace_package_not_dependencies() {
@@ -171,7 +171,7 @@ mod tests {
     fn json_value_and_trailing_comma_preserved() {
         let out = set_json(TAURI, "2.1.0").unwrap();
         assert!(out.contains("  \"version\": \"2.1.0\","));
-        assert!(out.contains("\"productName\": \"Yerd\""));
+        assert!(out.contains("\"productName\": \"Orcker\""));
         assert_eq!(get_json(&out).unwrap(), "2.1.0");
 
         let out2 = set_json(PKG, "2.1.0").unwrap();

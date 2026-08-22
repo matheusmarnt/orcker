@@ -1,17 +1,17 @@
 # CLI Reference
 
-The `yerd` command is a thin client that talks to the `yerdd` daemon over a local IPC socket. Almost every subcommand maps to exactly one daemon request: `yerd` validates your arguments locally, sends the request, and renders the daemon's reply as either a human-readable block or machine-readable JSON.
+The `orcker` command is a thin client that talks to the `orckerd` daemon over a local IPC socket. Almost every subcommand maps to exactly one daemon request: `orcker` validates your arguments locally, sends the request, and renders the daemon's reply as either a human-readable block or machine-readable JSON.
 
 This reference documents every command, subcommand, positional argument, and flag exactly as the CLI defines them. If a flag isn't listed here, it doesn't exist.
 
 ::: tip
-`yerd --help` and `yerd <command> --help` always print the authoritative, version-matched usage for your installed build. This reference mirrors that surface and explains what each command does behind the scenes.
+`orcker --help` and `orcker <command> --help` always print the authoritative, version-matched usage for your installed build. This reference mirrors that surface and explains what each command does behind the scenes.
 :::
 
 ## Synopsis
 
 ```sh
-yerd [--json] <COMMAND> [ARGS...]
+orcker [--json] <COMMAND> [ARGS...]
 ```
 
 ### Global flags
@@ -20,14 +20,14 @@ yerd [--json] <COMMAND> [ARGS...]
 | --- | --- |
 | `--json` | Emit machine-readable JSON instead of human-readable text. Available on every command except [`coverage`](./coverage) and [`exec`](./exec), which forward everything after them (including `--json`) to the tool they run. |
 | `--help`, `-h` | Print help for the command. |
-| `--version`, `-V` | Print the `yerd` version. |
+| `--version`, `-V` | Print the `orcker` version. |
 
-`--json` is a global flag, so you can place it before or after the subcommand: `yerd --json status` and `yerd status --json` are equivalent. In JSON mode the entire daemon response is printed as pretty JSON; the process exit code still reflects success or failure (see [Exit codes](#exit-codes)).
+`--json` is a global flag, so you can place it before or after the subcommand: `orcker --json status` and `orcker status --json` are equivalent. In JSON mode the entire daemon response is printed as pretty JSON; the process exit code still reflects success or failure (see [Exit codes](#exit-codes)).
 
-The exceptions are the two passthrough commands. Anything after [`coverage`](./coverage) - `--json` included - goes to PHP, and anything after [`exec`](./exec)'s tool goes to that tool, so `yerd exec composer show --json` produces Composer's JSON rather than a daemon response. `yerd which --json` is *not* an exception: `which` runs nothing, so `--json` is `yerd`'s there.
+The exceptions are the two passthrough commands. Anything after [`coverage`](./coverage) - `--json` included - goes to PHP, and anything after [`exec`](./exec)'s tool goes to that tool, so `orcker exec composer show --json` produces Composer's JSON rather than a daemon response. `orcker which --json` is *not* an exception: `which` runs nothing, so `--json` is `orcker`'s there.
 
 ::: info
-`yerd` is the command-line front end. The daemon (`yerdd`) does the real work: running the proxy, DNS responder, PHP-FPM pools, and certificate authority. See [The Daemon](../../guide/daemon) for how it runs, and the [IPC Protocol](../../developer/ipc-protocol) for the request/response wire format.
+`orcker` is the command-line front end. The daemon (`orckerd`) does the real work: running the proxy, DNS responder, PHP-FPM pools, and certificate authority. See [The Daemon](../../guide/daemon) for how it runs, and the [IPC Protocol](../../developer/ipc-protocol) for the request/response wire format.
 :::
 
 ## Commands
@@ -50,12 +50,12 @@ The exceptions are the two passthrough commands. Anything after [`coverage`](./c
 | [Diagnostics](./diagnostics) | `ping`, `status`, `doctor`, `doctor fix` |
 | [Elevation](./elevation) | `elevate`, `unelevate` |
 | [Daemon control](./daemon) | `restart daemon` |
-| [Self-Update](./update) | `update` (check/apply a Yerd self-update) |
+| [Self-Update](./update) | `update` (check/apply a Orcker self-update) |
 | [Uninstall](./uninstall) | `uninstall` (full self-uninstall), `uninstall php`, `uninstall tool` |
 
 ## Exit codes
 
-`yerd` returns a meaningful process exit code so it composes cleanly in scripts and CI:
+`orcker` returns a meaningful process exit code so it composes cleanly in scripts and CI:
 
 | Code | Meaning |
 | --- | --- |
@@ -69,10 +69,10 @@ For the `elevate`/`unelevate` path, additional codes can surface: `77` if not ru
 
 ```sh
 # Use the exit code in a script
-if yerd doctor; then
-  echo "yerd is healthy"
+if orcker doctor; then
+  echo "orcker is healthy"
 else
-  echo "yerd reported problems (exit $?)"
+  echo "orcker reported problems (exit $?)"
 fi
 ```
 
@@ -81,9 +81,9 @@ fi
 Pass `--json` to get the raw daemon response as pretty-printed JSON, ideal for scripting or for the [desktop app](../../guide/desktop-app) and other tooling:
 
 ```sh
-yerd --json status
-yerd --json list php --available
-yerd --json sites
+orcker --json status
+orcker --json list php --available
+orcker --json sites
 ```
 
 The exit code in JSON mode matches the human path exactly, including doctor's `Fail`-aware behaviour, so you can branch on the code and parse the body independently.
@@ -95,7 +95,7 @@ The exit code in JSON mode matches the human path exactly, including doctor's `F
 - [Services & Databases](../../guide/services): native MySQL · MariaDB · Postgres · Redis
 - [HTTPS & Certificates](../../guide/https): securing sites
 - [Sharing Sites](../../guide/sharing): publishing a site over a public URL via Cloudflare Tunnel
-- [Elevation & Privileges](../../guide/elevation): what `sudo yerd elevate` does
+- [Elevation & Privileges](../../guide/elevation): what `sudo orcker elevate` does
 - [Configuration Reference](../configuration): config file keys and locations
 - [IPC Protocol](../../developer/ipc-protocol): the request/response surface each command maps to
-- Source: [`forjedio/yerd`](https://github.com/forjedio/yerd)
+- Source: [`forjedio/orcker`](https://github.com/forjedio/orcker)

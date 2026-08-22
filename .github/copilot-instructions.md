@@ -1,13 +1,13 @@
-# Yerd — agent instructions
+# Orcker — agent instructions
 
 These are the rules for any AI agent writing, modifying, or reviewing code in
 this repository. Follow them exactly. Path-specific rules live in
 `.github/instructions/*.instructions.md` and apply automatically to the files
 they match; this file is the always-on baseline.
 
-## What Yerd is
+## What Orcker is
 
-Yerd is a cross-platform local PHP development environment for **macOS, Linux,
+Orcker is a cross-platform local PHP development environment for **macOS, Linux,
 and Windows**. It serves projects on `.test`
 domains over HTTP/HTTPS, runs multiple PHP versions per site, and optionally
 supervises databases and caches as native child processes. The product runs
@@ -26,36 +26,36 @@ Everything else follows from this:
 
 1. **Pure crates and pure modules do no I/O.** No filesystem, network, process
    spawning, clock reads, or environment reads. They must be unit-testable with
-   in-memory fixtures and zero setup. `yerd-core` is the exemplar — keep it that
+   in-memory fixtures and zero setup. `orcker-core` is the exemplar — keep it that
    way. Many crates split this physically into a `pure/` module (sync, no
    runtime) and an `io/` module (the side-effecting edge).
 2. **Side effects go behind traits.** Anything touching the OS is a trait
    (`ProcessSpawner`, `TrustStore`, `ResolverInstaller`, `PortBinder`,
    `Downloader`, `Clock`, …). Business logic depends on the trait; tests inject
-   a fake; the real implementation lives in `yerd-platform` or a crate's `os`
+   a fake; the real implementation lives in `orcker-platform` or a crate's `os`
    module behind `#[cfg(...)]`.
-3. **Binaries are thin.** `bin/yerdd`, `bin/yerd`, `bin/yerd-helper`, and the
+3. **Binaries are thin.** `bin/orckerd`, `bin/orcker`, `bin/orcker-helper`, and the
    Tauri `src-tauri` layer wire crates together and own transports. They contain
    orchestration, not behaviour. Interesting logic belongs in a crate with tests.
 4. **The IPC protocol is a stable contract.** Add fields and variants
    additively; never silently rename a variant or field (wire-stability tests
    guard this); bump the protocol version on any breaking change.
-5. **One source of truth.** The daemon (`yerdd`) owns runtime state. The CLI and
-   the GUI are both `yerd-ipc` *clients* — neither reimplements daemon logic.
+5. **One source of truth.** The daemon (`orckerd`) owns runtime state. The CLI and
+   the GUI are both `orcker-ipc` *clients* — neither reimplements daemon logic.
 
 ## Dependency direction (never violate)
 
 Internal dependencies flow strictly downhill, no cycles:
 
 ```
-yerd-core ◄── everything
-yerd-core ◄── yerd-ipc ◄── yerd-config, yerd-doctor, binaries, gui
-yerd-tls  ◄── yerd-platform ◄── yerd-php, yerd-proxy, binaries
+orcker-core ◄── everything
+orcker-core ◄── orcker-ipc ◄── orcker-config, orcker-doctor, binaries, gui
+orcker-tls  ◄── orcker-platform ◄── orcker-php, orcker-proxy, binaries
 ```
 
-- `yerd-core` depends on no other `yerd-*` crate.
+- `orcker-core` depends on no other `orcker-*` crate.
 - Libraries never depend on binaries.
-- The CLI and GUI depend on `yerd-ipc` (+ its `transport` feature), not on the
+- The CLI and GUI depend on `orcker-ipc` (+ its `transport` feature), not on the
   daemon's internals.
 
 ## Hard rules (enforced or required)
@@ -71,7 +71,7 @@ yerd-tls  ◄── yerd-platform ◄── yerd-php, yerd-proxy, binaries
   dep-graph test that fails if an OpenSSL variant leaks in.
 - **Async only at the I/O edge.** Pure crates/modules are sync and runtime-free;
   only I/O layers touch `tokio`.
-- **`yerd-helper` is the security boundary.** It is the only privileged surface:
+- **`orcker-helper` is the security boundary.** It is the only privileged surface:
   strict typed args, never shell out, never take network input, do exactly one
   operation, then exit. The GUI process must **never** run as root.
 - **Document public items.** `missing_docs` is `warn`; pedantic clippy is on.
@@ -123,7 +123,7 @@ A change is complete when:
 - wiring has an integration test in the crate's `tests/`;
 - `cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D warnings`,
   and `cargo test --workspace` all pass (Linux + macOS);
-- frontend changes pass `npm run test` and `npm run build` in `apps/yerd-gui`;
+- frontend changes pass `npm run test` and `npm run build` in `apps/orcker-gui`;
 - public items are documented and no `unwrap`/`expect`/`panic` exists outside tests.
 
 ## When a task conflicts with these boundaries

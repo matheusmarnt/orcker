@@ -1,12 +1,12 @@
 # PHP Versions
 
-Yerd runs **any number of PHP versions side by side** and lets you pick which one each site uses. PHP isn't bundled, so the install stays small. The first time you ask for a version, Yerd downloads a prebuilt, statically-linked PHP build that Yerd publishes itself (signed and checksummed) and supervises one PHP-FPM pool per version behind the [reverse proxy](./sites).
+Orcker runs **any number of PHP versions side by side** and lets you pick which one each site uses. PHP isn't bundled, so the install stays small. The first time you ask for a version, Orcker downloads a prebuilt, statically-linked PHP build that Orcker publishes itself (signed and checksummed) and supervises one PHP-FPM pool per version behind the [reverse proxy](./sites).
 
 ## In the desktop app
 
 The fastest way to manage PHP is the **PHP** page (under the **Environment** group) in the [desktop app](./desktop-app#php). It's a live view of every installed version and the controls to change them, with no commands to remember.
 
-<ThemedImage light="/images/php-light.png" dark="/images/php-dark.png" alt="The PHP page in the Yerd desktop app" />
+<ThemedImage light="/images/php-light.png" dark="/images/php-dark.png" alt="The PHP page in the Orcker desktop app" />
 
 - A table of installed versions shows live FPM pool state, patch level, pool memory (RSS), and whether an update is available.
 - **Install** opens a picker of installable versions (already-installed ones are hidden); progress streams live next to the Install button as the prebuilt static build downloads. An **Install a legacy version** toggle (off by default) swaps the picker over to the [legacy minors](#legacy-php-versions) (7.4 / 8.0 / 8.1) behind a warning block and a mandatory confirmation checkbox; when every current version is already installed the toggle starts on and locks there, since legacy is all that's left to add.
@@ -20,24 +20,24 @@ The fastest way to manage PHP is the **PHP** page (under the **Environment** gro
 ### Installing a version
 
 ```sh
-yerd install php 8.5
+orcker install php 8.5
 ```
 
-Yerd detects your platform (`linux`/`macos`, `x86_64`/`aarch64`), fetches Yerd's signed `php.json` manifest, resolves the single published build for your platform and minor, downloads the CLI and FPM tarballs, verifies each against its published SHA-256, then atomically swaps them into place. The manifest is the source of truth for what's installable, so a new PHP patch becomes available as soon as Yerd's build pipeline publishes it.
+Orcker detects your platform (`linux`/`macos`, `x86_64`/`aarch64`), fetches Orcker's signed `php.json` manifest, resolves the single published build for your platform and minor, downloads the CLI and FPM tarballs, verifies each against its published SHA-256, then atomically swaps them into place. The manifest is the source of truth for what's installable, so a new PHP patch becomes available as soon as Orcker's build pipeline publishes it.
 
 Installs are **idempotent**: running it again replaces the directory with a fresh download of the current build. If the version isn't published for your platform, the install fails cleanly and writes nothing. The running daemon picks up a new version automatically, no restart required.
 
 ::: info A version is always a major.minor
-A "PHP version" means a `major.minor` pair like `8.5`, never a full patch like `8.3.12`. Yerd installs and tracks the latest patch of the minor you ask for, and updates move you to a newer patch of that same minor. Input is `8.5` (or `php8.5`); major must be `5..=9`, minor `0..=99`.
+A "PHP version" means a `major.minor` pair like `8.5`, never a full patch like `8.3.12`. Orcker installs and tracks the latest patch of the minor you ask for, and updates move you to a newer patch of that same minor. Input is `8.5` (or `php8.5`); major must be `5..=9`, minor `0..=99`.
 :::
 
 ::: info Downloads are signed and hash-verified
-The `php.json` manifest is signed with a dedicated minisign key whose public half is embedded in Yerd; the daemon verifies that signature before trusting the manifest, then verifies each downloaded tarball against the SHA-256 the manifest lists. Because PHP runs as you, this verification is on the install critical path, not just updates.
+The `php.json` manifest is signed with a dedicated minisign key whose public half is embedded in Orcker; the daemon verifies that signature before trusting the manifest, then verifies each downloaded tarball against the SHA-256 the manifest lists. Because PHP runs as you, this verification is on the install critical path, not just updates.
 :::
 
 ### Legacy PHP versions
 
-Yerd also serves three **out-of-support** minors - **7.4**, **8.0**, and **8.1** -
+Orcker also serves three **out-of-support** minors - **7.4**, **8.0**, and **8.1** -
 from a separate, independently-signed `php-legacy.json` manifest. It's the same
 minisign key and the same per-tarball SHA-256 verification as `php.json`, just a
 different listing.
@@ -46,10 +46,10 @@ These versions are past their upstream end of life and may contain **unpatched
 security vulnerabilities**, so installing one requires an explicit opt-in:
 
 ```sh
-yerd install php 7.4 --legacy
+orcker install php 7.4 --legacy
 ```
 
-Running `yerd install php 7.4` without `--legacy` refuses and prints an
+Running `orcker install php 7.4` without `--legacy` refuses and prints an
 out-of-support warning instead of installing. In the desktop app, the Install
 picker's **Install a legacy version** toggle replaces the version list with the
 legacy minors and opens a warning block and a mandatory confirmation checkbox
@@ -58,22 +58,22 @@ Install button is enabled.
 
 A legacy version carries hard restrictions once installed:
 
-- **Cannot be the global default.** `yerd use 7.4` is refused; the desktop app
+- **Cannot be the global default.** `orcker use 7.4` is refused; the desktop app
   disables **Set default** for legacy rows.
 - **No code coverage.** `phpcover`, `php7.4cover` / `php8.0cover` / `php8.1cover`,
-  and `yerd coverage` all error rather than run - see [Code Coverage](./code-coverage).
-- **No yerd-dumps capture.** The Dumps view flags legacy rows as unsupported -
+  and `orcker coverage` all error rather than run - see [Code Coverage](./code-coverage).
+- **No orcker-dumps capture.** The Dumps view flags legacy rows as unsupported -
   see [Laravel Dumps](./laravel-dumps).
-- **No `pcov` or `yerd-dump` `.so` builds.** Neither extension is built for EOL
+- **No `pcov` or `orcker-dump` `.so` builds.** Neither extension is built for EOL
   PHP, which is why coverage and dumps don't work on legacy versions.
 
 A legacy version **can** still be assigned to an individual site
-(`yerd use my-app 7.4`), just not as the global default. See
+(`orcker use my-app 7.4`), just not as the global default. See
 [Per-site versions](#per-site-versions).
 
 ### Bundled extensions
 
-Yerd's builds ship the **bulk** extension set, so a real-world Laravel app has
+Orcker's builds ship the **bulk** extension set, so a real-world Laravel app has
 what it needs out of the box - highlights include **`intl`** (ICU, required by
 Laravel's `Number` helper), **`sodium`**, **`mysqli`**, **`gd`**, **`imagick`**,
 **`redis`**, **`opcache`**, and **`swoole`**. Database access is covered by the
@@ -90,7 +90,7 @@ It rarely changes between patch updates.
 <summary><b>Full bundled extension list</b> (PHP 8.5; 8.4 is identical minus <code>lexbor</code> and <code>uri</code>)</summary>
 
 Entries marked *(core)* are part of every standard PHP build; the rest are the
-extras Yerd's "bulk" build adds. Two extensions are **new in PHP 8.5** and absent
+extras Orcker's "bulk" build adds. Two extensions are **new in PHP 8.5** and absent
 on 8.4, as noted.
 
 | Extension | What it does |
@@ -165,7 +165,7 @@ on 8.4, as noted.
 </details>
 
 Need something not in this set? Register your own with
-[`yerd php ext`](#custom-extensions).
+[`orcker php ext`](#custom-extensions).
 
 [Legacy versions](#legacy-php-versions) (7.4 / 8.0 / 8.1) ship a smaller, uniform
 extension set built once across all three EOL minors, dropping a few extensions
@@ -237,8 +237,8 @@ Dropped versus the stable builds:
   fragment across the three EOL minors, so it's dropped to keep one uniform
   legacy set.
 - **`swoole-hook-mysql`** - depends on `swoole`.
-- **`pcov` and `yerd-dump`** - the external `.so` partners from
-  [`forjedio/yerd-php-ext`](https://github.com/forjedio/yerd-php-ext) aren't
+- **`pcov` and `orcker-dump`** - the external `.so` partners from
+  [`forjedio/orcker-php-ext`](https://github.com/forjedio/orcker-php-ext) aren't
   built for EOL PHP, which is why [coverage](./code-coverage) and
   [dumps](./laravel-dumps) don't work on legacy versions.
 
@@ -246,31 +246,31 @@ Dropped versus the stable builds:
 
 ### Custom extensions
 
-When you need an extension Yerd's builds don't ship (a PECL module like `scrypt`,
-or your own compiled `.so`), register it with `yerd php ext`. Yerd loads it into
+When you need an extension Orcker's builds don't ship (a PECL module like `scrypt`,
+or your own compiled `.so`), register it with `orcker php ext`. Orcker loads it into
 **both** the web (FPM) runtime and the CLI for that version, so `extension_loaded()`
 returns `true` on a `.test` route and `php -m` lists it - the two used to diverge.
 
 ```sh
-yerd php ext add 8.5 /opt/homebrew/lib/php/pecl/20250925/scrypt.so
-yerd php ext list
-yerd php ext remove 8.5 scrypt
+orcker php ext add 8.5 /opt/homebrew/lib/php/pecl/20250925/scrypt.so
+orcker php ext list
+orcker php ext remove 8.5 scrypt
 ```
 
 - **Extensions are tied to a PHP version.** A native `.so` is compiled against one
   PHP *minor*, so you register it under the version it was built for (`8.5` above);
   it loads only for that version.
-- **Every add is load-probed.** Before saving, Yerd actually loads the `.so` into
+- **Every add is load-probed.** Before saving, Orcker actually loads the `.so` into
   that version's PHP and rejects it if it can't load - a wrong-version build, a
   missing dependency, or a Zend extension registered without `--zend` fails with a
   clear message instead of silently breaking your pools.
 - **Zend extensions** (xdebug/opcache-style) use `--zend`:
-  `yerd php ext add 8.5 /path/xdebug.so --zend`.
+  `orcker php ext add 8.5 /path/xdebug.so --zend`.
 - **Naming.** The removal handle defaults to the `.so` filename (`scrypt` above);
   override it with `--name`.
 - **Missing files** are handled gracefully: if a registered `.so` later disappears
-  (e.g. Homebrew bumps its PECL directory on upgrade), Yerd skips it with a warning
-  rather than failing to start the pool, and `yerd php ext list` marks it
+  (e.g. Homebrew bumps its PECL directory on upgrade), Orcker skips it with a warning
+  rather than failing to start the pool, and `orcker php ext list` marks it
   `(missing!)`.
 
 Adding or removing an extension restarts that version's running FPM pool to apply
@@ -288,87 +288,87 @@ Each install lands under the per-user data directory:
 ```text
 {data}/php/php-8.5/bin/php          # the CLI interpreter
 {data}/php/php-8.5/sbin/php-fpm     # the FastCGI process manager
-{data}/php/php-8.5/.yerd-version    # the exact patch installed, e.g. "8.5.6"
+{data}/php/php-8.5/.orcker-version    # the exact patch installed, e.g. "8.5.6"
 {data}/bin/php                      # the default-version CLI shim
 {data}/bin/php8.5                   # a per-version CLI shim
 ```
 
-The dir is named for the **major.minor** (`php-8.5`); `.yerd-version` records the exact patch (`8.5.6`). Update checks read that marker to decide whether a newer patch exists. The daemon discovers installed versions by walking this directory and finding each `sbin/php-fpm` at startup.
+The dir is named for the **major.minor** (`php-8.5`); `.orcker-version` records the exact patch (`8.5.6`). Update checks read that marker to decide whether a newer patch exists. The daemon discovers installed versions by walking this directory and finding each `sbin/php-fpm` at startup.
 
 ### The global default
 
-Yerd has one **global default** version, used for the `php` shim at `{data}/bin/php` and as the fallback for any site that hasn't pinned its own. Set it with one argument:
+Orcker has one **global default** version, used for the `php` shim at `{data}/bin/php` and as the fallback for any site that hasn't pinned its own. Set it with one argument:
 
 ```sh
-yerd install php 8.5
-yerd use 8.5
+orcker install php 8.5
+orcker use 8.5
 ```
 
 A fresh config defaults to **PHP 8.3**, but you'll usually set your own right after installing.
 
 ::: warning Legacy versions can't be the default
 A [legacy version](#legacy-php-versions) (7.4 / 8.0 / 8.1) is ineligible as the
-global default - `yerd use 7.4` is refused client-side, and the desktop app
+global default - `orcker use 7.4` is refused client-side, and the desktop app
 disables **Set default** for legacy rows. It can still be pinned to an
 individual site.
 :::
 
 ::: tip Add the shim dir to your PATH
-Put `{data}/bin` (Yerd prints the exact path) on your `PATH` so a bare `php` matches the version your sites run. The bare `php` shim resolves the current default at run time, so `yerd use` takes effect immediately with nothing to re-point.
+Put `{data}/bin` (Orcker prints the exact path) on your `PATH` so a bare `php` matches the version your sites run. The bare `php` shim resolves the current default at run time, so `orcker use` takes effect immediately with nothing to re-point.
 :::
 
-Alongside the default `php` shim, Yerd maintains a `php<version>` shim for each installed version (`php8.4`, `php8.3`, ...) so you can reach a specific version directly, plus `phpcover` / `php<version>cover` shims that run PHP with the pcov coverage driver enabled. See [Code Coverage](./code-coverage). Each shim runs the right PHP with that version's ini and any [custom extensions](#custom-extensions) you've registered.
+Alongside the default `php` shim, Orcker maintains a `php<version>` shim for each installed version (`php8.4`, `php8.3`, ...) so you can reach a specific version directly, plus `phpcover` / `php<version>cover` shims that run PHP with the pcov coverage driver enabled. See [Code Coverage](./code-coverage). Each shim runs the right PHP with that version's ini and any [custom extensions](#custom-extensions) you've registered.
 
 ### Per-site versions
 
-Any site can pin its own version. Pass `yerd use` two arguments, a site name and a version:
+Any site can pin its own version. Pass `orcker use` two arguments, a site name and a version:
 
 ```sh
-yerd use my-app 8.3
+orcker use my-app 8.3
 ```
 
 Now `my-app.test` runs on 8.3 while every other site follows the global default.
 
 | Site setting | Effective version |
 |---|---|
-| Pinned (`yerd use <site> 8.3`) | `8.3` |
+| Pinned (`orcker use <site> 8.3`) | `8.3` |
 | Not pinned | the global default |
 
 Clearing a pin reverts the site to whatever the global default is at the time.
 
-Check what each site resolves to with `yerd sites`, which lists every site with its kind, PHP version, HTTPS state, and document root. See [Sites](./sites) for parking and linking.
+Check what each site resolves to with `orcker sites`, which lists every site with its kind, PHP version, HTTPS state, and document root. See [Sites](./sites) for parking and linking.
 
 ::: warning Pin a version you've installed
-Pinning a site (or the default) to an uninstalled version means there's no FPM binary to start when a request arrives. Install it first (`yerd install php 8.3`), then pin. `yerd doctor` flags a pool that can't start.
+Pinning a site (or the default) to an uninstalled version means there's no FPM binary to start when a request arrives. Install it first (`orcker install php 8.3`), then pin. `orcker doctor` flags a pool that can't start.
 :::
 
-### Site-aware CLI: `yerd exec` and `yerd which`
+### Site-aware CLI: `orcker exec` and `orcker which`
 
 A site's version governs how it is **served**, but the bare `php` and `composer` shims always use the **global default**. So inside a site on 8.3 while your default is 8.5, `php artisan` and `composer install` run on 8.5 - a different version than the site's own web requests.
 
-`yerd exec` closes that gap. It runs a tool under the version of the site containing your current directory:
+`orcker exec` closes that gap. It runs a tool under the version of the site containing your current directory:
 
 ```sh
 cd ~/Sites/my-app     # served on 8.3
-yerd exec php -v      # PHP 8.3.x
-yerd exec php artisan migrate
-yerd exec composer install
+orcker exec php -v      # PHP 8.3.x
+orcker exec php artisan migrate
+orcker exec composer install
 ```
 
-Everything after the tool is passed straight through, so no `--` separator is needed - which also means yerd's own flags (`--site`, `--json`) must come **before** the tool:
+Everything after the tool is passed straight through, so no `--` separator is needed - which also means orcker's own flags (`--site`, `--json`) must come **before** the tool:
 
 ```sh
-yerd exec --site my-app php -v      # from anywhere
-yerd exec composer show --json      # --json here belongs to Composer
+orcker exec --site my-app php -v      # from anywhere
+orcker exec composer show --json      # --json here belongs to Composer
 ```
 
-`yerd which php` prints the absolute path of the binary `yerd exec` would use, resolved identically:
+`orcker which php` prints the absolute path of the binary `orcker exec` would use, resolved identically:
 
 ```sh
-$ cd ~/Sites/my-app && yerd which php
-/Users/you/Library/Application Support/io.yerd.Yerd/php/php-8.3/bin/php
+$ cd ~/Sites/my-app && orcker which php
+/Users/you/Library/Application Support/io.orcker.Orcker/php/php-8.3/bin/php
 
-$ yerd --json which php
+$ orcker --json which php
 {"path":"…/php-8.3/bin/php","version":"8.3","site":"my-app","source":"site"}
 ```
 
@@ -383,7 +383,7 @@ How resolution falls out:
 | With `--site <name>` | that site's stored version, from anywhere |
 
 ::: warning A linked site's version doesn't follow the default
-Every registered site resolves to a concrete version, so `source` is `site` even for one you never ran `yerd use <site> <version>` against - there is no "unpinned" state to report.
+Every registered site resolves to a concrete version, so `source` is `site` even for one you never ran `orcker use <site> <version>` against - there is no "unpinned" state to report.
 
 The two site kinds get that version differently, which matters when you change the global default:
 
@@ -391,83 +391,83 @@ The two site kinds get that version differently, which matters when you change t
 - **Parked** sites follow the current default, unless you've pinned one explicitly.
 
 ```sh
-yerd link my-app      # default is 8.4 → my-app stores 8.4
-yerd use 8.5          # global default moves to 8.5
+orcker link my-app      # default is 8.4 → my-app stores 8.4
+orcker use 8.5          # global default moves to 8.5
 php -v                # 8.5 - the bare shim follows the default
-yerd exec php -v      # 8.4 - my-app is still *served* on 8.4
+orcker exec php -v      # 8.4 - my-app is still *served* on 8.4
 ```
 
-`yerd exec` is right here: it matches how the site actually runs. But it is deliberately not the same as "inherits the default". To move a linked site too, pin it explicitly with `yerd use my-app 8.5`. `yerd sites` shows what each site currently resolves to.
+`orcker exec` is right here: it matches how the site actually runs. But it is deliberately not the same as "inherits the default". To move a linked site too, pin it explicitly with `orcker use my-app 8.5`. `orcker sites` shows what each site currently resolves to.
 :::
 
 Two deliberate failure rules:
 
-- **A stored-but-uninstalled version is an error**, not a silent fallback: running under an unrelated default PHP with no indication why is worse than stopping. Install it (`yerd install php 8.3`) and retry.
+- **A stored-but-uninstalled version is an error**, not a silent fallback: running under an unrelated default PHP with no indication why is worse than stopping. Install it (`orcker install php 8.3`) and retry.
 - **`--site` never falls back.** You named a site, so an unknown name - or a daemon that isn't running to resolve it - is an error rather than a quiet switch to the default. Without `--site`, an unreachable daemon just means "not inside a site", and the global default is used - with a warning on stderr, since inside a site that would otherwise silently run the wrong version.
 
-`yerd exec composer` runs the same bundled phar the `composer` shim does, just under the site's PHP (and that version's CLI ini).
+`orcker exec composer` runs the same bundled phar the `composer` shim does, just under the site's PHP (and that version's CLI ini).
 
 ::: tip The shims are unchanged
-`php`, `php<version>`, and `composer` behave exactly as before - `php` still means the global default everywhere. `yerd exec` is an addition, not a change in what your existing commands do.
+`php`, `php<version>`, and `composer` behave exactly as before - `php` still means the global default everywhere. `orcker exec` is an addition, not a change in what your existing commands do.
 :::
 
-Because everything after the tool is forwarded, `-h`/`--help` reach the tool too: `yerd exec composer --help` prints Composer's help. Use `yerd help exec` for the command's own. See the [Exec and Which reference](../reference/cli/exec) for the full flag surface and exit codes.
+Because everything after the tool is forwarded, `-h`/`--help` reach the tool too: `orcker exec composer --help` prints Composer's help. Use `orcker help exec` for the command's own. See the [Exec and Which reference](../reference/cli/exec) for the full flag surface and exit codes.
 
 ### Listing versions
 
 ```sh
-yerd list php
+orcker list php
 ```
 
 This shows every installed version, marks the default, and flags any with a newer patch available. Update flags come from the **daemon's cache** by default, so no network call is made and the command is instant.
 
 | Command | What you get |
 |---|---|
-| `yerd list php` | Installed versions, default, cached update flags (no network) |
-| `yerd list php --check` | Same, but polls the distribution now to refresh update flags |
-| `yerd list php --available` | Versions installable from the distribution, tagging installed ones |
+| `orcker list php` | Installed versions, default, cached update flags (no network) |
+| `orcker list php --check` | Same, but polls the distribution now to refresh update flags |
+| `orcker list php --available` | Versions installable from the distribution, tagging installed ones |
 
 `--available` takes precedence over `--check`. Add `--json` (a global flag) for machine-readable output.
 
 ### Updates are notify-only
 
-Yerd checks for newer **patches** of the minors you have and tells you about them, but never installs on its own. The daemon periodically polls the distribution, compares each installed minor's latest patch against its `.yerd-version` marker, and on a newer patch logs:
+Orcker checks for newer **patches** of the minors you have and tells you about them, but never installs on its own. The daemon periodically polls the distribution, compares each installed minor's latest patch against its `.orcker-version` marker, and on a newer patch logs:
 
 ```text
-a newer PHP patch is available (run `yerd update php`)
+a newer PHP patch is available (run `orcker update php`)
 ```
 
-It records this in the cache `yerd list php` reads. The poll is failure-tolerant: a network or platform failure is logged quietly and your cached state is left untouched.
+It records this in the cache `orcker list php` reads. The poll is failure-tolerant: a network or platform failure is logged quietly and your cached state is left untouched.
 
 Update on your terms:
 
 ```sh
-yerd update php 8.5     # update just 8.5 to its latest patch
-yerd update php         # update every installed version
+orcker update php 8.5     # update just 8.5 to its latest patch
+orcker update php         # update every installed version
 ```
 
-An update is the same atomic install flow: it moves `8.5.4` → `8.5.6` and never jumps to a different minor. To move minors, run `yerd install php 8.6` and `yerd use 8.6` explicitly.
+An update is the same atomic install flow: it moves `8.5.4` → `8.5.6` and never jumps to a different minor. To move minors, run `orcker install php 8.6` and `orcker use 8.6` explicitly.
 
 ::: tip Nothing updates behind your back
-Updates are strictly notify-only. The only automatic network call is the lightweight update check, which downloads nothing but a directory listing. Yerd downloads or swaps a PHP version only when you run `yerd update php`.
+Updates are strictly notify-only. The only automatic network call is the lightweight update check, which downloads nothing but a directory listing. Orcker downloads or swaps a PHP version only when you run `orcker update php`.
 :::
 
 ### Tuning PHP settings
 
-Yerd keeps a small set of **global PHP ini defaults** that are applied to *every*
+Orcker keeps a small set of **global PHP ini defaults** that are applied to *every*
 installed version's FPM pool. Set and clear them with `set` / `unset`:
 
 ```sh
-yerd set php memory_limit 512M
-yerd set php upload_max_filesize 64M
-yerd unset php memory_limit          # reset to PHP's built-in default
+orcker set php memory_limit 512M
+orcker set php upload_max_filesize 64M
+orcker unset php memory_limit          # reset to PHP's built-in default
 ```
 
 Only an allowlisted set of directives is accepted (e.g. `memory_limit`,
 `max_execution_time`, `upload_max_filesize`, `post_max_size`, `display_errors`,
 `error_reporting`), and the value is validated client-side before it's sent, so a
 typo is a clean error rather than a broken pool. The configured values are echoed
-back by `yerd list php` under a `settings:` block. See the [PHP CLI
+back by `orcker list php` under a `settings:` block. See the [PHP CLI
 reference](../reference/cli/php#global-php-ini-settings) for the full list and the
 [Configuration Reference](../reference/configuration#php) for how they're stored
 and rendered into FPM config.
@@ -479,41 +479,41 @@ Every setting can also be pinned for a **single** installed version with the
 and applies to both its FPM pool and its CLI:
 
 ```sh
-yerd set php memory_limit 1G --only 8.3   # only PHP 8.3 gets 1G
-yerd unset php memory_limit --only 8.3    # 8.3 inherits the global value again
+orcker set php memory_limit 1G --only 8.3   # only PHP 8.3 gets 1G
+orcker unset php memory_limit --only 8.3    # 8.3 inherits the global value again
 ```
 
-Beyond the allowlist, `yerd php ini` sets **free-form ini directives** per
+Beyond the allowlist, `orcker php ini` sets **free-form ini directives** per
 version - typically the settings of a custom extension. The classic xdebug
 setup is two commands:
 
 ```sh
-yerd php ext add 8.3 /opt/php/xdebug.so --zend   # load the extension
-yerd php ini set 8.3 xdebug.mode debug           # configure it
+orcker php ext add 8.3 /opt/php/xdebug.so --zend   # load the extension
+orcker php ini set 8.3 xdebug.mode debug           # configure it
 ```
 
 Directive names and values are shape-checked so they can never corrupt the
-generated config, but Yerd doesn't second-guess their meaning - a directive PHP
+generated config, but Orcker doesn't second-guess their meaning - a directive PHP
 doesn't recognise is simply ignored by PHP. A per-version change restarts only
 that version's pool, and per-version configuration survives uninstalling and
 reinstalling the version.
 
 #### Pool size
 
-`yerd php pool` sets how many PHP workers a version may run at once - FPM's
+`orcker php pool` sets how many PHP workers a version may run at once - FPM's
 `pm.max_children`, applied to that version's web pool only:
 
 ```sh
-yerd php pool set 8.4 max_children 32   # raise the ceiling for PHP 8.4
-yerd php pool unset 8.4 max_children    # back to the default of 16
+orcker php pool set 8.4 max_children 32   # raise the ceiling for PHP 8.4
+orcker php pool unset 8.4 max_children    # back to the default of 16
 ```
 
-The default is 16 and the range is 1 to 1024. Yerd runs pools on demand, so
+The default is 16 and the range is 1 to 1024. Orcker runs pools on demand, so
 workers start as requests arrive rather than being held open: a higher ceiling
 costs nothing while the pool is idle. Raise it when requests start queueing
 behind long-running work - queue workers, parallel test runs, or a lot of open
 tabs hitting the same site. Note that `pm.*` names are pool settings rather than
-ini directives, so `yerd php ini` refuses them and points here.
+ini directives, so `orcker php ini` refuses them and points here.
 
 In the desktop app the same lives in the
 **Per-version configuration** card on the PHP page: pick a version from the list
@@ -522,33 +522,33 @@ size** field, that version's extensions, and a directive editor. A version that 
 registered after being uninstalled stays in the list, so those registrations can
 be removed. See the
 [PHP CLI reference](../reference/cli/php#custom-ini-directives) for the rules
-and the denylist of directives Yerd manages elsewhere.
+and the denylist of directives Orcker manages elsewhere.
 
 ### Command summary
 
 | Command | What it does |
 |---|---|
-| `yerd install php <version>` | Download + install the latest patch of a minor. |
-| `yerd use <version>` | Set the global default version (and the `php` shim). |
-| `yerd use <site> <version>` | Pin one site to a version. |
-| `yerd exec [--site <name>] <php\|composer> [args…]` | Run a tool under the site's own version instead of the global default. |
-| `yerd which [--site <name>] php` | Print the PHP binary `yerd exec` would use. |
-| `yerd list php [--check]` | List installed versions; `--check` refreshes update flags. |
-| `yerd list php --available` | List versions installable from the distribution. |
-| `yerd update php [<version>]` | Update one (or all) versions to the latest patch. |
-| `yerd uninstall php <version>` | Remove a version's files (blocked if a site uses it). |
-| `yerd restart php [<version>]` | Restart one (or all) running FPM pools. |
-| `yerd set php <setting> <value> [--only <version>]` | Set a global PHP ini default, or a per-version override with `--only`. |
-| `yerd unset php <setting> [--only <version>]` | Reset a global setting to PHP's built-in value. With `--only`, remove one version's override so the global value applies again. |
-| `yerd php ini set <version> <name> <value>` | Set a free-form ini directive (e.g. `xdebug.mode`) for one version. |
-| `yerd php ini unset <version> <name>` | Remove a free-form ini directive. |
-| `yerd php ini list` | Show per-version overrides, directives, and pool sizes. |
-| `yerd php pool set <version> max_children <n>` | Set how many PHP workers that version may run at once (1-1024, default 16). |
-| `yerd php pool unset <version> max_children` | Reset the worker ceiling to the default. |
-| `yerd php pool list` | Show per-version overrides, directives, and pool sizes. |
-| `yerd php ext add <version> <path> [--zend] [--name <name>]` | Register a custom extension (load-probed) for a version. |
-| `yerd php ext remove <version> <name>` | Remove a registered extension. |
-| `yerd php ext list` | List registered custom extensions, grouped by version. |
+| `orcker install php <version>` | Download + install the latest patch of a minor. |
+| `orcker use <version>` | Set the global default version (and the `php` shim). |
+| `orcker use <site> <version>` | Pin one site to a version. |
+| `orcker exec [--site <name>] <php\|composer> [args…]` | Run a tool under the site's own version instead of the global default. |
+| `orcker which [--site <name>] php` | Print the PHP binary `orcker exec` would use. |
+| `orcker list php [--check]` | List installed versions; `--check` refreshes update flags. |
+| `orcker list php --available` | List versions installable from the distribution. |
+| `orcker update php [<version>]` | Update one (or all) versions to the latest patch. |
+| `orcker uninstall php <version>` | Remove a version's files (blocked if a site uses it). |
+| `orcker restart php [<version>]` | Restart one (or all) running FPM pools. |
+| `orcker set php <setting> <value> [--only <version>]` | Set a global PHP ini default, or a per-version override with `--only`. |
+| `orcker unset php <setting> [--only <version>]` | Reset a global setting to PHP's built-in value. With `--only`, remove one version's override so the global value applies again. |
+| `orcker php ini set <version> <name> <value>` | Set a free-form ini directive (e.g. `xdebug.mode`) for one version. |
+| `orcker php ini unset <version> <name>` | Remove a free-form ini directive. |
+| `orcker php ini list` | Show per-version overrides, directives, and pool sizes. |
+| `orcker php pool set <version> max_children <n>` | Set how many PHP workers that version may run at once (1-1024, default 16). |
+| `orcker php pool unset <version> max_children` | Reset the worker ceiling to the default. |
+| `orcker php pool list` | Show per-version overrides, directives, and pool sizes. |
+| `orcker php ext add <version> <path> [--zend] [--name <name>]` | Register a custom extension (load-probed) for a version. |
+| `orcker php ext remove <version> <name>` | Remove a registered extension. |
+| `orcker php ext list` | List registered custom extensions, grouped by version. |
 
 Add `--json` to any command for machine-readable output.
 
@@ -556,7 +556,7 @@ Add `--json` to any command for machine-readable output.
 
 - [Sites](./sites) - parking, linking, and how a request reaches an FPM pool.
 - [HTTPS & Certificates](./https) - trusted HTTPS per site.
-- [Diagnostics](./diagnostics) - `yerd status` and `yerd doctor` for when a pool won't start.
+- [Diagnostics](./diagnostics) - `orcker status` and `orcker doctor` for when a pool won't start.
 - [CLI Reference](../reference/cli/) - every command and flag.
 - [Configuration Reference](../reference/configuration) - where the default and per-site pins live on disk.
-- [yerd-php crate](../developer/crates/yerd-php) - the supervisor, version resolution, and download internals.
+- [orcker-php crate](../developer/crates/orcker-php) - the supervisor, version resolution, and download internals.

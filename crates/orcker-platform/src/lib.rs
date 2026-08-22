@@ -1,0 +1,68 @@
+//! OS abstraction layer for Orcker.
+//!
+//! The core traits live here - [`Paths`], [`TrustStore`], [`ResolverInstaller`],
+//! [`PortBinder`], [`PortRedirector`], [`TerminalLauncher`], [`IdeLauncher`], and
+//! [`SystemOpener`] - each with a single thin
+//! implementation per OS selected by `#[cfg(target_os = ...)]`. macOS and Linux
+//! ship in Phase 1;
+//! Windows compiles against the [`os::unsupported`] stub that returns
+//! [`PlatformError::Unsupported`] for every method.
+//!
+//! ## Privilege boundary
+//!
+//! `orcker-platform` is unprivileged library code. Operations that need root
+//! return [`PlatformError::NeedsHelper`]. The typed [`HelperInvocation`]
+//! enum carries the request to the `orcker-helper` binary (a separate crate)
+//! for execution. The OS impls never spawn the helper themselves - a
+//! privileged caller owns the `Command::new(...)` call: the daemon for its
+//! own setup, or the `orcker elevate` CLI when run under `sudo`.
+//!
+//! ## Purity
+//!
+//! Decision logic that does not need OS interaction lives in the
+//! [`pure`] module and is fully unit-tested in-memory.
+
+#![forbid(unsafe_code)]
+
+pub mod detect;
+pub mod error;
+pub mod helper;
+pub mod ide;
+pub mod lan_ip;
+pub mod metrics;
+pub mod nss_exec;
+pub mod opener;
+pub mod paths;
+pub mod port_binder;
+pub mod port_redirect;
+pub mod pure;
+pub mod resolver;
+pub mod terminal;
+pub mod trust_store;
+
+mod os;
+
+pub use detect::{gather_project_signals, FsSignalSource, ProjectSignalSource};
+pub use error::{
+    BindPairErrorReason, IdeErrorReason, OpenErrorReason, PlatformError, ResolverErrorReason,
+    TerminalErrorReason, TrustStoreErrorReason,
+};
+pub use helper::{ArgvParseError, HelperInvocation};
+pub use ide::{DetectedIde, FakeIdeLauncher, IdeLauncher, LaunchTarget};
+pub use lan_ip::{ActiveLanIpProvider, FakeLanIpProvider, LanIpProvider};
+pub use metrics::SystemMetrics;
+pub use opener::{FakeSystemOpener, SystemOpener};
+pub use paths::{Paths, PlatformDirs};
+pub use port_binder::{BoundPort, PortBinder, PortPair};
+pub use port_redirect::PortRedirector;
+pub use resolver::ResolverInstaller;
+pub use terminal::TerminalLauncher;
+pub use trust_store::{
+    BrowserCaTrust, CaFingerprint, FingerprintParseError, NssFailure, NssOutcome, TrustStore,
+};
+
+pub use os::active::{
+    ActiveIdeLauncher, ActivePaths, ActivePortBinder, ActivePortRedirector,
+    ActiveResolverInstaller, ActiveSystemMetrics, ActiveSystemOpener, ActiveTerminalLauncher,
+    ActiveTrustStore,
+};

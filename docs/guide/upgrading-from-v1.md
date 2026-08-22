@@ -1,9 +1,9 @@
 # Upgrade Guide
 
-Coming from the original Go-based Yerd (`LumoSolutions/yerd`, "v1")? This page covers what changed and how to move your local sites to v2.
+Coming from the original Go-based Orcker (`LumoSolutions/orcker`, "v1")? This page covers what changed and how to move your local sites to v2.
 
 ::: warning This is a replacement, not an in-place upgrade.
-Yerd v2 (`forjedio/yerd`) is a ground-up Rust rewrite. Different binaries, a different on-disk layout, an incompatible config format, and a redesigned command set. There is no automatic migration. You uninstall v1 and set up v2 fresh.
+Orcker v2 (`forjedio/orcker`) is a ground-up Rust rewrite. Different binaries, a different on-disk layout, an incompatible config format, and a redesigned command set. There is no automatic migration. You uninstall v1 and set up v2 fresh.
 :::
 
 ## What changed
@@ -19,7 +19,7 @@ Yerd v2 (`forjedio/yerd`) is a ground-up Rust rewrite. Different binaries, a dif
 So v2 installs small and fast (no compiler needed for PHP), doesn't ask for your password every time you touch a site, and behaves the same across operating systems.
 
 ::: info Rootless by design
-`sudo` appears in only two places: installing the system package (normal for any `.deb`/`.pkg.tar.zst`), and the one-time `sudo yerd elevate`. After that, day-to-day use never touches root. See [Elevation & Privileges](./elevation).
+`sudo` appears in only two places: installing the system package (normal for any `.deb`/`.pkg.tar.zst`), and the one-time `sudo orcker elevate`. After that, day-to-day use never touches root. See [Elevation & Privileges](./elevation).
 :::
 
 ## What does not carry over
@@ -27,7 +27,7 @@ So v2 installs small and fast (no compiler needed for PHP), doesn't ask for your
 - **v1 config is not read.** v2 uses its own TOML config; see the [Configuration Reference](../reference/configuration).
 - **PHP versions are not reused.** Reinstall the versions you need (fast, no compilation).
 - **Sites are not migrated.** Re-park and re-link them with the v2 commands below.
-- **Command names may differ.** Use the [CLI Reference](../reference/cli/) or `yerd --help`.
+- **Command names may differ.** Use the [CLI Reference](../reference/cli/) or `orcker --help`.
 - **The local CA is regenerated.** You trust the new CA once during setup.
 
 ## Migration, step by step
@@ -42,30 +42,30 @@ If v1 changed your system DNS resolver or installed a CA into your trust store, 
 After removing v1, reboot or flush DNS so the OS forgets v1's resolver before v2 installs its own.
 :::
 
-### 2. Install Yerd v2
+### 2. Install Orcker v2
 
 Follow **[Getting Started](./getting-started)** to install the app and go through its first-run onboarding journey - it installs and starts the daemon for you. You can install a PHP version and park a projects folder there too, or hold off and do it explicitly in the migration-specific steps below.
 
 ### 3. Run the one-time privileged setup
 
-The only command that uses root in normal use. It trusts the local CA, routes `*.test` to Yerd's DNS responder, and lets the daemon bind ports 80/443:
+The only command that uses root in normal use. It trusts the local CA, routes `*.test` to Orcker's DNS responder, and lets the daemon bind ports 80/443:
 
 ```sh
-sudo yerd elevate
+sudo orcker elevate
 ```
 
 You can grant the pieces individually:
 
 ```sh
-sudo yerd elevate trust       # trust the local CA in the system store
-sudo yerd elevate resolver    # route *.test queries to Yerd's DNS responder
-sudo yerd elevate ports       # allow the daemon to bind ports 80/443
+sudo orcker elevate trust       # trust the local CA in the system store
+sudo orcker elevate resolver    # route *.test queries to Orcker's DNS responder
+sudo orcker elevate ports       # allow the daemon to bind ports 80/443
 ```
 
-Reverse any of these with `sudo yerd unelevate` (optionally `trust`, `resolver`, or `ports`). See [Elevation & Privileges](./elevation).
+Reverse any of these with `sudo orcker unelevate` (optionally `trust`, `resolver`, or `ports`). See [Elevation & Privileges](./elevation).
 
 ::: tip Ports without elevation
-Skip `sudo yerd elevate ports` and the daemon falls back to `8080`/`8443`. `yerd doctor` reports what's in effect.
+Skip `sudo orcker elevate ports` and the daemon falls back to `8080`/`8443`. `orcker doctor` reports what's in effect.
 :::
 
 ### 4. Reinstall the PHP versions you need
@@ -73,22 +73,22 @@ Skip `sudo yerd elevate ports` and the daemon falls back to `8080`/`8443`. `yerd
 These download prebuilt static builds, so it's quick:
 
 ```sh
-yerd install php 8.5
-yerd install php 8.3
+orcker install php 8.5
+orcker install php 8.3
 ```
 
 Set a global default (this drives the terminal `php` shim and the per-site fallback):
 
 ```sh
-yerd use 8.5
+orcker use 8.5
 ```
 
 Check what's installed and what updates are available:
 
 ```sh
-yerd list php                 # installed versions + the global default
-yerd list php --available     # versions installable from the distribution
-yerd list php --check         # refresh "update available" status (polls now)
+orcker list php                 # installed versions + the global default
+orcker list php --available     # versions installable from the distribution
+orcker list php --check         # refresh "update available" status (polls now)
 ```
 
 See [PHP Versions](./php-versions) for installs, updates, and per-site pinning.
@@ -98,81 +98,81 @@ See [PHP Versions](./php-versions) for installs, updates, and per-site pinning.
 To turn a directory whose sub-folders should each become a `.test` site, **park** it:
 
 ```sh
-yerd park ~/Sites
+orcker park ~/Sites
 #   ~/Sites/blog  ->  http://blog.test
 ```
 
 For a single project served under a name you choose, **link** it:
 
 ```sh
-yerd link my-app ~/code/my-app
+orcker link my-app ~/code/my-app
 #   ->  http://my-app.test
 ```
 
 Verify:
 
 ```sh
-yerd sites                    # every parked or linked site
-yerd list parked              # the registered parked directory roots
+orcker sites                    # every parked or linked site
+orcker list parked              # the registered parked directory roots
 ```
 
-Later, `yerd unlink <name>` removes a linked site and `yerd unpark <path>` un-parks a directory. See [Sites](./sites).
+Later, `orcker unlink <name>` removes a linked site and `orcker unpark <path>` un-parks a directory. See [Sites](./sites).
 
 ### 6. Turn HTTPS back on per site
 
 HTTPS isn't on by default. Promote the sites that need it:
 
 ```sh
-yerd secure my-app
+orcker secure my-app
 #   ->  https://my-app.test  (trusted, via the local CA)
 ```
 
-Use `yerd unsecure <name>` to turn it off. Since the CA was trusted in step 3, secured sites get a green padlock with no browser warnings. See [HTTPS & Certificates](./https).
+Use `orcker unsecure <name>` to turn it off. Since the CA was trusted in step 3, secured sites get a green padlock with no browser warnings. See [HTTPS & Certificates](./https).
 
 ### 7. Pin per-site PHP versions (optional)
 
-The two-argument form of `yerd use` targets a single site:
+The two-argument form of `orcker use` targets a single site:
 
 ```sh
-yerd use my-app 8.3
+orcker use my-app 8.3
 ```
 
 ### 8. Confirm everything is healthy
 
 ```sh
-yerd status                   # daemon, proxy, DNS, ports, CA, PHP health
-yerd doctor                   # diagnose common problems
-yerd doctor fix               # attempt safe, unprivileged repairs
+orcker status                   # daemon, proxy, DNS, ports, CA, PHP health
+orcker doctor                   # diagnose common problems
+orcker doctor fix               # attempt safe, unprivileged repairs
 ```
 
-`yerd doctor` is most useful right after migrating: it flags a left-over v1 resolver, a port conflict, or an untrusted CA and tells you what to do. Add `--json` for machine-readable output. See [Diagnostics](./diagnostics).
+`orcker doctor` is most useful right after migrating: it flags a left-over v1 resolver, a port conflict, or an untrusted CA and tells you what to do. Add `--json` for machine-readable output. See [Diagnostics](./diagnostics).
 
 ## Command map
 
-Commands you'll use most while migrating. For the rest, see `yerd --help` and the [CLI Reference](../reference/cli/).
+Commands you'll use most while migrating. For the rest, see `orcker --help` and the [CLI Reference](../reference/cli/).
 
 | Task | v2 command |
 |---|---|
-| Park a directory of projects | `yerd park <dir>` |
-| Link one project as a named site | `yerd link <name> <dir>` |
-| Remove a linked site | `yerd unlink <name>` |
-| Un-park a directory | `yerd unpark <dir>` |
-| List sites | `yerd sites` |
-| List parked roots | `yerd list parked` |
-| Install a PHP version | `yerd install php <version>` |
-| Set the global PHP default | `yerd use <version>` |
-| Pin a site's PHP version | `yerd use <site> <version>` |
-| List / update PHP | `yerd list php` · `yerd update php [<version>]` |
-| HTTPS on / off | `yerd secure <site>` · `yerd unsecure <site>` |
-| Manage a site's domains | `yerd domain list\|add\|remove\|primary\|reset <site>` |
-| One-time privileged setup | `sudo yerd elevate [trust\|resolver\|ports]` |
-| Reverse setup | `sudo yerd unelevate [...]` |
-| Health & repair | `yerd status` · `yerd doctor` · `yerd doctor fix` |
+| Park a directory of projects | `orcker park <dir>` |
+| Link one project as a named site | `orcker link <name> <dir>` |
+| Remove a linked site | `orcker unlink <name>` |
+| Un-park a directory | `orcker unpark <dir>` |
+| List sites | `orcker sites` |
+| List parked roots | `orcker list parked` |
+| Install a PHP version | `orcker install php <version>` |
+| Set the global PHP default | `orcker use <version>` |
+| Pin a site's PHP version | `orcker use <site> <version>` |
+| List / update PHP | `orcker list php` · `orcker update php [<version>]` |
+| HTTPS on / off | `orcker secure <site>` · `orcker unsecure <site>` |
+| Manage a site's domains | `orcker domain list\|add\|remove\|primary\|reset <site>` |
+| One-time privileged setup | `sudo orcker elevate [trust\|resolver\|ports]` |
+| Reverse setup | `sudo orcker unelevate [...]` |
+| Health & repair | `orcker status` · `orcker doctor` · `orcker doctor fix` |
 
-v2 lets a site answer multiple domains, subdomains, and wildcards through `yerd domain` (see the [domains reference](../reference/cli/domains)). Unlike some setups, subdomains are explicit: a site answers only its exact apex until you add more.
+v2 lets a site answer multiple domains, subdomains, and wildcards through `orcker domain` (see the [domains reference](../reference/cli/domains)). Unlike some setups, subdomains are explicit: a site answers only its exact apex until you add more.
 
 ::: details Lineage
-Yerd v2 is a ground-up rewrite of our own v1 package ([`LumoSolutions/yerd`](https://github.com/LumoSolutions/yerd)). v1 is reference-only: no command-surface or config-format compatibility. The full project lives at [github.com/forjedio/yerd](https://github.com/forjedio/yerd).
+Orcker v2 is a ground-up rewrite of our own v1 package ([`LumoSolutions/orcker`](https://github.com/LumoSolutions/orcker)). v1 is reference-only: no command-surface or config-format compatibility. The full project lives at [github.com/forjedio/orcker](https://github.com/forjedio/orcker).
 :::
 
 ## Where to go next

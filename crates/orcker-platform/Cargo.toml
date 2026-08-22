@@ -1,0 +1,33 @@
+[package]
+name                   = "orcker-platform"
+version.workspace      = true
+edition.workspace      = true
+rust-version.workspace = true
+license.workspace      = true
+publish.workspace      = true
+description            = "OS abstraction layer for Orcker (paths, trust store, resolver, port binder)."
+readme                 = "README.md"
+
+[dependencies]
+orcker-core   = { path = "../orcker-core" }
+orcker-tls    = { path = "../orcker-tls" }
+thiserror   = { workspace = true }
+directories = { workspace = true }
+sha2        = { workspace = true }
+hex         = { workspace = true }
+pem         = { workspace = true }
+x509-parser = { workspace = true }
+serde_json  = { workspace = true }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+security-framework = { workspace = true }
+
+[dev-dependencies]
+tempfile      = { workspace = true }
+orcker-depcheck = { path = "../orcker-depcheck" }
+# Minting test CAs (via orcker-tls, already a normal dep) needs a Validity, which
+# is built from `time` timestamps.
+time          = { workspace = true }
+
+[lints]
+workspace = true

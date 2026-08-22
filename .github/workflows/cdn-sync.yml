@@ -28,7 +28,7 @@ permissions:
 # Share the writers' lock with release.yml's cdn-mirror job so a manual sync and
 # an automatic release mirror can never interleave root-manifest writes.
 concurrency:
-  group: yerd-cdn-writes
+  group: orcker-cdn-writes
   cancel-in-progress: false
 
 jobs:

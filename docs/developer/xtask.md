@@ -1,6 +1,6 @@
 # Build Automation (xtask)
 
-Yerd's repository-local build automation lives in the [`xtask`](https://github.com/forjedio/yerd/tree/main/xtask) crate. It follows the well-known [cargo-xtask](https://github.com/matklad/cargo-xtask) pattern: instead of shell scripts or a Makefile, build tasks are ordinary Rust programs run through a cargo alias. There is no extra tool to install - if you can build the workspace, you can run every task.
+Orcker's repository-local build automation lives in the [`xtask`](https://github.com/forjedio/orcker/tree/main/xtask) crate. It follows the well-known [cargo-xtask](https://github.com/matklad/cargo-xtask) pattern: instead of shell scripts or a Makefile, build tasks are ordinary Rust programs run through a cargo alias. There is no extra tool to install - if you can build the workspace, you can run every task.
 
 ```sh
 cargo xtask <command>
@@ -43,7 +43,7 @@ pub enum Command {
 ```
 
 ::: info Scope
-`xtask` only keeps **versions in sync**. It does *not* build any artifacts - the shipped products are the **GUI bundle** (`.dmg` on macOS, `.deb` on Linux) with the three binaries (`yerd`/`yerdd`/`yerd-helper`) embedded via `externalBin` (per-platform overlays in `apps/yerd-gui/src-tauri/`), plus a native **Arch package** (`.pkg.tar.zst`, x86-64) built from `packaging/arch/PKGBUILD` in the workflow's `arch` job. Tauri builds the `.app` (macOS) and `.deb` (Linux) directly; the macOS `.dmg` is packaged as a separate headless step (`apps/yerd-gui/scripts/build-macos-dmg.sh`, via `appdmg`) since Tauri's own dmg bundler drives Finder via AppleScript, which isn't reliable outside an interactive session. There is no standalone CLI tarball/`.deb`. `xtask` also doesn't download or cache PHP - PHP builds are fetched at runtime by the daemon (see [yerd-php](./crates/yerd-php)). Cross-platform release artifacts and checksums are assembled by the GitHub Actions workflows.
+`xtask` only keeps **versions in sync**. It does *not* build any artifacts - the shipped products are the **GUI bundle** (`.dmg` on macOS, `.deb` on Linux) with the three binaries (`orcker`/`orckerd`/`orcker-helper`) embedded via `externalBin` (per-platform overlays in `apps/orcker-gui/src-tauri/`), plus a native **Arch package** (`.pkg.tar.zst`, x86-64) built from `packaging/arch/PKGBUILD` in the workflow's `arch` job. Tauri builds the `.app` (macOS) and `.deb` (Linux) directly; the macOS `.dmg` is packaged as a separate headless step (`apps/orcker-gui/scripts/build-macos-dmg.sh`, via `appdmg`) since Tauri's own dmg bundler drives Finder via AppleScript, which isn't reliable outside an interactive session. There is no standalone CLI tarball/`.deb`. `xtask` also doesn't download or cache PHP - PHP builds are fetched at runtime by the daemon (see [orcker-php](./crates/orcker-php)). Cross-platform release artifacts and checksums are assembled by the GitHub Actions workflows.
 :::
 
 ## Module map
@@ -62,13 +62,13 @@ This mirrors the project-wide convention: **pure logic in functions you can test
 
 ## Version sync - `bump` and `version-check`
 
-Yerd declares its version in **three** manifests that must never drift:
+Orcker declares its version in **three** manifests that must never drift:
 
 | Manifest | Key |
 |---|---|
 | `Cargo.toml` (workspace root) | `[workspace.package].version` |
-| `apps/yerd-gui/src-tauri/tauri.conf.json` | top-level `"version"` |
-| `apps/yerd-gui/package.json` | top-level `"version"` |
+| `apps/orcker-gui/src-tauri/tauri.conf.json` | top-level `"version"` |
+| `apps/orcker-gui/package.json` | top-level `"version"` |
 
 `main.rs` locates all three relative to the crate's manifest directory (the workspace root is `xtask`'s parent), and `version.rs` provides the pure string transforms.
 
@@ -104,7 +104,7 @@ On success it prints `OK: all manifests are at <version>`. On mismatch it lists 
 ## Release workflow
 
 The version commands exist to make tagged releases safe, but cutting a release
-is a single command: [`scripts/release.sh`](https://github.com/forjedio/yerd/blob/main/scripts/release.sh).
+is a single command: [`scripts/release.sh`](https://github.com/forjedio/orcker/blob/main/scripts/release.sh).
 
 ```sh
 ./scripts/release.sh --version v2.0.3           # final release
@@ -139,6 +139,6 @@ The release CI builds the single GUI bundle for macOS (`arm64`) and Linux (`amd6
 
 ## Source
 
-- Crate root: [`xtask/`](https://github.com/forjedio/yerd/tree/main/xtask)
-- Orchestration: [`xtask/src/main.rs`](https://github.com/forjedio/yerd/blob/main/xtask/src/main.rs)
-- Pure helper: [`xtask/src/version.rs`](https://github.com/forjedio/yerd/blob/main/xtask/src/version.rs)
+- Crate root: [`xtask/`](https://github.com/forjedio/orcker/tree/main/xtask)
+- Orchestration: [`xtask/src/main.rs`](https://github.com/forjedio/orcker/blob/main/xtask/src/main.rs)
+- Pure helper: [`xtask/src/version.rs`](https://github.com/forjedio/orcker/blob/main/xtask/src/version.rs)

@@ -1,6 +1,6 @@
 # PHP
 
-Yerd downloads prebuilt static PHP builds and runs an FPM pool per installed version. The [PHP Versions guide](../../guide/php-versions) covers this in depth.
+Orcker downloads prebuilt static PHP builds and runs an FPM pool per installed version. The [PHP Versions guide](../../guide/php-versions) covers this in depth.
 
 ## Choosing the version
 
@@ -8,19 +8,19 @@ The `use` command is overloaded by argument count:
 
 | Command | Description | Example |
 | --- | --- | --- |
-| `yerd use <VERSION>` | Set the **global** default: the terminal `php` shim and the per-site fallback. | `yerd use 8.5` |
-| `yerd use <SITE> <VERSION>` | Set the PHP version for a single named site. | `yerd use blog 8.3` |
+| `orcker use <VERSION>` | Set the **global** default: the terminal `php` shim and the per-site fallback. | `orcker use 8.5` |
+| `orcker use <SITE> <VERSION>` | Set the PHP version for a single named site. | `orcker use blog 8.3` |
 
 ```sh
-yerd use 8.5          # global default for the `php` shim and new sites
-yerd use blog 8.3     # pin one site to 8.3
+orcker use 8.5          # global default for the `php` shim and new sites
+orcker use blog 8.3     # pin one site to 8.3
 ```
 
-After a successful global `yerd use <version>` (human output only), `yerd` prints a hint telling you which directory holds the managed `php` shim and warns if a different `php` is found earlier on your `PATH` and would shadow it.
+After a successful global `orcker use <version>` (human output only), `orcker` prints a hint telling you which directory holds the managed `php` shim and warns if a different `php` is found earlier on your `PATH` and would shadow it.
 
-::: warning `yerd use` refuses a legacy version as the default
-`yerd use <VERSION>` is refused for an out-of-support [legacy version](../../guide/php-versions#legacy-php-versions)
-(7.4 / 8.0 / 8.1) - legacy versions can't be the global default. `yerd use <SITE> <VERSION>`
+::: warning `orcker use` refuses a legacy version as the default
+`orcker use <VERSION>` is refused for an out-of-support [legacy version](../../guide/php-versions#legacy-php-versions)
+(7.4 / 8.0 / 8.1) - legacy versions can't be the global default. `orcker use <SITE> <VERSION>`
 still accepts one, pinning it to that site only.
 :::
 
@@ -28,18 +28,18 @@ still accepts one, pinning it to that site only.
 
 | Command | Description | Example |
 | --- | --- | --- |
-| `yerd install php <VERSION> [--legacy]` | Install a PHP version (downloads a prebuilt static build). | `yerd install php 8.5` |
-| `yerd uninstall php <VERSION>` | Uninstall a PHP version (removes its files; blocked if in use). | `yerd uninstall php 8.3` |
-| `yerd update php [VERSION]` | Update a PHP version to the latest release. Omit the version to update every installed version. | `yerd update php` |
-| `yerd restart php [VERSION]` | Restart a PHP FPM pool. Omit the version to restart every running pool. | `yerd restart php 8.5` |
-| `yerd list php [--check] [--available]` | List installed PHP versions and the global default. | `yerd list php` |
+| `orcker install php <VERSION> [--legacy]` | Install a PHP version (downloads a prebuilt static build). | `orcker install php 8.5` |
+| `orcker uninstall php <VERSION>` | Uninstall a PHP version (removes its files; blocked if in use). | `orcker uninstall php 8.3` |
+| `orcker update php [VERSION]` | Update a PHP version to the latest release. Omit the version to update every installed version. | `orcker update php` |
+| `orcker restart php [VERSION]` | Restart a PHP FPM pool. Omit the version to restart every running pool. | `orcker restart php 8.5` |
+| `orcker list php [--check] [--available]` | List installed PHP versions and the global default. | `orcker list php` |
 
 ```sh
-yerd install php 8.5      # download + run an 8.5 FPM pool
-yerd update php           # update all installed versions to latest
-yerd update php 8.5       # update just 8.5
-yerd restart php          # restart every running pool
-yerd uninstall php 8.3    # remove 8.3 (refused if a site still uses it)
+orcker install php 8.5      # download + run an 8.5 FPM pool
+orcker update php           # update all installed versions to latest
+orcker update php 8.5       # update just 8.5
+orcker restart php          # restart every running pool
+orcker uninstall php 8.3    # remove 8.3 (refused if a site still uses it)
 ```
 
 ### The `--legacy` flag
@@ -48,14 +48,14 @@ yerd uninstall php 8.3    # remove 8.3 (refused if a site still uses it)
 served from a separate manifest. Installing one requires the explicit `--legacy` flag:
 
 ```sh
-yerd install php 7.4 --legacy
+orcker install php 7.4 --legacy
 ```
 
-Without `--legacy`, `yerd install php 7.4` prints an out-of-support warning and
+Without `--legacy`, `orcker install php 7.4` prints an out-of-support warning and
 refuses to install. `--legacy` is a no-op (accepted but unnecessary) for a
 supported version.
 
-### `yerd list php` flags
+### `orcker list php` flags
 
 | Flag | Description |
 | --- | --- |
@@ -63,14 +63,14 @@ supported version.
 | `--available` | List the versions installable from the distribution instead, tagging ones already installed. **Takes precedence over `--check`.** |
 
 ```sh
-yerd list php                 # installed versions, from cache (no network)
-yerd list php --check         # installed versions, freshly checking for updates
-yerd list php --available     # everything installable, tagging what you have
+orcker list php                 # installed versions, from cache (no network)
+orcker list php --check         # installed versions, freshly checking for updates
+orcker list php --available     # everything installable, tagging what you have
 ```
 
-Installed versions are printed one per line; the current default is marked `(default)`, and any version with a newer release shows `update available: <installed> -> <latest>`. Each installed version then gets a `PHP <version>:` section listing its per-version overrides, custom ini directives, and its [FPM pool size](#fpm-pool-size) - the pool line always prints, showing `(default)` for a version you have not changed. If nothing is installed, `yerd list php` suggests `yerd install php <default>`.
+Installed versions are printed one per line; the current default is marked `(default)`, and any version with a newer release shows `update available: <installed> -> <latest>`. Each installed version then gets a `PHP <version>:` section listing its per-version overrides, custom ini directives, and its [FPM pool size](#fpm-pool-size) - the pool line always prints, showing `(default)` for a version you have not changed. If nothing is installed, `orcker list php` suggests `orcker install php <default>`.
 
-`yerd list php --available` also prints a trailing **Legacy (out of support - no
+`orcker list php --available` also prints a trailing **Legacy (out of support - no
 coverage, no dumps, cannot be default)** section listing the installable
 [legacy versions](../../guide/php-versions#legacy-php-versions), tagging any
 already installed - the section is omitted when there are none.
@@ -81,15 +81,15 @@ already installed - the section is omitted when there are none.
 
 | Command | Description | Example |
 | --- | --- | --- |
-| `yerd set php <SETTING> <VALUE> [--only <VERSION>]` | Set a PHP ini default. With `--only`, only that installed version is affected (a per-version override). | `yerd set php memory_limit 512M` |
-| `yerd unset php <SETTING> [--only <VERSION>]` | Reset a setting to PHP's built-in value. With `--only`, only that version's override is removed (the global default applies again). | `yerd unset php memory_limit` |
+| `orcker set php <SETTING> <VALUE> [--only <VERSION>]` | Set a PHP ini default. With `--only`, only that installed version is affected (a per-version override). | `orcker set php memory_limit 512M` |
+| `orcker unset php <SETTING> [--only <VERSION>]` | Reset a setting to PHP's built-in value. With `--only`, only that version's override is removed (the global default applies again). | `orcker unset php memory_limit` |
 
 ```sh
-yerd set php memory_limit 512M
-yerd set php display_errors On
-yerd unset php memory_limit
-yerd set php memory_limit 1G --only 8.3    # only PHP 8.3 gets 1G
-yerd unset php memory_limit --only 8.3     # 8.3 inherits the global value again
+orcker set php memory_limit 512M
+orcker set php display_errors On
+orcker unset php memory_limit
+orcker set php memory_limit 1G --only 8.3    # only PHP 8.3 gets 1G
+orcker unset php memory_limit --only 8.3     # 8.3 inherits the global value again
 ```
 
 **Precedence:** a version's effective value is its `--only` override when set, else
@@ -111,27 +111,27 @@ The setting name (and, for `set`, the value) is validated client-side before con
 | `error_reporting` | an `error_reporting` expression |
 
 ::: tip
-The configured settings are echoed back by `yerd list php` under a `settings:` block, and each version's overrides, directives, and pool size follow in a `PHP <version>:` section, so you can confirm what's currently applied. See the [Configuration Reference](../configuration) for how these are stored and rendered into FPM config.
+The configured settings are echoed back by `orcker list php` under a `settings:` block, and each version's overrides, directives, and pool size follow in a `PHP <version>:` section, so you can confirm what's currently applied. See the [Configuration Reference](../configuration) for how these are stored and rendered into FPM config.
 :::
 
 ## Custom extensions
 
-`yerd php ext` registers extra PHP extensions (`.so`) that Yerd's builds don't
+`orcker php ext` registers extra PHP extensions (`.so`) that Orcker's builds don't
 ship. A registered extension loads into **both** the FPM (web) runtime and the CLI
 for its version. Native extensions are ABI-bound to a PHP minor, so each is
 registered under one version.
 
 | Command | Description | Example |
 | --- | --- | --- |
-| `yerd php ext add <VERSION> <PATH> [--zend] [--name <NAME>]` | Register an extension for a version. | `yerd php ext add 8.5 /opt/php/pecl/scrypt.so` |
-| `yerd php ext remove <VERSION> <NAME>` | Remove a registered extension by name. | `yerd php ext remove 8.5 scrypt` |
-| `yerd php ext list` | List registered extensions, grouped by version. | `yerd php ext list` |
+| `orcker php ext add <VERSION> <PATH> [--zend] [--name <NAME>]` | Register an extension for a version. | `orcker php ext add 8.5 /opt/php/pecl/scrypt.so` |
+| `orcker php ext remove <VERSION> <NAME>` | Remove a registered extension by name. | `orcker php ext remove 8.5 scrypt` |
+| `orcker php ext list` | List registered extensions, grouped by version. | `orcker php ext list` |
 
 ```sh
-yerd php ext add 8.5 /opt/homebrew/lib/php/pecl/20250925/scrypt.so
-yerd php ext add 8.5 /opt/php/xdebug.so --zend --name xdebug
-yerd php ext list
-yerd php ext remove 8.5 scrypt
+orcker php ext add 8.5 /opt/homebrew/lib/php/pecl/20250925/scrypt.so
+orcker php ext add 8.5 /opt/php/xdebug.so --zend --name xdebug
+orcker php ext list
+orcker php ext remove 8.5 scrypt
 ```
 
 - `VERSION` is a `major.minor` (e.g. `8.5`) and must be installed.
@@ -146,37 +146,37 @@ On `add`, the daemon **load-probes** the `.so` against that version's PHP and
 rejects it if it can't load (wrong-version build, missing dependency, or a Zend
 extension registered without `--zend`), so a bad extension is a clear error rather
 than a broken pool. `add`/`remove` restart that version's running FPM pool.
-`yerd php ext list` tags any extension whose `.so` is missing on disk with
+`orcker php ext list` tags any extension whose `.so` is missing on disk with
 `(missing!)`. See the [Configuration Reference](../configuration#php) for how the
 registry is stored.
 
 ## Custom ini directives
 
-`yerd php ini` sets free-form ini directives for **one** installed version - the
-directives Yerd's typed allowlist doesn't cover, typically extension settings
+`orcker php ini` sets free-form ini directives for **one** installed version - the
+directives Orcker's typed allowlist doesn't cover, typically extension settings
 like `xdebug.mode` or `opcache.jit_buffer_size`. They apply to that version's
 FPM (web) pool and its CLI.
 
 | Command | Description | Example |
 | --- | --- | --- |
-| `yerd php ini set <VERSION> <NAME> <VALUE>` | Set a directive for one installed version. | `yerd php ini set 8.3 xdebug.mode debug` |
-| `yerd php ini unset <VERSION> <NAME>` | Remove a directive. | `yerd php ini unset 8.3 xdebug.mode` |
-| `yerd php ini list` | List per-version overrides, directives, and pool sizes (same output as `yerd list php`). | `yerd php ini list` |
+| `orcker php ini set <VERSION> <NAME> <VALUE>` | Set a directive for one installed version. | `orcker php ini set 8.3 xdebug.mode debug` |
+| `orcker php ini unset <VERSION> <NAME>` | Remove a directive. | `orcker php ini unset 8.3 xdebug.mode` |
+| `orcker php ini list` | List per-version overrides, directives, and pool sizes (same output as `orcker list php`). | `orcker php ini list` |
 
 ```sh
-yerd php ext add 8.3 /opt/php/xdebug.so --zend   # 1. load the extension
-yerd php ini set 8.3 xdebug.mode debug           # 2. configure it
-yerd php ini list
-yerd php ini unset 8.3 xdebug.mode
+orcker php ext add 8.3 /opt/php/xdebug.so --zend   # 1. load the extension
+orcker php ini set 8.3 xdebug.mode debug           # 2. configure it
+orcker php ini list
+orcker php ini unset 8.3 xdebug.mode
 ```
 
 Names and values are **shape-validated** (no control characters or the ini
 metacharacters `[ ] = ; #`), but not semantically: a well-formed directive PHP
-doesn't recognise is simply ignored by PHP. Directives Yerd manages through
+doesn't recognise is simply ignored by PHP. Directives Orcker manages through
 typed paths are refused with a pointer to the right command: the eight
-[allowlisted settings](#global-php-ini-settings) (use `yerd set php`,
-optionally with `--only`), `extension`/`zend_extension` (use `yerd php ext`),
-and `openssl.cafile`/`curl.cainfo` (Yerd manages the CA bundle).
+[allowlisted settings](#global-php-ini-settings) (use `orcker set php`,
+optionally with `--only`), `extension`/`zend_extension` (use `orcker php ext`),
+and `openssl.cafile`/`curl.cainfo` (Orcker manages the CA bundle).
 
 In the FPM pool config a directive renders as `php_value[name] = value`
 (FPM coerces boolean-valued directives); in the version's CLI ini it renders as
@@ -186,28 +186,28 @@ version.
 
 FPM's own pool-block settings (anything starting with `pm.`) are **not** ini
 directives and are refused here with a pointer at
-[`yerd php pool`](#fpm-pool-size).
+[`orcker php pool`](#fpm-pool-size).
 
 ## FPM pool size
 
-`yerd php pool` sets how many PHP workers one installed version may run at
+`orcker php pool` sets how many PHP workers one installed version may run at
 once. This is FPM's `pm.max_children`, and it applies to that version's web
 (FPM) pool only - never its CLI.
 
 | Command | Description | Example |
 | --- | --- | --- |
-| `yerd php pool set <VERSION> max_children <N>` | Set the worker ceiling for one installed version. | `yerd php pool set 8.4 max_children 32` |
-| `yerd php pool unset <VERSION> max_children` | Reset the ceiling to the default of 16. | `yerd php pool unset 8.4 max_children` |
-| `yerd php pool list` | List per-version overrides, directives, and pool sizes (same output as `yerd list php`). | `yerd php pool list` |
+| `orcker php pool set <VERSION> max_children <N>` | Set the worker ceiling for one installed version. | `orcker php pool set 8.4 max_children 32` |
+| `orcker php pool unset <VERSION> max_children` | Reset the ceiling to the default of 16. | `orcker php pool unset 8.4 max_children` |
+| `orcker php pool list` | List per-version overrides, directives, and pool sizes (same output as `orcker list php`). | `orcker php pool list` |
 
 ```sh
-yerd php pool set 8.4 max_children 32
-yerd php pool list
+orcker php pool set 8.4 max_children 32
+orcker php pool list
 #   pm.max_children = 32  (overrides default 16)
-yerd php pool unset 8.4 max_children
+orcker php pool unset 8.4 max_children
 ```
 
-The default is **16** and the accepted range is **1 to 1024**. Yerd runs each
+The default is **16** and the accepted range is **1 to 1024**. Orcker runs each
 pool in FPM's `ondemand` mode, so workers are spawned as requests arrive rather
 than preallocated: raising the ceiling costs nothing while the pool is idle.
 Raise it when requests start queueing behind long-running work - queue workers,

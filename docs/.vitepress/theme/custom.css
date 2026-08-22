@@ -1,5 +1,5 @@
 /**
- * Yerd brand theme for VitePress.
+ * Orcker brand theme for VitePress.
  *
  * Brand color is the logo's indigo gradient: #6366F1 (indigo-500) → #4338CA
  * (indigo-700). Link/UI colors are pulled a shade darker in light mode for
@@ -8,7 +8,7 @@
 
 /* Forjed display face (Outage Cut), self-hosted. Used for the hero wordmark,
  * the navbar title, and documentation page titles - matching forjed.io and the
- * Yerd social cards. It's a single heavy all-caps weight, so headings using it
+ * Orcker social cards. It's a single heavy all-caps weight, so headings using it
  * set font-weight: normal to avoid faux-bold synthesis. */
 @font-face {
   font-family: 'Outage Cut';
@@ -18,7 +18,7 @@
   font-display: swap;
 }
 
-/* Homepage hero: the "Yerd" wordmark and the "Local PHP, without the friction."
+/* Homepage hero: the "Orcker" wordmark and the "Local PHP, without the friction."
  * line, in the Forjed display face. The wordmark keeps its indigo gradient
  * (background-clip: text). The homepage showcase headings get the same face (see
  * the .home-showcase rules); documentation body headings stay in the default
@@ -30,7 +30,7 @@
   letter-spacing: 0.01em;
 }
 
-/* Hero lockup (logo + "Yerd"), matching the social card. Markup comes from the
+/* Hero lockup (logo + "Orcker"), matching the social card. Markup comes from the
  * #home-hero-info slot in Layout.vue. Hidden below the hero's stacked
  * breakpoint - the navbar already shows the logo + wordmark there, so
  * repeating it right below the screenshot is redundant. */
@@ -68,7 +68,7 @@
     height: 54px;
   }
 }
-/* "Yerd" in the foreground colour (white on dark, ink on light) - the default
+/* "Orcker" in the foreground colour (white on dark, ink on light) - the default
  * hero gradient is overridden here. */
 .VPHero .name {
   color: var(--vp-c-text-1);
@@ -223,7 +223,7 @@ html:not(.dark) .VPHero .hero-shot--dark {
   --vp-c-brand-3: #6366f1; /* indigo-500 — button hover */
   --vp-c-brand-soft: rgba(99, 102, 241, 0.14);
 
-  /* Hero "Yerd" wordmark: the logo gradient. */
+  /* Hero "Orcker" wordmark: the logo gradient. */
   --vp-home-hero-name-color: transparent;
   --vp-home-hero-name-background: linear-gradient(
     120deg,

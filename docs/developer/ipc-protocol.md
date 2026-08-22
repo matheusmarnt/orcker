@@ -1,6 +1,6 @@
 # IPC Protocol
 
-This page is the contributor-facing reference for the protocol spoken between the daemon (`yerdd`) and its clients - the `yerd` CLI and the Tauri desktop app. Everything here lives in the [`yerd-ipc`](./crates/yerd-ipc) crate (`crates/yerd-ipc/`), with socket/pipe binding deferred to the binaries.
+This page is the contributor-facing reference for the protocol spoken between the daemon (`orckerd`) and its clients - the `orcker` CLI and the Tauri desktop app. Everything here lives in the [`orcker-ipc`](./crates/orcker-ipc) crate (`crates/orcker-ipc/`), with socket/pipe binding deferred to the binaries.
 
 The crate has three jobs, layered so they can be tested in isolation:
 
@@ -13,19 +13,19 @@ The crate has three jobs, layered so they can be tested in isolation:
   socket / pipe      interprocess local-socket bind + connect            (lives in the binaries)
 ```
 
-The top three layers are **pure**: no sockets, no async, no I/O. The `transport` feature pulls in `tokio` async helpers; the actual socket/named-pipe binding never enters the crate at all - it lives in `yerdd`, `yerd`, and the Tauri sidecar.
+The top three layers are **pure**: no sockets, no async, no I/O. The `transport` feature pulls in `tokio` async helpers; the actual socket/named-pipe binding never enters the crate at all - it lives in `orckerd`, `orcker`, and the Tauri sidecar.
 
 ::: info Source map
-`crates/yerd-ipc/src/`: `lib.rs` (re-exports + `PROTOCOL_VERSION`), `frame.rs` (framing), `message.rs` (JSON codec), `request.rs` / `response.rs` / `status.rs` (the wire types), `dump.rs` (the Laravel ▸ Dumps data model: `DumpCategory`, `DumpEvent`, `DumpCounts`, `DumpExtStatus`), `error.rs` (`FrameError` / `IpcError`), `transport.rs` (feature-gated async helpers). Tests: `tests/frame_codec.rs`, `tests/wire_stability.rs`, `tests/roundtrip.rs`. Browse them on [GitHub](https://github.com/forjedio/yerd).
+`crates/orcker-ipc/src/`: `lib.rs` (re-exports + `PROTOCOL_VERSION`), `frame.rs` (framing), `message.rs` (JSON codec), `request.rs` / `response.rs` / `status.rs` (the wire types), `dump.rs` (the Laravel ▸ Dumps data model: `DumpCategory`, `DumpEvent`, `DumpCounts`, `DumpExtStatus`), `error.rs` (`FrameError` / `IpcError`), `transport.rs` (feature-gated async helpers). Tests: `tests/frame_codec.rs`, `tests/wire_stability.rs`, `tests/roundtrip.rs`. Browse them on [GitHub](https://github.com/forjedio/orcker).
 :::
 
 ## Transport
 
-The default build of `yerd-ipc` has no transport at all. Enable it explicitly:
+The default build of `orcker-ipc` has no transport at all. Enable it explicitly:
 
 ```toml
-# yerdd / yerd / the Tauri backend depend on it like this
-yerd-ipc = { path = "../../crates/yerd-ipc", features = ["transport"] }
+# orckerd / orcker / the Tauri backend depend on it like this
+orcker-ipc = { path = "../../crates/orcker-ipc", features = ["transport"] }
 ```
 
 In the crate's own `Cargo.toml`, `tokio` is `optional = true` and the feature simply turns it on:
@@ -40,28 +40,28 @@ Keeping the codec runtime-free means tests of framing and wire shapes compile an
 
 The transport helpers in `transport.rs` are generic over `tokio::io::AsyncRead` / `AsyncWrite` - they never name a concrete socket type. The concrete binding is done in the binaries with the [`interprocess`](https://crates.io/crates/interprocess) crate's `local_socket`, which maps to:
 
-- **Unix domain socket** on macOS and Linux - `<runtime>/yerd.sock`, where `<runtime>` is resolved by `yerd-platform` (with the `/tmp/yerd-$UID` fallback when `XDG_RUNTIME_DIR` is unset). The daemon removes any stale socket file, then `restrict_to_owner`s it (`0o700` runtime dir plus an owner-only socket) because the IPC server performs no peer-credential check - file permissions are the access boundary.
-- **Named pipe** on Windows - currently `yerd-<pid>` via `GenericNamespaced`.
+- **Unix domain socket** on macOS and Linux - `<runtime>/orcker.sock`, where `<runtime>` is resolved by `orcker-platform` (with the `/tmp/orcker-$UID` fallback when `XDG_RUNTIME_DIR` is unset). The daemon removes any stale socket file, then `restrict_to_owner`s it (`0o700` runtime dir plus an owner-only socket) because the IPC server performs no peer-credential check - file permissions are the access boundary.
+- **Named pipe** on Windows - currently `orcker-<pid>` via `GenericNamespaced`.
 
-The daemon side (`bin/yerdd/src/startup.rs`) selects the name per OS:
+The daemon side (`bin/orckerd/src/startup.rs`) selects the name per OS:
 
 ```rust
 #[cfg(unix)]
-let socket_path = dirs.runtime.join("yerd.sock");
+let socket_path = dirs.runtime.join("orcker.sock");
 // ... to_fs_name::<GenericFilePath>() ...
 #[cfg(windows)]
 let name = {
-    let pipe = format!("yerd-{}", std::process::id());
+    let pipe = format!("orcker-{}", std::process::id());
     pipe.clone().to_ns_name::<GenericNamespaced>()? // namespaced pipe
 };
 let listener = ListenerOptions::new().name(name).create_tokio()?;
 ```
 
 ::: warning Windows client is not wired up yet
-The `yerd` CLI derives the Unix socket path *identically* to the daemon, so they always agree. The Windows pipe name is PID-based and therefore not derivable by a client; the CLI returns `ClientError::DaemonUnreachable` on non-Unix targets today. This is tracked as a follow-up - treat full Windows client support as roadmap. See [Cross-Platform Model](./cross-platform).
+The `orcker` CLI derives the Unix socket path *identically* to the daemon, so they always agree. The Windows pipe name is PID-based and therefore not derivable by a client; the CLI returns `ClientError::DaemonUnreachable` on non-Unix targets today. This is tracked as a follow-up - treat full Windows client support as roadmap. See [Cross-Platform Model](./cross-platform).
 :::
 
-The accept loop is one `tokio::spawn` per connection, and a connection is a long-lived request/response stream - the daemon reads a `Request`, dispatches it, writes a `Response`, and loops until EOF (`bin/yerdd/src/ipc_server.rs`). The CLI typically does a single exchange and drops the connection.
+The accept loop is one `tokio::spawn` per connection, and a connection is a long-lived request/response stream - the daemon reads a `Request`, dispatches it, writes a `Response`, and loops until EOF (`bin/orckerd/src/ipc_server.rs`). The CLI typically does a single exchange and drops the connection.
 
 ## Framing
 
@@ -218,7 +218,7 @@ The variant set is the daemon's whole RPC surface - liveness, site management, P
 | `SetWordpressAutoLogin { name, enabled, user: Option }` | `{"type":"set_wordpress_auto_login","name":"blog","enabled":true,"user":"admin"}` |
 | `WordpressAdminUsers { site }` | `{"type":"wordpress_admin_users","site":"blog"}` |
 
-Database `name` has operation-specific validation. `CreateDatabase` uses Yerd's
+Database `name` has operation-specific validation. `CreateDatabase` uses Orcker's
 portable creation allowlist. `DropDatabase`, `BackupDatabase`, and
 `RestoreDatabase` address an existing engine database and preserve the supplied
 name exactly; only an empty name or embedded NUL is rejected. Drop and restore
@@ -238,7 +238,7 @@ version](../guide/php-versions#legacy-php-versions) (7.4 / 8.0 / 8.1) and
 otherwise replies `Response::Error { code: ErrorCode::LegacyRestricted, .. }`.
 :::
 
-`CreateSite { spec: CreateSiteSpec }` is the wizard's entry point (both Laravel and WordPress): `CreateSiteSpec` carries the shared fields (`name`, `parent_dir`, `php`, `secure`) plus a `framework: Framework` enum internally tagged on `"framework"` (`"laravel"` with `LaravelOptions`, `"wordpress"` with `WordPressOptions` - core version, locale, admin credentials, database engine/name/table-prefix). It replies `JobStarted { job_id }` immediately; the caller polls `Request::JobStatus { job_id }` (streamed via `Response::JobProgress`) the same way `InstallPhpStreamed`/`InstallToolStreamed` do. See [`yerdd`'s WordPress support section](./binaries/yerdd#wordpress-support) for what runs behind the job.
+`CreateSite { spec: CreateSiteSpec }` is the wizard's entry point (both Laravel and WordPress): `CreateSiteSpec` carries the shared fields (`name`, `parent_dir`, `php`, `secure`) plus a `framework: Framework` enum internally tagged on `"framework"` (`"laravel"` with `LaravelOptions`, `"wordpress"` with `WordPressOptions` - core version, locale, admin credentials, database engine/name/table-prefix). It replies `JobStarted { job_id }` immediately; the caller polls `Request::JobStatus { job_id }` (streamed via `Response::JobProgress`) the same way `InstallPhpStreamed`/`InstallToolStreamed` do. See [`orckerd`'s WordPress support section](./binaries/orckerd#wordpress-support) for what runs behind the job.
 
 ### Response (daemon → client)
 
@@ -298,11 +298,11 @@ pub enum Response {
 :::
 
 ::: info WordPress fields on `Site` and `SiteEntry`
-`Site` gained `wp_auto_login: bool` and `wp_auto_login_user: Option<String>`, both skipped on the wire when absent/`false` - same additive, no-bump pattern as `web_subpath`. `Response::Sites`'s per-entry payload (`SiteEntry`, `#[serde(flatten)]` over `Site`) separately gained `is_wordpress: bool`, also skipped when `false` - it's a runtime detection fact (see `wordpress_detect`, [`yerdd`'s WordPress support](./binaries/yerdd#wordpress-support)), not a persisted config field, so it lives on the response wrapper rather than the config-backed `Site` itself.
+`Site` gained `wp_auto_login: bool` and `wp_auto_login_user: Option<String>`, both skipped on the wire when absent/`false` - same additive, no-bump pattern as `web_subpath`. `Response::Sites`'s per-entry payload (`SiteEntry`, `#[serde(flatten)]` over `Site`) separately gained `is_wordpress: bool`, also skipped when `false` - it's a runtime detection fact (see `wordpress_detect`, [`orckerd`'s WordPress support](./binaries/orckerd#wordpress-support)), not a persisted config field, so it lives on the response wrapper rather than the config-backed `Site` itself.
 :::
 
 ::: info Domain fields on `SiteEntry`, and `StatusReport.shadows`
-The multi-domain feature adds three more `SiteEntry` fields alongside `is_wordpress`: `primary_domain: Option<String>` (the canonical FQDN, populated only when it differs from the default `{name}.{tld}` apex), `domains: Vec<String>` (the full routable set, populated only for a customized site), and `apex_shadowed_by: Option<String>` (the other site claiming this apex, if any). All three are skipped when default/empty, so a default site's `Response::Sites` bytes are byte-identical to before - same additive, no-bump pattern as `web_subpath`. Separately, `StatusReport` gained `shadows: Vec<DomainShadow>` (skipped when empty): one `DomainShadow { site, shadowed_by }` per site that lost a domain to another when the router was built, which `yerd doctor` surfaces as a `DomainShadowed` warning. The four domain mutators (`AddDomain` / `RemoveDomain` / `SetPrimaryDomain` / `ResetDomains`) reply with the generic `Ok`.
+The multi-domain feature adds three more `SiteEntry` fields alongside `is_wordpress`: `primary_domain: Option<String>` (the canonical FQDN, populated only when it differs from the default `{name}.{tld}` apex), `domains: Vec<String>` (the full routable set, populated only for a customized site), and `apex_shadowed_by: Option<String>` (the other site claiming this apex, if any). All three are skipped when default/empty, so a default site's `Response::Sites` bytes are byte-identical to before - same additive, no-bump pattern as `web_subpath`. Separately, `StatusReport` gained `shadows: Vec<DomainShadow>` (skipped when empty): one `DomainShadow { site, shadowed_by }` per site that lost a domain to another when the router was built, which `orcker doctor` surfaces as a `DomainShadowed` warning. The four domain mutators (`AddDomain` / `RemoveDomain` / `SetPrimaryDomain` / `ResetDomains`) reply with the generic `Ok`.
 :::
 
 ::: info The mail payloads gained read/unread fields additively
@@ -323,13 +323,13 @@ no-`PROTOCOL_VERSION`-bump pattern as `web_subpath`.
 ::: info Reverse proxies are additive requests plus their own response variant
 The proxy feature adds four mutators - `AddProxy { name, url }`, `RemoveProxy { name }`, `AddProxyRule { site, prefix, url }`, `RemoveProxyRule { site, prefix }` (all reply with the generic `Ok`) - and one query, `ListProxies`. Because a whole-host proxy is **not** a `Site`, it can't ride `Response::Sites`/`SiteEntry`; `ListProxies` gets a dedicated `Response::Proxies { proxies: Vec<ProxyEntry>, rules: Vec<ProxyRuleEntry> }` instead, where `ProxyEntry { name, target, secure, primary_domain, domains }` and `ProxyRuleEntry { site, prefix, target }` are built from plain `String`/`bool`/`Option<String>`/`Vec<String>`, so they satisfy the `PartialEq` that `Response` derives (see above: `Response` is `PartialEq` only, never `Eq`). New variants are additive by serde tag, so existing pins are byte-identical and no `PROTOCOL_VERSION` bump is needed. `url` stays a `String` on the wire; the daemon parses and validates it (returning a typed error) rather than the client.
 
-`ProxyEntry` later gained `primary_domain: Option<String>` and `domains: Vec<String>` (FQDNs) so a proxy can carry the extra domains, subdomains and wildcards [`yerd domain`](../reference/cli/domains) now gives it. Both use `#[serde(default, skip_serializing_if = ...)]` and are populated only for a **customised** proxy, so an uncustomised one serialises to the original three-field byte shape and an older client decodes it unchanged - the same additive, no-`PROTOCOL_VERSION`-bump pattern as `web_subpath` and `supports_overrides`. A proxy the router never inserted (one name-shadowed by a site) reports both as empty rather than the shadowing site's domains.
+`ProxyEntry` later gained `primary_domain: Option<String>` and `domains: Vec<String>` (FQDNs) so a proxy can carry the extra domains, subdomains and wildcards [`orcker domain`](../reference/cli/domains) now gives it. Both use `#[serde(default, skip_serializing_if = ...)]` and are populated only for a **customised** proxy, so an uncustomised one serialises to the original three-field byte shape and an older client decodes it unchanged - the same additive, no-`PROTOCOL_VERSION`-bump pattern as `web_subpath` and `supports_overrides`. A proxy the router never inserted (one name-shadowed by a site) reports both as empty rather than the shadowing site's domains.
 :::
 
 ::: info Routing rules are a separate surface from proxy rules
 Per-site [routing rules](../reference/cli/routes) add three variants - `AddRouteRule { site, prefix, target }` and `RemoveRouteRule { site, prefix }` (both reply with the generic `Ok`) plus the `ListRoutes` query, which gets its own `Response::Routes { rules: Vec<RouteRuleEntry> }`.
 
-`RouteRuleEntry { site, prefix, target }` is field-identical to `ProxyRuleEntry` and is deliberately **not** the same struct: `yerd-ipc` is a byte-pinned contract, so coupling two features' wire evolution to one type would make either one hard to change. The semantic difference is what the `target` is - a proxy rule's target is an HTTP upstream URL, a routing rule's target is a path relative to the site's *served root* (a nested `api/index.php`, or `index.html` for an SPA). The daemon validates it as a safe relative path; an absolute path or one containing `..` is refused.
+`RouteRuleEntry { site, prefix, target }` is field-identical to `ProxyRuleEntry` and is deliberately **not** the same struct: `orcker-ipc` is a byte-pinned contract, so coupling two features' wire evolution to one type would make either one hard to change. The semantic difference is what the `target` is - a proxy rule's target is an HTTP upstream URL, a routing rule's target is a path relative to the site's *served root* (a nested `api/index.php`, or `index.html` for an SPA). The daemon validates it as a safe relative path; an absolute path or one containing `..` is refused.
 
 All three variants are additive by serde tag, so existing pins are byte-identical and no `PROTOCOL_VERSION` bump was needed.
 :::
@@ -362,9 +362,9 @@ There is deliberately **no `#[serde(other)]` catch-all**. An unknown code from a
 
 `status.rs` holds the nested payloads carried inside the status/doctor, service/database, and mail responses: `StatusReport`, `PortStatus`, `CaStatus`, `SiteCounts`, `PhpPoolStatus`, `PoolRunState`, `ServiceStatus`, `ServiceRunState`, `ServiceAvailability`, `DatabaseSummary`, `Diagnosis`, `Severity`, `DiagnosisCode`, `FixReport`, `FixResult`, and the mail-capture types `MailStatus`, `MailSummary`, `MailHeader`, and `MailDetail`. Same contract rules apply. `StatusReport` also carries an additive `services: Vec<ServiceStatus>` field alongside the PHP pools, plus an additive `mail: Option<MailStatus>`.
 
-`ServiceStatus` gained `supports_overrides: bool` (last field, `#[serde(default, skip_serializing_if = "std::ops::Not::not")]`) - whether the engine accepts the free-form [configuration overrides](../guide/services#service-configuration-overrides) that `SetServiceOverrides` writes. It gates the GUI's **Override settings** dialog the way `supports_databases` gates "Create Database", and is `true` only for the config-backed engines (`mysql`, `mariadb`, `postgres`, `redis`); Meilisearch and Reverb are argv/env driven, so both override requests are refused for them with `ErrorCode::InvalidPath`. Skipped on the wire when `false` and defaulted on decode, so the byte shape is unchanged for the services that don't and an older daemon's status reads as "no overrides" rather than failing - the same additive, no-`PROTOCOL_VERSION`-bump pattern as `web_subpath`. `DiagnosisCode` separately gained `ServiceOverrideInvalid` (`"service_override_invalid"`), the `Warn` `yerd doctor` raises per bad line of a hand-edited `50-local.<ext>` file.
+`ServiceStatus` gained `supports_overrides: bool` (last field, `#[serde(default, skip_serializing_if = "std::ops::Not::not")]`) - whether the engine accepts the free-form [configuration overrides](../guide/services#service-configuration-overrides) that `SetServiceOverrides` writes. It gates the GUI's **Override settings** dialog the way `supports_databases` gates "Create Database", and is `true` only for the config-backed engines (`mysql`, `mariadb`, `postgres`, `redis`); Meilisearch and Reverb are argv/env driven, so both override requests are refused for them with `ErrorCode::InvalidPath`. Skipped on the wire when `false` and defaulted on decode, so the byte shape is unchanged for the services that don't and an older daemon's status reads as "no overrides" rather than failing - the same additive, no-`PROTOCOL_VERSION`-bump pattern as `web_subpath`. `DiagnosisCode` separately gained `ServiceOverrideInvalid` (`"service_override_invalid"`), the `Warn` `orcker doctor` raises per bad line of a hand-edited `50-local.<ext>` file.
 
-`StatusReport` is also how the MCP gate is read back: `mcp_enabled: bool` (additive, `#[serde(default)]`, always emitted) reports whether `SetMcpEnabled` has been turned on. The daemon runs no MCP server itself - it persists the flag and reports it here, and each `yerd mcp` session reads it to decide whether to serve tools. See [yerd-mcp](./crates/yerd-mcp).
+`StatusReport` is also how the MCP gate is read back: `mcp_enabled: bool` (additive, `#[serde(default)]`, always emitted) reports whether `SetMcpEnabled` has been turned on. The daemon runs no MCP server itself - it persists the flag and reports it here, and each `orcker mcp` session reads it to decide whether to serve tools. See [orcker-mcp](./crates/orcker-mcp).
 
 `dump.rs` holds the dump-telemetry payloads carried inside the `Dumps` / `DumpsStatus` responses: `DumpCategory` (the per-tab category enum), `DumpEvent` (one buffered event; its `payload` is an opaque `serde_json::Value`), `DumpCounts` (per-category buffered counts), and `DumpExtStatus` (per-PHP-version extension presence). Same contract rules apply.
 
@@ -395,7 +395,7 @@ pub async fn read_message<R, T>(reader: &mut R, decoder: &mut FrameDecoder)
     -> Result<Option<T>, IpcError>;
 ```
 
-`read_frame` loops: try `decoder.next_frame()`, and on `None` read another chunk (a 4 KiB scratch buffer) into the decoder. It returns the raw payload so a caller can inspect the `type` tag before fully decoding. `read_message` is `read_frame` then `decode_message`. The daemon's per-client loop drives exactly these (`bin/yerdd/src/ipc_server.rs`):
+`read_frame` loops: try `decoder.next_frame()`, and on `None` read another chunk (a 4 KiB scratch buffer) into the decoder. It returns the raw payload so a caller can inspect the `type` tag before fully decoding. `read_message` is `read_frame` then `decode_message`. The daemon's per-client loop drives exactly these (`bin/orckerd/src/ipc_server.rs`):
 
 ```rust
 let mut decoder = FrameDecoder::new();
@@ -428,7 +428,7 @@ The JSON shapes are the **published contract**, pinned three ways so a rename or
 
 2. **Inline `variant_name_pinning` modules** in `request.rs` and `response.rs` contain exhaustive `match` arms over the (in-crate, so matchable despite `#[non_exhaustive]`) enums. A renamed Rust variant fails to compile there - integration tests can't catch this across the crate boundary.
 
-3. **A CI grep gate** forbids per-field `#[serde(rename = "...")]` in `crates/yerd-ipc/src/`. Casing is owned entirely by `rename_all = "snake_case"`. Pairing the no-rename rule with the byte pins means a Rust rename trips *both* the wire pin (changed JSON) and the compile-time match - you cannot mask a rename with a `serde` attribute.
+3. **A CI grep gate** forbids per-field `#[serde(rename = "...")]` in `crates/orcker-ipc/src/`. Casing is owned entirely by `rename_all = "snake_case"`. Pairing the no-rename rule with the byte pins means a Rust rename trips *both* the wire pin (changed JSON) and the compile-time match - you cannot mask a rename with a `serde` attribute.
 
 `tests/roundtrip.rs` additionally pins an `encode_message` ∘ `decode_message` identity plus the deliberate envelope/inner asymmetry: the outer `Request`/`Response` envelope **accepts** unknown JSON fields (so additive changes stay compatible), while an inner `Site` is **strict** (`deny_unknown_fields`). So `{"type":"ping","__extra":42}` decodes as `Request::Ping`, but an unknown field on a `Site` inside `Response::Sites` is rejected.
 
@@ -452,7 +452,7 @@ The invariants that keep the protocol forward-compatible:
 
 ## See also
 
-- [yerd-ipc crate reference](./crates/yerd-ipc)
-- [The Daemon](../guide/daemon) and [yerdd internals](./binaries/yerdd)
-- [yerd CLI internals](./binaries/yerd) · [Desktop App Internals](./gui)
+- [orcker-ipc crate reference](./crates/orcker-ipc)
+- [The Daemon](../guide/daemon) and [orckerd internals](./binaries/orckerd)
+- [orcker CLI internals](./binaries/orcker) · [Desktop App Internals](./gui)
 - [Cross-Platform Model](./cross-platform) · [Architecture](./architecture)

@@ -1,10 +1,10 @@
-//! Yerd build automation, invoked as `cargo xtask <command>`.
+//! Orcker build automation, invoked as `cargo xtask <command>`.
 //!
 //! Provides `bump` (set the project version across the three manifests) and
 //! `version-check` (assert a tag matches them). Pure helpers live in
 //! [`version`]; per-command I/O glue lives here. (Linux packaging is no longer an
 //! xtask concern - the single GUI bundle is produced by Tauri; see
-//! `apps/yerd-gui/src-tauri/tauri.bundle-linux.conf.json`.)
+//! `apps/orcker-gui/src-tauri/tauri.bundle-linux.conf.json`.)
 
 #![forbid(unsafe_code)]
 
@@ -19,7 +19,7 @@ use clap::Parser;
 
 /// Top-level `xtask` command-line parser.
 #[derive(Parser, Debug)]
-#[command(name = "xtask", about = "Yerd build automation")]
+#[command(name = "xtask", about = "Orcker build automation")]
 pub struct Cli {
     /// The subcommand to run.
     #[command(subcommand)]
@@ -50,7 +50,7 @@ pub enum Command {
         /// Path to the CDN listing JSON (`bunny-list.sh` output).
         #[arg(long)]
         cdn_listing: PathBuf,
-        /// Public CDN base URL, e.g. `https://cdn.yerd.app`.
+        /// Public CDN base URL, e.g. `https://cdn.orcker.app`.
         #[arg(long)]
         cdn_base: String,
         /// Directory to write `latest.json` / `releases.json` into.
@@ -110,8 +110,8 @@ impl Manifests {
             .map_or_else(|| PathBuf::from("."), Path::to_path_buf);
         Self {
             cargo: root.join("Cargo.toml"),
-            tauri: root.join("apps/yerd-gui/src-tauri/tauri.conf.json"),
-            package_json: root.join("apps/yerd-gui/package.json"),
+            tauri: root.join("apps/orcker-gui/src-tauri/tauri.conf.json"),
+            package_json: root.join("apps/orcker-gui/package.json"),
         }
     }
 }

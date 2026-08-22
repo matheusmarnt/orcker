@@ -1,6 +1,6 @@
 # Contributing
 
-This page is the set of conventions every contribution to Yerd must follow. They
+This page is the set of conventions every contribution to Orcker must follow. They
 are not style preferences - most are mechanically enforced by `clippy`,
 dependency-graph tests, and wire-stability tests, and CI fails the moment one is
 violated. Read this before opening a pull request; it will save you a round-trip
@@ -31,12 +31,12 @@ Before you write a module, decide which layer it belongs to:
 
 Do not mix the two in one function. Many crates split this physically: a `pure/`
 module (sync, no runtime) and an `io/` or `os/` module (the side-effecting
-edge). Put new code in the matching directory. `yerd-core` is the exemplar of a
+edge). Put new code in the matching directory. `orcker-core` is the exemplar of a
 fully pure crate - keep it pure.
 
 If a pure function needs the clock, env, filesystem, network, or a child
 process, **do not reach for it directly** - take it as a trait parameter and let
-the caller inject it. The real implementations live in `yerd-platform` or in a
+the caller inject it. The real implementations live in `orcker-platform` or in a
 crate's `os/` module behind `#[cfg(...)]`; the existing traits include:
 
 ```
@@ -45,14 +45,14 @@ HealthProbe      Paths       PortBinder    PortRedirector ProcessSpawner
 ResolverInstaller  SystemMetrics  TrustStore
 ```
 
-Binaries (`bin/yerdd`, `bin/yerd`, `bin/yerd-helper`, and the Tauri
+Binaries (`bin/orckerd`, `bin/orcker`, `bin/orcker-helper`, and the Tauri
 `src-tauri` layer) are **thin**. They wire crates together and own transports.
 They contain orchestration, not behaviour - interesting logic belongs in a crate
 with tests.
 
 ::: warning
-The daemon (`yerdd`) is the single source of truth for runtime state. The CLI
-and the GUI are both [`yerd-ipc`](./crates/yerd-ipc) *clients* - neither may
+The daemon (`orckerd`) is the single source of truth for runtime state. The CLI
+and the GUI are both [`orcker-ipc`](./crates/orcker-ipc) *clients* - neither may
 reimplement daemon logic. If you find yourself duplicating daemon behaviour in a
 client, stop.
 :::
@@ -63,14 +63,14 @@ Internal dependencies flow strictly downhill; there are no cycles.
 
 ```mermaid
 flowchart LR
-    core["yerd-core"]
-    ipc["yerd-ipc"]
-    config["yerd-config"]
-    doctor["yerd-doctor"]
-    tls["yerd-tls"]
-    platform["yerd-platform"]
-    php["yerd-php"]
-    proxy["yerd-proxy"]
+    core["orcker-core"]
+    ipc["orcker-ipc"]
+    config["orcker-config"]
+    doctor["orcker-doctor"]
+    tls["orcker-tls"]
+    platform["orcker-platform"]
+    php["orcker-php"]
+    proxy["orcker-proxy"]
     bins["binaries"]
     gui["gui"]
 
@@ -86,9 +86,9 @@ flowchart LR
     bins --> platform
 ```
 
-- `yerd-core` depends on no other `yerd-*` crate.
+- `orcker-core` depends on no other `orcker-*` crate.
 - Libraries never depend on binaries.
-- The CLI and GUI depend on `yerd-ipc` (plus its transport feature), not on the
+- The CLI and GUI depend on `orcker-ipc` (plus its transport feature), not on the
   daemon's internals.
 
 See the [Crates Overview](./crates) for the full map.
@@ -146,12 +146,12 @@ Also note: `missing_docs` is `warn`, so document every public item.
 - Never collapse distinct failures into a generic `Internal`/`Other` variant
   when a caller could reasonably branch on them - add a variant.
 
-A real example: `yerd-tls` carries typed sub-reasons rather than wrapping the
+A real example: `orcker-tls` carries typed sub-reasons rather than wrapping the
 upstream `rcgen::Error` (which is not `Clone`), so its error type stays
 `Clone + PartialEq + Eq`:
 
 ```rust
-/// Errors produced by `yerd-tls`.
+/// Errors produced by `orcker-tls`.
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum TlsError {
@@ -206,9 +206,9 @@ test, and where each applies:
 3. **Integration tests for wiring.** When you wire crates together, add an
    integration test in the crate's `tests/` directory that exercises the seam.
 4. **Wire-stability / golden tests.** `serde` JSON (IPC) and TOML (config)
-   shapes are a contract, pinned byte-for-byte. `yerd-ipc` has
-   `tests/wire_stability.rs`, `yerd-core` has its own `wire_stability.rs`, and
-   `yerd-php` ships a `fpm_conf_golden.rs`.
+   shapes are a contract, pinned byte-for-byte. `orcker-ipc` has
+   `tests/wire_stability.rs`, `orcker-core` has its own `wire_stability.rs`, and
+   `orcker-php` ships a `fpm_conf_golden.rs`.
 
 The wire-stability tests assert exact serialized bytes for every IPC variant,
 for example:
@@ -249,7 +249,7 @@ The currently pinned crates (and the reason, abbreviated):
 | Pin | Reason |
 |---|---|
 | `tempfile = "=3.10.1"` | version pin |
-| `rcgen = "=0.13.2"` | `rcgen::Error` is `#[non_exhaustive]`; pin forces a deliberate bump that trips `yerd-tls`'s detail-table tripwire |
+| `rcgen = "=0.13.2"` | `rcgen::Error` is `#[non_exhaustive]`; pin forces a deliberate bump that trips `orcker-tls`'s detail-table tripwire |
 | `time = "=0.3.36"` | 0.3.37+ pulls `time-core` requiring edition2024; keeps resolved `time-core` at 0.1.2 |
 | `hickory-proto`/`hickory-server`/`hickory-client = "=0.24.4"` | `ProtoErrorKind` / `RData` are `#[non_exhaustive]` upstream |
 | `clap = "=4.5.20"` | version pin |
@@ -265,7 +265,7 @@ Several crates ship a `tests/no_runtime_deps.rs` that walks the resolved
 dependency graph with `cargo metadata` and fails if a forbidden crate (`anyhow`,
 `reqwest`, `openssl*`, `native-tls`) is reachable through normal-kind edges, or
 if a sensitive crate (`tokio`, `time`) resolves to more than one version. For
-example, `yerd-tls`'s guard asserts:
+example, `orcker-tls`'s guard asserts:
 
 ```rust
 // (1) No tokio in the runtime graph.
@@ -306,12 +306,12 @@ not implemented - do not assume Windows code paths exist).
 The [Cross-Platform Model](./cross-platform) page covers the `os/{linux,macos,
 unsupported}` adapter layout in detail.
 
-::: warning `yerd-helper` is the security boundary
-`yerd-helper` is the only privileged surface. It takes strict typed arguments,
+::: warning `orcker-helper` is the security boundary
+`orcker-helper` is the only privileged surface. It takes strict typed arguments,
 **never** shells out, **never** takes network input, performs exactly one
 operation, and exits. The GUI process must **never** run as root. Treat any
 change near this binary as security-sensitive. See
-[yerd-helper](./binaries/yerd-helper).
+[orcker-helper](./binaries/orcker-helper).
 :::
 
 ## Definition of Done
@@ -337,7 +337,7 @@ cargo test --workspace
 ```
 
 - [ ] Frontend changes pass `npm run test` and `npm run build` in
-      `apps/yerd-gui`.
+      `apps/orcker-gui`.
 
 ## When a task conflicts with these boundaries
 
@@ -347,5 +347,5 @@ the GUI privileged access, or break the IPC contract - raise it in the pull
 request or an issue instead of quietly implementing it.
 
 The source lives at
-[github.com/forjedio/yerd](https://github.com/forjedio/yerd). For the build
+[github.com/forjedio/orcker](https://github.com/forjedio/orcker). For the build
 toolchain and GUI prerequisites, continue to [Building from Source](./building).

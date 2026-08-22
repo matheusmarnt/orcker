@@ -1,45 +1,45 @@
 # Domains
 
-Every site answers on its `{name}.test` **apex** by default. The `yerd domain`
+Every site answers on its `{name}.test` **apex** by default. The `orcker domain`
 commands let a site carry **multiple** domains, use **subdomains** and
 **wildcards**, and **change** which domain is primary - without renaming the
 site.
 
 | Command | Description | Example |
 | --- | --- | --- |
-| `yerd domain list` | List every site's effective domains (primary marked). | `yerd domain list` |
-| `yerd domain list <SITE>` | List one site's domains. | `yerd domain list blog` |
-| `yerd domain add <SITE> <FQDN>` | Add an exact host or a single-label wildcard. | `yerd domain add blog corp.test` |
-| `yerd domain remove <SITE> <FQDN>` | Remove a domain (a site must keep one exact domain). | `yerd domain remove blog blog.test` |
-| `yerd domain primary <SITE> <FQDN>` | Set the canonical domain (added if absent; must be exact). | `yerd domain primary blog corp.test` |
-| `yerd domain reset <SITE>` | Reset a site to its default apex-only domain. | `yerd domain reset blog` |
+| `orcker domain list` | List every site's effective domains (primary marked). | `orcker domain list` |
+| `orcker domain list <SITE>` | List one site's domains. | `orcker domain list blog` |
+| `orcker domain add <SITE> <FQDN>` | Add an exact host or a single-label wildcard. | `orcker domain add blog corp.test` |
+| `orcker domain remove <SITE> <FQDN>` | Remove a domain (a site must keep one exact domain). | `orcker domain remove blog blog.test` |
+| `orcker domain primary <SITE> <FQDN>` | Set the canonical domain (added if absent; must be exact). | `orcker domain primary blog corp.test` |
+| `orcker domain reset <SITE>` | Reset a site to its default apex-only domain. | `orcker domain reset blog` |
 
 `<SITE>` in `add`, `remove`, `primary`, and `reset` may also name a whole-host
 [proxy](./proxies): a proxy carries extra domains, subdomains, and wildcards
-exactly as a site does. `yerd domain list` stays site-only - a proxy's domains
-are shown by [`yerd proxy list`](./proxies).
+exactly as a site does. `orcker domain list` stays site-only - a proxy's domains
+are shown by [`orcker proxy list`](./proxies).
 
 ```sh
 # Give one app several apex domains (multi-tenant: all served from one project)
-yerd domain add app acme.test
-yerd domain add app globex.test
+orcker domain add app acme.test
+orcker domain add app globex.test
 
 # A single-label wildcard: every foo.test subdomain (one level) routes to blog
-yerd domain add blog '*.blog.test'
+orcker domain add blog '*.blog.test'
 
 # Point a specific subdomain at a *different* site (exact beats wildcard)
-yerd link api ~/code/api
-yerd domain add api api.blog.test
+orcker link api ~/code/api
+orcker domain add api api.blog.test
 
 # Move a site to a new primary domain and drop the old apex
-yerd domain add blog corp.test
-yerd domain primary blog corp.test
-yerd domain remove blog blog.test
+orcker domain add blog corp.test
+orcker domain primary blog corp.test
+orcker domain remove blog blog.test
 
 # A whole-host proxy takes domains too - pass its name where a site name goes
-yerd proxy add account-dev http://127.0.0.1:48087
-yerd domain add account-dev custom-domain.test
-yerd domain add account-dev '*.account-dev.test'
+orcker proxy add account-dev http://127.0.0.1:48087
+orcker domain add account-dev custom-domain.test
+orcker domain add account-dev '*.account-dev.test'
 ```
 
 `domain list` marks each site's primary domain, and appends
@@ -49,13 +49,13 @@ site - the same condition doctor reports as its `DomainShadowed` check. With
 
 ## How resolution works
 
-For an incoming host, yerd tries an **exact** domain match first, then a
+For an incoming host, orcker tries an **exact** domain match first, then a
 **single-label wildcard** (the host with its leftmost label replaced by `*`).
 Exact always wins.
 
 - `*.blog.test` matches exactly one label - `api.blog.test`, not
   `x.api.blog.test`. To route a deeper level, register that wildcard too:
-  `yerd domain add deep '*.api.blog.test'`.
+  `orcker domain add deep '*.api.blog.test'`.
 - `blog.test` and `*.blog.test` can belong to **different** sites.
 - A domain can only be claimed by one site or proxy; adding a domain another one
   already holds fails with an "already routes to" error.
@@ -67,7 +67,7 @@ answers only its apex until you add domains. If you relied on subdomains
 (e.g. WordPress multisite in subdomain mode), re-enable them explicitly:
 
 ```sh
-yerd domain add blog '*.blog.test'
+orcker domain add blog '*.blog.test'
 ```
 :::
 

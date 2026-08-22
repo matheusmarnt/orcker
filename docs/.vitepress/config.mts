@@ -3,22 +3,22 @@ import llmstxt from 'vitepress-plugin-llms'
 
 // Shared SEO strings (reused for the meta description, social cards, and the
 // per-page tags injected by `transformPageData`).
-const SITE_TITLE = 'Yerd - Local PHP development environment for macOS & Linux'
+const SITE_TITLE = 'Orcker - Local PHP development environment for macOS & Linux'
 const SITE_DESCRIPTION =
   'A fast, rootless, open-source local PHP development environment for macOS and Linux. Serve .test sites over HTTP and HTTPS, run a different PHP version per site, and manage databases, mail, and tooling from one tiny daemon - a Laravel Herd alternative.'
-const OG_IMAGE = 'https://yerd.app/images/social-card.png'
+const OG_IMAGE = 'https://orcker.app/images/social-card.png'
 
-// Site config for the Yerd documentation (https://yerd.app).
+// Site config for the Orcker documentation (https://orcker.app).
 // Run with `npm run dev` from the `docs/` directory.
 // Wrapped with withMermaid so ```mermaid code blocks render as responsive SVG.
 export default withMermaid({
-  title: 'Yerd',
+  title: 'Orcker',
   description: SITE_DESCRIPTION,
   lang: 'en-US',
 
   // Canonical host for the generated sitemap and absolute URLs.
   sitemap: {
-    hostname: 'https://yerd.app',
+    hostname: 'https://orcker.app',
   },
 
   // Clean URLs (`/guide/getting-started` instead of `.html`).
@@ -40,7 +40,7 @@ export default withMermaid({
     // Open Graph + Twitter — the per-page title/description/url are injected by
     // `transformPageData` below; these are the static, page-independent bits.
     ['meta', { property: 'og:type', content: 'website' }],
-    ['meta', { property: 'og:site_name', content: 'Yerd' }],
+    ['meta', { property: 'og:site_name', content: 'Orcker' }],
     ['meta', { property: 'og:locale', content: 'en_US' }],
     ['meta', { property: 'og:image', content: OG_IMAGE }],
     ['meta', { property: 'og:image:width', content: '1200' }],
@@ -49,23 +49,23 @@ export default withMermaid({
       'meta',
       {
         property: 'og:image:alt',
-        content: 'Yerd - local PHP dev for macOS and Linux',
+        content: 'Orcker - local PHP dev for macOS and Linux',
       },
     ],
     ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
     ['meta', { name: 'twitter:image', content: OG_IMAGE }],
-    // Structured data: marks Yerd as a free developer application for rich results.
+    // Structured data: marks Orcker as a free developer application for rich results.
     [
       'script',
       { type: 'application/ld+json' },
       JSON.stringify({
         '@context': 'https://schema.org',
         '@type': 'SoftwareApplication',
-        name: 'Yerd',
+        name: 'Orcker',
         applicationCategory: 'DeveloperApplication',
         operatingSystem: 'macOS, Linux',
         description: SITE_DESCRIPTION,
-        url: 'https://yerd.app',
+        url: 'https://orcker.app',
         image: OG_IMAGE,
         license: 'https://opensource.org/licenses/MIT',
         isAccessibleForFree: true,
@@ -81,8 +81,8 @@ export default withMermaid({
     const path = pageData.relativePath
       .replace(/(^|\/)index\.md$/, '$1')
       .replace(/\.md$/, '')
-    const canonical = `https://yerd.app/${path}`
-    const title = isHome ? SITE_TITLE : `${pageData.title} | Yerd`
+    const canonical = `https://orcker.app/${path}`
+    const title = isHome ? SITE_TITLE : `${pageData.title} | Orcker`
     const description = pageData.description || SITE_DESCRIPTION
     pageData.frontmatter.head ??= []
     pageData.frontmatter.head.push(
@@ -107,7 +107,7 @@ export default withMermaid({
   vite: {
     plugins: [
       llmstxt({
-        domain: 'https://yerd.app',
+        domain: 'https://orcker.app',
         title: SITE_TITLE,
         description: SITE_DESCRIPTION,
       }),
@@ -130,7 +130,7 @@ export default withMermaid({
         items: [
           {
             text: 'Changelog',
-            link: 'https://github.com/forjedio/yerd/releases',
+            link: 'https://github.com/forjedio/orcker/releases',
           },
           { text: 'Contributing', link: '/developer/contributing' },
         ],
@@ -142,16 +142,16 @@ export default withMermaid({
         {
           text: 'Introduction',
           items: [
-            { text: 'What is Yerd?', link: '/guide/introduction' },
+            { text: 'What is Orcker?', link: '/guide/introduction' },
             { text: 'Getting Started', link: '/guide/getting-started' },
             { text: 'Guides', link: '/guide/guides' },
-            { text: 'Switching to Yerd', link: '/guide/switching-to-yerd' },
+            { text: 'Switching to Orcker', link: '/guide/switching-to-orcker' },
             { text: 'Upgrade Guide', link: '/guide/upgrading-from-v1' },
             { text: 'Features', link: '/guide/desktop-app' },
           ],
         },
         {
-          text: 'Using Yerd',
+          text: 'Using Orcker',
           items: [
             { text: 'Sites', link: '/guide/sites' },
             { text: 'Reverse Proxies', link: '/guide/proxies' },
@@ -231,34 +231,34 @@ export default withMermaid({
           text: 'Crates',
           collapsed: false,
           items: [
-            { text: 'yerd-core', link: '/developer/crates/yerd-core' },
-            { text: 'yerd-ipc', link: '/developer/crates/yerd-ipc' },
-            { text: 'yerd-config', link: '/developer/crates/yerd-config' },
-            { text: 'yerd-tls', link: '/developer/crates/yerd-tls' },
-            { text: 'yerd-dns', link: '/developer/crates/yerd-dns' },
-            { text: 'yerd-proxy', link: '/developer/crates/yerd-proxy' },
-            { text: 'yerd-supervise', link: '/developer/crates/yerd-supervise' },
-            { text: 'yerd-php', link: '/developer/crates/yerd-php' },
-            { text: 'yerd-mail', link: '/developer/crates/yerd-mail' },
-            { text: 'yerd-mcp', link: '/developer/crates/yerd-mcp' },
-            { text: 'yerd-tunnel', link: '/developer/crates/yerd-tunnel' },
-            { text: 'yerd-services', link: '/developer/crates/yerd-services' },
-            { text: 'yerd-doctor', link: '/developer/crates/yerd-doctor' },
-            { text: 'yerd-platform', link: '/developer/crates/yerd-platform' },
-            { text: 'yerd-service-ctl', link: '/developer/crates/yerd-service-ctl' },
-            { text: 'yerd-update', link: '/developer/crates/yerd-update' },
-            { text: 'yerd-depcheck (test-only)', link: '/developer/crates/yerd-depcheck' },
+            { text: 'orcker-core', link: '/developer/crates/orcker-core' },
+            { text: 'orcker-ipc', link: '/developer/crates/orcker-ipc' },
+            { text: 'orcker-config', link: '/developer/crates/orcker-config' },
+            { text: 'orcker-tls', link: '/developer/crates/orcker-tls' },
+            { text: 'orcker-dns', link: '/developer/crates/orcker-dns' },
+            { text: 'orcker-proxy', link: '/developer/crates/orcker-proxy' },
+            { text: 'orcker-supervise', link: '/developer/crates/orcker-supervise' },
+            { text: 'orcker-php', link: '/developer/crates/orcker-php' },
+            { text: 'orcker-mail', link: '/developer/crates/orcker-mail' },
+            { text: 'orcker-mcp', link: '/developer/crates/orcker-mcp' },
+            { text: 'orcker-tunnel', link: '/developer/crates/orcker-tunnel' },
+            { text: 'orcker-services', link: '/developer/crates/orcker-services' },
+            { text: 'orcker-doctor', link: '/developer/crates/orcker-doctor' },
+            { text: 'orcker-platform', link: '/developer/crates/orcker-platform' },
+            { text: 'orcker-service-ctl', link: '/developer/crates/orcker-service-ctl' },
+            { text: 'orcker-update', link: '/developer/crates/orcker-update' },
+            { text: 'orcker-depcheck (test-only)', link: '/developer/crates/orcker-depcheck' },
           ],
         },
         {
           text: 'Binaries',
           collapsed: false,
           items: [
-            { text: 'yerdd (daemon)', link: '/developer/binaries/yerdd' },
-            { text: 'yerd (CLI)', link: '/developer/binaries/yerd' },
+            { text: 'orckerd (daemon)', link: '/developer/binaries/orckerd' },
+            { text: 'orcker (CLI)', link: '/developer/binaries/orcker' },
             {
-              text: 'yerd-helper (privileged)',
-              link: '/developer/binaries/yerd-helper',
+              text: 'orcker-helper (privileged)',
+              link: '/developer/binaries/orcker-helper',
             },
           ],
         },
@@ -273,11 +273,11 @@ export default withMermaid({
     },
 
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/forjedio/yerd' },
+      { icon: 'github', link: 'https://github.com/forjedio/orcker' },
     ],
 
     editLink: {
-      pattern: 'https://github.com/forjedio/yerd/edit/main/docs/:path',
+      pattern: 'https://github.com/forjedio/orcker/edit/main/docs/:path',
       text: 'Edit this page on GitHub',
     },
 
@@ -288,7 +288,7 @@ export default withMermaid({
     footer: {
       message:
         'A <a href="https://forjed.io" target="_blank" rel="noopener">Forjed</a> project. Released under the MIT License.',
-      copyright: 'Copyright © 2026 Yerd',
+      copyright: 'Copyright © 2026 Orcker',
     },
   },
 })

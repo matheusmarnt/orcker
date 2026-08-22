@@ -4,7 +4,7 @@
 # release minisign key and verify each signature against the public key the
 # daemon EMBEDS, so a manifest can never ship a signature the shipped binary
 # cannot check. The daemon verifies latest.json against
-# `yerd_update::UPDATE_PUBLIC_KEY` before trusting it (see
+# `orcker_update::UPDATE_PUBLIC_KEY` before trusting it (see
 # `self_update::fetch_releases`), the same key that signs the release artifacts.
 #
 # Usage: sign-manifests.sh <file> [<file> ...]
@@ -38,7 +38,7 @@ command -v minisign >/dev/null
 # The trust anchor: read the key the daemon embeds and refuse to sign with a
 # secret whose public half is the placeholder test key (a mismatched secret
 # would produce signatures the shipped binary rejects).
-art="${GITHUB_WORKSPACE}/crates/yerd-update/src/artifact.rs"
+art="${GITHUB_WORKSPACE}/crates/orcker-update/src/artifact.rs"
 key=$(grep -oE 'UPDATE_PUBLIC_KEY: &str = "[^"]+"' "$art" | sed -E 's/.*"([^"]+)".*/\1/')
 [ -n "$key" ] || { echo "::error::could not read UPDATE_PUBLIC_KEY from $art" >&2; exit 1; }
 test_key="RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3"

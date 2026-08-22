@@ -9,7 +9,7 @@ them with `/spec-new` when the queue approaches them.
 
 | # | Spec | Status | Covers | Depends on |
 |---|------|--------|--------|------------|
-| 1 | SPEC-0001-fork-bootstrap | draft | FR-001 | — |
+| 1 | SPEC-0001-fork-bootstrap | accepted | FR-001 | — |
 | 2 | SPEC-0002-remove-native-runtime | draft | FR-002 | SPEC-0001 |
 | 3 | SPEC-0003-stack-compose-renderer | draft | FR-022 (partial) | SPEC-0001 |
 | 4 | SPEC-0004-engine-docker-detection | draft | FR-010 | SPEC-0001 |
@@ -55,3 +55,6 @@ Never a merge, never a bulk sync. Numbered above the reserved Phase-1 range.
 | # | Spec | Status | Covers | Depends on |
 |---|------|--------|--------|------------|
 | 28 | SPEC-0028-cherry-pick-networkmanager-reload-fix | draft | FR-030 | SPEC-0001 |
+| 29 | SPEC-0029-replace-binary-brand-icons | draft | FR-001 | SPEC-0001 |
+| 30 | SPEC-0030-fix-stale-daemon-run-command-in-docs | draft | FR-001 | SPEC-0001 |
+| 31 | SPEC-0031-repoint-release-and-cdn-automation | draft | FR-001 | SPEC-0001 |

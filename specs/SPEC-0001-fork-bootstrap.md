@@ -6,7 +6,7 @@ covers: [FR-001]
 depends_on: []
 surface:
   - ./
-status: approved
+status: accepted
 attempts: 0
 ---
 
@@ -86,9 +86,20 @@ same commit and note it (authorized here as part of the fork's contract reset;
 - [ ] AC1 `cargo test --workspace` green after rename -> evidence: gate output
 - [ ] AC2 `cargo run -p orckerd` starts and `cargo run -p orcker -- ping`
       answers -> evidence: command output in the cycle log
-- [ ] AC3 `rg -i "yerd" --hidden -g '!.git' -g '!docs/UPSTREAM.md' -g '!README.md' -g '!LICENSE.md'`
-      returns no matches (README/LICENSE mention Yerd only in Lineage/copyright)
-      -> evidence: command output
+- [ ] AC3 the brand is gone from the product surface:
+      `rg -i "yerd" --hidden -g '!.git' -g '!target' -g '!node_modules'
+      -g '!docs/UPSTREAM.md' -g '!README.md' -g '!LICENSE.md' -g '!CLAUDE.md'
+      -g '!docs/PRD.md' -g '!docs/SDD.md' -g '!specs/**' -g '!**/package-lock.json'`
+      returns no matches -> evidence: command output.
+      The exemptions beyond README/LICENSE were added during implementation, and
+      none of them relax what AC3 is for. `CLAUDE.md`, `docs/PRD.md`, `docs/SDD.md`
+      and `specs/**` are the fork's own lineage and process documents, already
+      written for Orcker, which name Yerd deliberately ("forked from Yerd",
+      "replaces Yerd's native runtime") - substituting there would retitle this
+      very spec "Rebrand the Orcker fork". The two `package-lock.json` hits are the
+      substring `YerD` inside the npm integrity hash
+      `sha512-NxnomyxYerDh5n4i...`: a case-insensitive false positive that cannot
+      be edited without corrupting the lockfile.
 - [ ] AC4 `docs/UPSTREAM.md` exists with repo, tag, commit, date, policy
 - [ ] AC5 CI workflow file present and valid (`gate.yml` runs the gate on both
       OSes) -> evidence: file + (post-push) green run link added by the human

@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Orcker
+GenericName=PHP development environment
+Comment=Local PHP development environment
+Exec=orcker-gui
+Icon=orcker-gui
+Terminal=false
+Categories=Development;Utility;
+# Must equal the window's runtime WM_CLASS so the dock binds it to this launcher;
+# the GUI sets prgname "orcker-gui" (apps/orcker-gui/src-tauri/src/main.rs).
+StartupWMClass=orcker-gui
+StartupNotify=true

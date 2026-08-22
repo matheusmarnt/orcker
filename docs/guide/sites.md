@@ -1,10 +1,10 @@
 # Sites
 
-A **site** is a target Yerd serves on the `.test` TLD. Each one has a name, a document root, a **served web root** (auto-detected per framework), a PHP version, and an HTTPS flag. The daemon keeps a registry and resolves every request's `Host:` header to exactly one site.
+A **site** is a target Orcker serves on the `.test` TLD. Each one has a name, a document root, a **served web root** (auto-detected per framework), a PHP version, and an HTTPS flag. The daemon keeps a registry and resolves every request's `Host:` header to exactly one site.
 
 You register sites two ways:
 
-- **Parking** points Yerd at a *parent* directory, and every child folder becomes a site (`<folder>.test`). Good for a `~/Sites` workspace you add to often.
+- **Parking** points Orcker at a *parent* directory, and every child folder becomes a site (`<folder>.test`). Good for a `~/Sites` workspace you add to often.
 - **Linking** registers *one* directory under a name you choose. Good for a project outside your parked workspace, or when the site name shouldn't match the folder name.
 
 Both route identically; only the registration differs.
@@ -13,7 +13,7 @@ Both route identically; only the registration differs.
 
 The **Sites** page (under **Environment** in the sidebar) is the home base for managing your sites. It lists every `.test` site as a scannable card you can act on, with the registration controls in the header. Most day-to-day site work happens here without touching the terminal.
 
-<ThemedImage light="/images/sites-light.png" dark="/images/sites-dark.png" alt="The Sites page in the Yerd desktop app" />
+<ThemedImage light="/images/sites-light.png" dark="/images/sites-dark.png" alt="The Sites page in the Orcker desktop app" />
 
 - Each card is a site you can click to open in your browser (at its primary domain), with badges for `parked`/`linked`, PHP version, HTTPS/HTTP, a `+N` badge when the site has extra domains, and an amber notice if another site has claimed its apex.
 - A card's **Edit…** dialog (from its `⋯` menu) covers PHP version, [web root](#web-root-the-served-directory), HTTPS, and [group](#site-groups) in one place - no commands. The same `⋯` menu has **Manage domains…** for setting the primary domain and adding/removing aliases and wildcards.
@@ -84,7 +84,7 @@ When it finishes, the project is on disk, registered (parked or linked), served 
 The same **Create** menu can scaffold a brand-new WordPress install for you. Choose **New WordPress site** to launch a four-step wizard - **Basics → WordPress → Database → Review** - that provisions a database, runs WP-CLI's `core download`/`config create`/`core install`, sets pretty permalinks, and registers the result as a `.test` site automatically.
 
 ::: tip Prerequisites
-Creating a WordPress site needs a PHP version and **WP-CLI**, and the wizard offers to install whatever's missing. WP-CLI must be Yerd's own build - Yerd runs it directly rather than through a `wp` on your `PATH`, so an [externally installed](./tooling#external-tools) `wp` doesn't count and your own copy is left alone. Yerd's **Composer** builds WP-CLI, so it's offered as a prerequisite too when WP-CLI still needs installing - see [Tooling](./tooling).
+Creating a WordPress site needs a PHP version and **WP-CLI**, and the wizard offers to install whatever's missing. WP-CLI must be Orcker's own build - Orcker runs it directly rather than through a `wp` on your `PATH`, so an [externally installed](./tooling#external-tools) `wp` doesn't count and your own copy is left alone. Orcker's **Composer** builds WP-CLI, so it's offered as a prerequisite too when WP-CLI still needs installing - see [Tooling](./tooling).
 :::
 
 ### Basics
@@ -112,7 +112,7 @@ Creating a WordPress site needs a PHP version and **WP-CLI**, and the wizard off
 - **Database engine** - **MySQL** or **MariaDB** (the only two WordPress core itself supports).
 - **Database name** and **table prefix** - defaults are derived from the project name; both can be edited.
 
-Yerd provisions the database as part of creating the site, installing/starting the chosen engine first if it isn't already running - see [Services & Databases](./services).
+Orcker provisions the database as part of creating the site, installing/starting the chosen engine first if it isn't already running - see [Services & Databases](./services).
 
 ### Review
 
@@ -139,14 +139,14 @@ Opening **WP Admin** mints a short-lived, single-use login token and appends it 
 
 ## From the command line
 
-Everything the Sites page does maps to a `yerd` command. These are the same operations against the same daemon, so anything you do here shows up in the app immediately.
+Everything the Sites page does maps to a `orcker` command. These are the same operations against the same daemon, so anything you do here shows up in the app immediately.
 
 ### Parking a directory
 
-`yerd park <dir>` registers a directory as a **parked root**. Each immediate child directory becomes a site named after the folder:
+`orcker park <dir>` registers a directory as a **parked root**. Each immediate child directory becomes a site named after the folder:
 
 ```sh
-yerd park ~/Sites
+orcker park ~/Sites
 #   ~/Sites/blog      ->  http://blog.test
 #   ~/Sites/shop      ->  http://shop.test
 #   ~/Sites/my-app    ->  http://my-app.test
@@ -161,25 +161,25 @@ You can park multiple roots. They all contribute children to one flat namespace 
 To stop serving a parked root, un-park it. This removes only the parked root, not any linked sites:
 
 ```sh
-yerd unpark ~/Sites
+orcker unpark ~/Sites
 ```
 
 Un-parking matches the stored path exactly. List the parked roots first if you're unsure what was registered:
 
 ```sh
-yerd list parked
+orcker list parked
 ```
 
 ::: info
-`yerd list parked` shows every parked root, including empty ones. An empty root produces no sites, so it won't appear in `yerd sites`, but it's still parked.
+`orcker list parked` shows every parked root, including empty ones. An empty root produces no sites, so it won't appear in `orcker sites`, but it's still parked.
 :::
 
 ### Linking a directory
 
-`yerd link <name> <dir>` registers a single directory as a named site. The name becomes `<name>.test`; the directory is its document root:
+`orcker link <name> <dir>` registers a single directory as a named site. The name becomes `<name>.test`; the directory is its document root:
 
 ```sh
-yerd link my-app ~/code/my-app
+orcker link my-app ~/code/my-app
 #   ->  http://my-app.test
 ```
 
@@ -188,9 +188,9 @@ Name and directory are both optional shorthand for the current directory:
 ```sh
 cd ~/code/my-app
 
-yerd link              # links the cwd, named "my-app" after its folder
-yerd link my-app       # same, with an explicit name
-yerd link ../other-app # links a relative path, named "other-app" after its folder
+orcker link              # links the cwd, named "my-app" after its folder
+orcker link my-app       # same, with an explicit name
+orcker link ../other-app # links a relative path, named "other-app" after its folder
 ```
 
 A single positional argument is treated as a directory (and the name derived from its
@@ -198,12 +198,12 @@ folder) when it contains a path separator or is `.`/`..`; otherwise it's treated
 bare name and the current directory is linked. Web-root detection (`public/` for
 Laravel, etc. - see [Web root](#web-root-the-served-directory)) runs automatically the
 first time a site is linked, so a Laravel app's `SERVED` directory is usually already
-correct with no extra `yerd root` step.
+correct with no extra `orcker root` step.
 
 To remove it, unlink by name:
 
 ```sh
-yerd unlink my-app
+orcker unlink my-app
 ```
 
 ### Site name rules
@@ -224,10 +224,10 @@ Names are unique. Since they're lowercased first, `Foo` and `foo` collide, so th
 
 ### Listing your sites
 
-`yerd sites` lists every site (parked and linked) with its kind, PHP version, secure flag, served subdirectory, and document root:
+`orcker sites` lists every site (parked and linked) with its kind, PHP version, secure flag, served subdirectory, and document root:
 
 ```sh
-yerd sites
+orcker sites
 ```
 
 ```
@@ -242,33 +242,33 @@ The `SERVED` column is the web root relative to the document root; `/` means the
 Sites print in name order; an empty registry prints `no sites`. Add `--json` for machine-readable output:
 
 ```sh
-yerd sites --json
+orcker sites --json
 ```
 
 ### Command reference
 
 | Command | What it does |
 |---|---|
-| `yerd park <dir>` | Park a directory; each child folder is served at `<name>.test`. |
-| `yerd unpark <dir>` | Un-park a directory. Linked sites are untouched. |
-| `yerd link [name] [dir]` | Serve a directory as a named site; both args are optional shorthand for the current directory. |
-| `yerd unlink <name>` | Remove a site by name. |
-| `yerd sites` | List every site (name, kind, PHP, secure, served path, doc-root). |
-| `yerd list parked` | List parked roots, including empty ones. |
-| `yerd secure <name>` / `yerd unsecure <name>` | Turn HTTPS on / off for a site. |
-| `yerd root <name> <path>` | Set the served directory (web root) for a site. |
-| `yerd root <name> --auto` | Reset a site to automatic web-root detection. |
-| `yerd domain <list\|add\|remove\|primary\|reset>` | Manage a site's domains (primary, aliases, subdomains, wildcards). See [Domains](../reference/cli/domains). |
+| `orcker park <dir>` | Park a directory; each child folder is served at `<name>.test`. |
+| `orcker unpark <dir>` | Un-park a directory. Linked sites are untouched. |
+| `orcker link [name] [dir]` | Serve a directory as a named site; both args are optional shorthand for the current directory. |
+| `orcker unlink <name>` | Remove a site by name. |
+| `orcker sites` | List every site (name, kind, PHP, secure, served path, doc-root). |
+| `orcker list parked` | List parked roots, including empty ones. |
+| `orcker secure <name>` / `orcker unsecure <name>` | Turn HTTPS on / off for a site. |
+| `orcker root <name> <path>` | Set the served directory (web root) for a site. |
+| `orcker root <name> --auto` | Reset a site to automatic web-root detection. |
+| `orcker domain <list\|add\|remove\|primary\|reset>` | Manage a site's domains (primary, aliases, subdomains, wildcards). See [Domains](../reference/cli/domains). |
 
 For per-site PHP, see [PHP Versions](./php-versions). For the full command surface, see the [CLI Reference](../reference/cli/sites).
 
 ## How routing works
 
-Yerd normalises the `Host:` header and resolves it to a site using the rules below.
+Orcker normalises the `Host:` header and resolves it to a site using the rules below.
 
 ### The `.test` TLD
 
-By default Yerd serves on `.test`, a reserved TLD that's safe for local development. A host only resolves if it ends in the configured TLD:
+By default Orcker serves on `.test`, a reserved TLD that's safe for local development. A host only resolves if it ends in the configured TLD:
 
 ```
 blog.test        ->  site "blog"
@@ -279,12 +279,12 @@ blog.notthetest  ->  no match (suffix collision doesn't count)
 The bare TLD (`test`, or `test.`) has no site label and never resolves.
 
 ::: info
-The TLD is configurable (for example `dev.local`); the default is `.test`, and `yerd status` shows the active one. See [DNS &amp; .test Domains](./dns) for how `*.test` requests reach the daemon.
+The TLD is configurable (for example `dev.local`); the default is `.test`, and `orcker status` shows the active one. See [DNS &amp; .test Domains](./dns) for how `*.test` requests reach the daemon.
 :::
 
 ### Host cleanup
 
-Matching is case-insensitive and tolerant of cosmetic bits clients send. Before matching, Yerd:
+Matching is case-insensitive and tolerant of cosmetic bits clients send. Before matching, Orcker:
 
 - Lowercases the host (`FOO.TEST` matches `foo`).
 - Strips a port (`foo.test:8443` becomes `foo.test`; a trailing `:` is fine).
@@ -294,7 +294,7 @@ Hosts that can't be a `.test` name never match: IPv6 literals (`[::1]`), non-ASC
 
 ### Domains, subdomains, and wildcards
 
-By default a site answers for **exactly one** host: its apex `<name>.test`. A site can hold more than one domain, and can answer subdomains and wildcards, but each is **explicit** - you register it with [`yerd domain`](../reference/cli/domains). After confirming the host ends in `.test`, Yerd resolves it with one exact lookup, then one single-label wildcard lookup:
+By default a site answers for **exactly one** host: its apex `<name>.test`. A site can hold more than one domain, and can answer subdomains and wildcards, but each is **explicit** - you register it with [`orcker domain`](../reference/cli/domains). After confirming the host ends in `.test`, Orcker resolves it with one exact lookup, then one single-label wildcard lookup:
 
 ```text
 foo.test          ->  foo            (exact apex)
@@ -304,45 +304,45 @@ api.foo.test      ->  foo            (once `*.foo.test` is added to foo)
 x.api.foo.test    ->  no match       (a wildcard matches one label; needs `*.api.foo.test`)
 ```
 
-**This changed in v2.** Earlier builds made every subdomain fall through to its parent site implicitly. That catch-all is gone: `api.foo.test` is a 404 until you register it. Re-enable the old behavior for a site with `yerd domain add foo '*.foo.test'`. The upside is that `foo.test` and `*.foo.test` can now be **two different sites**.
+**This changed in v2.** Earlier builds made every subdomain fall through to its parent site implicitly. That catch-all is gone: `api.foo.test` is a 404 until you register it. Re-enable the old behavior for a site with `orcker domain add foo '*.foo.test'`. The upside is that `foo.test` and `*.foo.test` can now be **two different sites**.
 
 **Exact beats wildcard.** The exact lookup runs first, so a registered `api.foo.test` (exact) wins over a `*.foo.test` wildcard on another site. A wildcard is never a site's primary (canonical) domain - only exact domains can be primary.
 
 Manage a site's domains from the CLI:
 
 ```sh
-yerd domain list blog                  # show blog's domains, primary marked
-yerd domain add blog corp.test         # add an alias
-yerd domain add blog '*.blog.test'     # add a wildcard (quote it for the shell)
-yerd domain primary blog corp.test     # make corp.test the canonical address
-yerd domain remove blog blog.test      # drop a domain (a site keeps >=1 exact)
-yerd domain reset blog                 # back to the default apex only
+orcker domain list blog                  # show blog's domains, primary marked
+orcker domain add blog corp.test         # add an alias
+orcker domain add blog '*.blog.test'     # add a wildcard (quote it for the shell)
+orcker domain primary blog corp.test     # make corp.test the canonical address
+orcker domain remove blog blog.test      # drop a domain (a site keeps >=1 exact)
+orcker domain reset blog                 # back to the default apex only
 ```
 
 For a WordPress site, changing the primary domain also rewrites its `siteurl`/`home`. In the desktop app the same lives under a site's **⋯ → Manage domains…**. See the [domains reference](../reference/cli/domains) for the full command surface and rules.
 
 ### Document roots and the served web root
 
-The **document root** is the project directory a site maps to: the child folder for a parked site, or the path you passed to `yerd link`. It's shown in `yerd sites`.
+The **document root** is the project directory a site maps to: the child folder for a parked site, or the path you passed to `orcker link`. It's shown in `orcker sites`.
 
-The directory actually served to the browser is the document root's **web root** - which, for most modern frameworks, is a subdirectory rather than the project root itself. Yerd detects this automatically (see [Web root](#web-root-the-served-directory) below), so a Laravel app parked at `~/Sites/blog` is served from `~/Sites/blog/public` without any configuration.
+The directory actually served to the browser is the document root's **web root** - which, for most modern frameworks, is a subdirectory rather than the project root itself. Orcker detects this automatically (see [Web root](#web-root-the-served-directory) below), so a Laravel app parked at `~/Sites/blog` is served from `~/Sites/blog/public` without any configuration.
 
 ### The secure (HTTPS) flag
 
-Sites start insecure (HTTP only). Securing one serves it over HTTPS with a certificate from Yerd's local CA:
+Sites start insecure (HTTP only). Securing one serves it over HTTPS with a certificate from Orcker's local CA:
 
 ```sh
-yerd secure my-app      # serve over HTTPS
-yerd unsecure my-app    # back to HTTP only
+orcker secure my-app      # serve over HTTPS
+orcker unsecure my-app    # back to HTTP only
 ```
 
 ::: tip
-`yerd secure` promotes a parked site to a tracked (linked) entry so the flag has somewhere to live, then flips it. See [HTTPS &amp; Certificates](./https) for how the CA and per-site certificates work.
+`orcker secure` promotes a parked site to a tracked (linked) entry so the flag has somewhere to live, then flips it. See [HTTPS &amp; Certificates](./https) for how the CA and per-site certificates work.
 :::
 
 ## Web root (the served directory)
 
-Most PHP frameworks don't serve from the project root - they put a front controller in a subdirectory and keep application code out of the document root. Yerd detects the right directory automatically and serves it, so you don't hand-configure a web server:
+Most PHP frameworks don't serve from the project root - they put a front controller in a subdirectory and keep application code out of the document root. Orcker detects the right directory automatically and serves it, so you don't hand-configure a web server:
 
 | Framework | Served from |
 |---|---|
@@ -352,9 +352,9 @@ Most PHP frameworks don't serve from the project root - they put a front control
 | Magento 2 | `pub/` |
 | WordPress, plain PHP | the project root |
 
-Detection runs in the daemon when a site is registered and whenever its project changes - it reads `composer.json`, looks for framework marker files (`artisan`, `wp-config.php`, `bin/console`, …), and probes for a front controller (`index.php`) in the conventional subdirectories. A site with nothing to detect yet (an empty folder) serves the project root for now, and Yerd watches it so that **cloning a project into a parked folder makes it serve from the right directory within a second or so - no restart, no refresh**.
+Detection runs in the daemon when a site is registered and whenever its project changes - it reads `composer.json`, looks for framework marker files (`artisan`, `wp-config.php`, `bin/console`, …), and probes for a front controller (`index.php`) in the conventional subdirectories. A site with nothing to detect yet (an empty folder) serves the project root for now, and Orcker watches it so that **cloning a project into a parked folder makes it serve from the right directory within a second or so - no restart, no refresh**.
 
-The served path shows up in `yerd sites` (the `SERVED` column, `/` meaning the project root itself).
+The served path shows up in `orcker sites` (the `SERVED` column, `/` meaning the project root itself).
 
 ::: info Static files are served directly
 A request that resolves to a real file under the served root (a stylesheet, image, `favicon.ico`, compiled JS, …) is returned straight from disk by the proxy, with a guessed `Content-Type` - it never touches PHP. A directory request (including the site root) falls back to `index.html` or `index.htm` from that directory when there's no `index.php` there, so a plain static site (no PHP at all) works with no extra configuration. Everything else is handed to the framework's front controller (`index.php`). PHP source files are never served as static bytes. A symlink is allowed to point anywhere inside the site's project directory - so Laravel's `public/storage -> ../storage/app/public` link works with no extra setup - but a symlink that escapes the project directory entirely is refused with an explicit `403 Forbidden` naming the requested path, rather than being silently handed to PHP.
@@ -371,12 +371,12 @@ Front-controller sites are deliberately unaffected: there, `/sub` is a framework
 When detection guesses wrong, or you have an unconventional layout, set the served directory explicitly:
 
 ```sh
-yerd root my-app public      # serve my-app.test from <docroot>/public
-yerd root my-app web/app     # a nested directory is fine
-yerd root my-app --auto      # forget the override; go back to auto-detection
+orcker root my-app public      # serve my-app.test from <docroot>/public
+orcker root my-app web/app     # a nested directory is fine
+orcker root my-app --auto      # forget the override; go back to auto-detection
 ```
 
-`yerd root <site>` with no path also resets to auto-detection. The path is relative to the site's directory (an absolute path inside it works too); Yerd validates that it resolves to a directory **inside** the project and rejects anything that escapes it. A manual override always wins and is never overwritten by re-detection.
+`orcker root <site>` with no path also resets to auto-detection. The path is relative to the site's directory (an absolute path inside it works too); Orcker validates that it resolves to a directory **inside** the project and rejects anything that escapes it. A manual override always wins and is never overwritten by re-detection.
 
 ::: tip In the desktop app
 The [Sites view](./desktop-app#sites) shows the served web root as a badge per site, and its **Edit…** dialog sets it directly - leave the field blank to go back to auto-detection.
@@ -389,7 +389,7 @@ Detection and the web root cover the common layouts, but two shapes need a rule.
 A **legacy portal with a nested app** - an older PHP site that grew a Yii or CodeIgniter API in a subdirectory - has *two* front controllers, and only the root one is found automatically. A rule points the rest at the nested one:
 
 ```sh
-yerd route add portal /api api/index.php
+orcker route add portal /api api/index.php
 # portal.test/api/user/login  → api/index.php (POST included)
 # portal.test/anything-else   → the root index.php
 ```
@@ -397,7 +397,7 @@ yerd route add portal /api api/index.php
 A **JavaScript SPA** needs history-API deep links to serve the app shell:
 
 ```sh
-yerd route add dashboard / index.html
+orcker route add dashboard / index.html
 # dashboard.test/settings/profile → index.html
 ```
 
@@ -407,9 +407,9 @@ See [Routing rules](../reference/cli/routes) for the full semantics, and note th
 
 ## Streaming responses (SSE / Livewire `wire:stream`)
 
-Streamed responses pass straight through as PHP flushes them - server-sent events, `response()->stream()`, Livewire's `wire:stream`, and token-by-token AI output all reach the browser incrementally. There is no setting to turn on and no header to send: `X-Accel-Buffering: no` is unnecessary (Yerd consumes it rather than forwarding it), and a response that sets no `Content-Length` is sent chunked.
+Streamed responses pass straight through as PHP flushes them - server-sent events, `response()->stream()`, Livewire's `wire:stream`, and token-by-token AI output all reach the browser incrementally. There is no setting to turn on and no header to send: `X-Accel-Buffering: no` is unnecessary (Orcker consumes it rather than forwarding it), and a response that sets no `Content-Length` is sent chunked.
 
-Each open stream occupies one PHP-FPM worker for as long as it stays open, so a page holding several event streams, or a few tabs left open on one, can reach the per-version ceiling of 16 workers and leave later requests queueing. Raise it with [`yerd php pool`](./php-versions#pool-size) if you work with streaming regularly.
+Each open stream occupies one PHP-FPM worker for as long as it stays open, so a page holding several event streams, or a few tabs left open on one, can reach the per-version ceiling of 16 workers and leave later requests queueing. Raise it with [`orcker php pool`](./php-versions#pool-size) if you work with streaming regularly.
 
 If a stream still arrives in one burst, the buffering is on the application side. Check `output_buffering` and any `ob_*` handlers your framework installs, and `zlib.output_compression`, which buffers to compress:
 

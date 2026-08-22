@@ -1,42 +1,36 @@
 # Security Policy
 
-We take the security of Yerd seriously. Yerd binds local ports, manages TLS
-certificates and a local trust store, and elevates privileges once during setup
-(via the `yerd-helper` boundary), so we appreciate reports that help keep it
-safe.
+Orcker binds local ports, manages TLS certificates and a local trust store,
+generates container stacks, and elevates privileges once during setup (through
+the `orcker-helper` boundary). Reports that help keep that surface safe are
+welcome.
 
 ## Supported versions
 
-Yerd is pre-1.0 and ships as a rolling release. Security fixes land on the
-latest release; please reproduce against the most recent version before
-reporting.
+Orcker is pre-release and pinned at `0.0.0` until the MVP gate. There is no
+supported release line yet: please reproduce against the `main` branch.
 
 ## Reporting a vulnerability
 
-**Please do not open a public GitHub issue for security-sensitive reports.**
+**Please do not open a public GitHub issue for a security-sensitive report.**
 
-For any issue you consider sensitive, email **security@forjed.io**. Include:
+Use GitHub's
+[private vulnerability reporting](https://github.com/matheusmarnt/orcker/security/advisories/new).
+Include:
 
 - a description of the vulnerability and its impact;
-- the Yerd version (`yerd --version`) and platform (macOS / Linux);
+- the commit you reproduced against, and the platform (macOS / Linux);
 - steps to reproduce, or a proof of concept, if you have one;
 - any relevant logs (daemon or GUI), with secrets redacted.
 
-You can also use GitHub's
-[private vulnerability reporting](https://github.com/forjedio/yerd/security/advisories/new)
-if you prefer to disclose through GitHub.
+For a non-sensitive hardening suggestion with no exploit, a regular
+[issue](https://github.com/matheusmarnt/orcker/issues/new) is fine.
 
-For non-sensitive, low-risk issues (e.g. a hardening suggestion with no
-exploit), a regular [bug report](https://github.com/forjedio/yerd/issues/new/choose)
-is fine.
+Please allow a reasonable opportunity to release a fix before public
+disclosure.
 
-## What to expect
+## Upstream
 
-- We'll acknowledge your report as soon as we can.
-- We'll investigate, keep you updated on our assessment, and let you know when a
-  fix ships.
-- We're happy to credit you in the release notes once the issue is resolved -
-  let us know how you'd like to be named, or if you'd prefer to stay anonymous.
-
-Please give us a reasonable opportunity to release a fix before any public
-disclosure. Thank you for reporting responsibly.
+Orcker is a fork and inherits much of its upstream's code; `docs/UPSTREAM.md`
+records which project, at which commit. A vulnerability in inherited code
+affects that project too — report it here, and it will be escalated upstream.

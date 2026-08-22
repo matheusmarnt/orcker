@@ -1,13 +1,13 @@
 # Orcker agentic harness — install
 
-Files ready to copy into the root of your Yerd fork. Generated 2026-08-20 from
+Files ready to copy into the root of your Orcker fork. Generated 2026-08-20 from
 `orcker-prd.md` v1.0 and `orcker-sdd.md` v1.0 (keep both at `docs/prd-sdd/PRD.md` and
 `docs/prd-sdd/SDD.md` in the repo — the harness references those paths).
 
 ## Contents
 
 ```
-CLAUDE.md                     agent memory (replaces Yerd's CLAUDE.md)
+CLAUDE.md                     agent memory (replaces Orcker's CLAUDE.md)
 .claude/settings.json         permissions + rustfmt-on-edit hook
 .claude/agents/supervisor.md  acceptance gatekeeper (SDD section 8)
 .claude/agents/spec-writer.md drafts specs from PRD requirements
@@ -26,7 +26,7 @@ specs/SPEC-0001..0006-*.md    the six Phase-0 specs, fully written
 
 ## Install
 
-1. Fork/clone Yerd at a stable tag; from this package's directory:
+1. Fork/clone Orcker at a stable tag; from this package's directory:
    `cp -r CLAUDE.md .claude scripts specs <fork-root>/` and
    `mkdir -p <fork-root>/docs && cp <your PRD/SDD files> <fork-root>/docs/`
    (rename to `PRD.md` and `SDD.md`).
@@ -37,7 +37,7 @@ specs/SPEC-0001..0006-*.md    the six Phase-0 specs, fully written
    `status: approved` **is your sign-off** (SDD section 5 — the only mandatory
    human transition). To approve all six after reading:
    `sed -i 's/^status: draft/status: approved/' specs/SPEC-000*.md`
-5. Keep Yerd's `.github/instructions/` files — CLAUDE.md points to them;
+5. Keep Orcker's `.github/instructions/` files — CLAUDE.md points to them;
    SPEC-0001 renames their contents.
 6. Start: `claude` in the repo root, then `/spec-next`. Verify a finished spec
    with `/spec-verify SPEC-0001`. Merge/push remain manual (human) actions.

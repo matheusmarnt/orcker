@@ -1,29 +1,29 @@
-# Maintainer: Yerd <yerd@forjed.io>
+# Maintainer: Orcker <orcker@forjed.io>
 #
-# Native Arch package for Yerd: the Tauri GUI plus the three binaries (yerd CLI,
-# yerdd daemon, yerd-helper) that the GUI drives. Mirrors the layout of the
+# Native Arch package for Orcker: the Tauri GUI plus the three binaries (orcker CLI,
+# orckerd daemon, orcker-helper) that the GUI drives. Mirrors the layout of the
 # upstream .deb (all four binaries in /usr/bin), so the daemon's sibling-binary
 # lookup behaves identically. The daemon is built with the `pacman` feature so
-# in-app `yerd update` self-updates via `pacman -U` (not `dpkg -i`).
+# in-app `orcker update` self-updates via `pacman -U` (not `dpkg -i`).
 #
 # Built in CI from the in-tree checkout (no source=()/AUR fetch in v1). The
-# release workflow exports YERD_SRCROOT (the workspace root) and YERD_PKGVER (the
+# release workflow exports ORCKER_SRCROOT (the workspace root) and ORCKER_PKGVER (the
 # release version with any `-` replaced by `_`, since makepkg forbids `-` in
 # pkgver) before invoking makepkg.
-pkgname=yerd
-pkgver="${YERD_PKGVER:-0.0.0}"
+pkgname=orcker
+pkgver="${ORCKER_PKGVER:-0.0.0}"
 pkgrel=1
 pkgdesc="Local PHP development environment — daemon, CLI, and desktop app"
 arch=('x86_64')
-url="https://github.com/forjedio/yerd"
+url="https://github.com/forjedio/orcker"
 license=('MIT')
 # Runtime deps. webkit2gtk-4.1/gtk3/librsvg/libayatana-appindicator back the Tauri
 # GUI; libayatana-appindicator + librsvg are dlopen'd (not ELF-NEEDED) so namcap
 # can't infer them — list explicitly. cairo/pango/gdk-pixbuf2/glib2 come in via
 # gtk3. libcap provides setcap, used by the install scriptlet (namcap will report
 # it "not needed" — a false positive, it is not ELF-linked). libxcrypt-compat
-# ships libcrypt.so.1: Yerd's managed PHP builds (fetched at runtime, not part of
-# this package - see crates/yerd-php) are glibc-dynamic and still link against
+# ships libcrypt.so.1: Orcker's managed PHP builds (fetched at runtime, not part of
+# this package - see crates/orcker-php) are glibc-dynamic and still link against
 # the legacy crypt() ABI, which stock Arch dropped in favour of libxcrypt.so.2;
 # without it `php`/composer/etc. fail with "libcrypt.so.1: cannot open shared
 # object file". namcap can't infer this either, since it isn't ELF-NEEDED by
@@ -35,15 +35,15 @@ makedepends=('rust' 'cargo' 'nodejs' 'npm')
 # table, leaving ring_core_* symbols (p256/poly1305/x25519) undefined at the
 # final link. Ring's asm is not LTO-compatible, so opt this package out of LTO.
 options=('!strip' '!debug' '!lto')
-install="yerd.install"
+install="orcker.install"
 
 build() {
-  cd "${YERD_SRCROOT:?YERD_SRCROOT must point at the workspace checkout root}"
+  cd "${ORCKER_SRCROOT:?ORCKER_SRCROOT must point at the workspace checkout root}"
   # The GUI embeds the built frontend (frontendDist=../dist) at compile time, so
   # build the web assets BEFORE cargo.
-  ( cd apps/yerd-gui && npm ci && npm run build )
-  # Build the daemon with the pacman self-update format (`yerdd/pacman` →
-  # `yerd-update/pacman`) plus the CLI, helper, and GUI binaries.
+  ( cd apps/orcker-gui && npm ci && npm run build )
+  # Build the daemon with the pacman self-update format (`orckerd/pacman` →
+  # `orcker-update/pacman`) plus the CLI, helper, and GUI binaries.
   #
   # `tauri/custom-protocol` must be enabled here: unlike `tauri build`/`npm run
   # tauri build` (which the .deb/.dmg release path uses and which inject this
@@ -52,34 +52,34 @@ build() {
   # devUrl (http://localhost:1420) at runtime instead of the embedded frontend
   # dist, failing with "Could not connect to localhost: Connection refused".
   cargo build --release --locked \
-    --features yerdd/pacman,tauri/custom-protocol \
-    -p yerd -p yerdd -p yerd-helper -p yerd-gui
+    --features orckerd/pacman,tauri/custom-protocol \
+    -p orcker -p orckerd -p orcker-helper -p orcker-gui
 }
 
 package() {
-  cd "${YERD_SRCROOT:?YERD_SRCROOT must point at the workspace checkout root}"
+  cd "${ORCKER_SRCROOT:?ORCKER_SRCROOT must point at the workspace checkout root}"
 
   # All four binaries as real files in /usr/bin. The three driven binaries
-  # (yerd/yerdd/yerd-helper) land at the same paths as the upstream .deb, so the
-  # GUI's trusted_yerd()/resolve_binary sibling lookup is identical.
-  install -Dm755 target/release/yerd        "$pkgdir/usr/bin/yerd"
-  install -Dm755 target/release/yerdd       "$pkgdir/usr/bin/yerdd"
-  install -Dm755 target/release/yerd-helper "$pkgdir/usr/bin/yerd-helper"
-  install -Dm755 target/release/yerd-gui    "$pkgdir/usr/bin/yerd-gui"
+  # (orcker/orckerd/orcker-helper) land at the same paths as the upstream .deb, so the
+  # GUI's trusted_orcker()/resolve_binary sibling lookup is identical.
+  install -Dm755 target/release/orcker        "$pkgdir/usr/bin/orcker"
+  install -Dm755 target/release/orckerd       "$pkgdir/usr/bin/orckerd"
+  install -Dm755 target/release/orcker-helper "$pkgdir/usr/bin/orcker-helper"
+  install -Dm755 target/release/orcker-gui    "$pkgdir/usr/bin/orcker-gui"
 
   # Desktop entry + hicolor icons, named after the GUI binary (its runtime
-  # WM_CLASS is `yerd-gui`) so the dock binds the window to the launcher.
-  install -Dm644 packaging/arch/yerd-gui.desktop \
-    "$pkgdir/usr/share/applications/yerd-gui.desktop"
-  install -Dm644 apps/yerd-gui/src-tauri/icons/32x32.png \
-    "$pkgdir/usr/share/icons/hicolor/32x32/apps/yerd-gui.png"
-  install -Dm644 apps/yerd-gui/src-tauri/icons/64x64.png \
-    "$pkgdir/usr/share/icons/hicolor/64x64/apps/yerd-gui.png"
-  install -Dm644 apps/yerd-gui/src-tauri/icons/128x128.png \
-    "$pkgdir/usr/share/icons/hicolor/128x128/apps/yerd-gui.png"
+  # WM_CLASS is `orcker-gui`) so the dock binds the window to the launcher.
+  install -Dm644 packaging/arch/orcker-gui.desktop \
+    "$pkgdir/usr/share/applications/orcker-gui.desktop"
+  install -Dm644 apps/orcker-gui/src-tauri/icons/32x32.png \
+    "$pkgdir/usr/share/icons/hicolor/32x32/apps/orcker-gui.png"
+  install -Dm644 apps/orcker-gui/src-tauri/icons/64x64.png \
+    "$pkgdir/usr/share/icons/hicolor/64x64/apps/orcker-gui.png"
+  install -Dm644 apps/orcker-gui/src-tauri/icons/128x128.png \
+    "$pkgdir/usr/share/icons/hicolor/128x128/apps/orcker-gui.png"
   # 256px source is the @2x variant (there is no 256x256.png).
-  install -Dm644 apps/yerd-gui/src-tauri/icons/128x128@2x.png \
-    "$pkgdir/usr/share/icons/hicolor/256x256/apps/yerd-gui.png"
+  install -Dm644 apps/orcker-gui/src-tauri/icons/128x128@2x.png \
+    "$pkgdir/usr/share/icons/hicolor/256x256/apps/orcker-gui.png"
 
   install -Dm644 LICENSE.md "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }

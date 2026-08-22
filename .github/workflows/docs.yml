@@ -2,8 +2,8 @@ name: Docs
 
 # Publish the VitePress documentation site (docs/) to GitHub Pages.
 on:
-  # Inherited from Yerd. The tag trigger is removed in the Orcker fork: the site
-  # still describes Yerd and the Pages target is Yerd's, so an Orcker release tag
+  # Inherited from Orcker. The tag trigger is removed in the Orcker fork: the site
+  # still describes Orcker and the Pages target is Orcker's, so an Orcker release tag
   # must not redeploy it. Manual dispatch stays for deliberate previews.
   workflow_dispatch:
 

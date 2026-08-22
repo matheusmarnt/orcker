@@ -1,0 +1,18 @@
+[package]
+name                   = "orcker-mcp"
+version.workspace      = true
+edition.workspace      = true
+rust-version.workspace = true
+license.workspace      = true
+publish.workspace      = true
+description            = "Model Context Protocol server logic: tool catalog, JSON-RPC state machine, and result rendering."
+
+[dependencies]
+orcker-core  = { path = "../orcker-core" }
+orcker-ipc   = { path = "../orcker-ipc" }
+serde      = { workspace = true }
+serde_json = { workspace = true }
+thiserror  = { workspace = true }
+
+[lints]
+workspace = true

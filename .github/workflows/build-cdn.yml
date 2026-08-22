@@ -166,7 +166,7 @@ jobs:
             -exec mv -t . {} +
           find . -mindepth 1 -type d -exec rm -rf {} +
           ver="v${VERSION}"
-          for f in Yerd_* yerd-gui_* yerd_*; do
+          for f in Orcker_* orcker-gui_* orcker_*; do
             [ -e "$f" ] || continue
             case "$f" in
               *.app.tar.gz)  ext="app.tar.gz";  os="MacOS" ;;
@@ -181,7 +181,7 @@ jobs:
               *x86_64*|*amd64*)  arch="x86_64" ;;
               *) arch="unknown" ;;
             esac
-            mv -- "$f" "Yerd_${os}_${arch}_${ver}.${ext}"
+            mv -- "$f" "Orcker_${os}_${arch}_${ver}.${ext}"
           done
           echo "Artifacts:" && ls -1
 
@@ -205,12 +205,12 @@ jobs:
           set -euo pipefail
           put="${GITHUB_WORKSPACE}/.github/scripts/bunny-put.sh"
           shopt -s nullglob
-          arts=(Yerd_*)
+          arts=(Orcker_*)
           [ ${#arts[@]} -gt 0 ] || { echo "::error::no artifacts to upload"; exit 1; }
           # bunny-put.sh PUTs then verifies each object with a ranged GET.
           for f in "${arts[@]}"; do bash "$put" "$f" "builds/${DEST}/$f"; done
           # Manifest strictly last, so its presence signals a complete upload
-          # (Yerd_* sorts AFTER SHA256SUMS, so it must not ride the loop).
+          # (Orcker_* sorts AFTER SHA256SUMS, so it must not ride the loop).
           bash "$put" SHA256SUMS "builds/${DEST}/SHA256SUMS"
           echo "Uploaded + verified ${#arts[@]} artifact(s) + SHA256SUMS."
 
@@ -233,7 +233,7 @@ jobs:
               echo ""
               if [ -n "${PULLZONE:-}" ]; then
                 shopt -s nullglob
-                for f in dist/Yerd_* dist/SHA256SUMS; do
+                for f in dist/Orcker_* dist/SHA256SUMS; do
                   [ -e "$f" ] || continue
                   b=$(basename "$f")
                   echo "- [\`$b\`](https://${PULLZONE}/builds/${DEST}/$b)"

@@ -1,0 +1,96 @@
+[package]
+name                   = "orckerd"
+version.workspace      = true
+edition.workspace      = true
+rust-version.workspace = true
+license.workspace      = true
+publish.workspace      = true
+description            = "Orcker unprivileged daemon — wires every Phase-1 library together."
+
+[features]
+# Build the daemon for the Arch package: flips `orcker_update::PkgFormat::current()`
+# to `Pacman` so self-update selects the `.pkg.tar.zst` and installs via `pacman -U`.
+# Enabled ONLY by the Arch CI build (`--features orckerd/pacman`); default off → `.deb`.
+pacman = ["orcker-update/pacman"]
+# Build the daemon for the Fedora package: flips `PkgFormat::current()` to `Rpm` so
+# self-update selects the `.rpm` and installs via `rpm -U`. Enabled ONLY by the
+# Fedora CI build (`--features orckerd/rpm`); mutually exclusive with `pacman`.
+rpm = ["orcker-update/rpm"]
+
+[[bin]]
+name = "orckerd"
+path = "src/main.rs"
+
+[lib]
+name = "orckerd"
+path = "src/lib.rs"
+
+[dependencies]
+orcker-core      = { path = "../../crates/orcker-core" }
+orcker-config    = { path = "../../crates/orcker-config" }
+orcker-ipc       = { path = "../../crates/orcker-ipc", features = ["transport"] }
+orcker-tls       = { path = "../../crates/orcker-tls" }
+orcker-platform  = { path = "../../crates/orcker-platform" }
+orcker-dns       = { path = "../../crates/orcker-dns" }
+orcker-php       = { path = "../../crates/orcker-php" }
+orcker-services  = { path = "../../crates/orcker-services" }
+orcker-supervise = { path = "../../crates/orcker-supervise" }
+orcker-tunnel    = { path = "../../crates/orcker-tunnel" }
+orcker-proxy     = { path = "../../crates/orcker-proxy" }
+orcker-doctor    = { path = "../../crates/orcker-doctor" }
+orcker-mail      = { path = "../../crates/orcker-mail" }
+orcker-update    = { path = "../../crates/orcker-update" }
+orcker-release-manifest = { path = "../../crates/orcker-release-manifest" }
+thiserror      = { workspace = true }
+semver         = { workspace = true }
+serde          = { workspace = true }
+serde_json     = { workspace = true }
+sha2           = { workspace = true }
+hex            = { workspace = true }
+rand           = { workspace = true }
+async-trait    = { workspace = true }
+clap           = { workspace = true }
+tokio          = { workspace = true, features = ["net", "rt-multi-thread", "macros", "signal", "time", "io-util", "sync", "process"] }
+tracing        = { workspace = true }
+tracing-subscriber = { workspace = true }
+tracing-appender = { workspace = true }
+interprocess   = { workspace = true }
+fs4            = { workspace = true }
+rustls         = { workspace = true, features = ["ring"] }
+rustls-pki-types = { workspace = true, features = ["alloc", "std"] }
+tokio-rustls   = { workspace = true }
+webpki-roots   = { workspace = true }
+# LAN remote-setup bootstrap endpoint (hyper service + constant-time code compare).
+hyper          = { workspace = true }
+hyper-util     = { workspace = true }
+http-body-util = { workspace = true }
+subtle         = { workspace = true }
+time           = { workspace = true }
+# PHP install path: fetch (rustls, no OpenSSL) + unpack prebuilt builds.
+reqwest        = { workspace = true }
+flate2         = { workspace = true }
+tar            = { workspace = true }
+# Bun ships only a .zip. `deflate` selects flate2's pure-Rust `rust_backend`
+# (miniz_oxide) and also pulls `zopfli` (a compressor we don't use); both are
+# pure-Rust so there are no bzip2/zstd/lzma C deps. A decompress-only path that
+# drops zopfli isn't available without switching to a C zlib backend, so we keep
+# `deflate`. Version pinned to 2.x in the workspace (zip >= 4 needs
+# edition2024/MSRV 1.88; see the workspace Cargo.toml pin block).
+zip            = { workspace = true, features = ["deflate"] }
+notify-debouncer-mini = "0.4"
+
+# Site creation streams `laravel new` output and process-group-kills it on
+# cancel/timeout (Unix); `killpg` lives in `nix`.
+[target.'cfg(unix)'.dependencies]
+# `user` adds `User::from_uid`/`getuid` — resolve the invoking user's login shell
+# when `$SHELL` is absent (launchd/systemd service env) for external-tool detection.
+nix            = { workspace = true, features = ["user"] }
+
+[dev-dependencies]
+tempfile       = { workspace = true }
+minisign       = { workspace = true }
+tokio          = { workspace = true, features = ["macros", "rt-multi-thread", "net", "io-util", "sync", "time"] }
+orcker-depcheck  = { path = "../../crates/orcker-depcheck" }
+
+[lints]
+workspace = true

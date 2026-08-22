@@ -18,7 +18,7 @@
 # verbatim and printed after the grouped sections.
 #
 # Note: the release-notes grouping only elevates [Feat]/[Fix]; [Docs] and [Meta]
-# are repo housekeeping and dropped entirely, while any other Yerd prefix
+# are repo housekeeping and dropped entirely, while any other Orcker prefix
 # ([Task], ...) falls through to "Others" (its bracket prefix kept as-is). The
 # stricter set of *allowed* PR-title prefixes is enforced separately by
 # .github/workflows/pr-title.yml.
