@@ -30,15 +30,20 @@ echo "[gate 5/6] no new clippy escape hatches"
 CLIPPY_ALLOW_RE='#!?\[allow\([^]]*clippy::(unwrap_used|expect_used|panic|todo|dbg_macro|indexing_slicing)'
 CLIPPY_ALLOW_CURRENT="$(mktemp)"
 trap 'rm -f "$CLIPPY_ALLOW_CURRENT"' EXIT
+# LC_ALL=C, not a bare sort: the baseline is a checked-in artifact, and glibc's
+# locale collations ignore `-` at primary strength, so `bin/orcker-helper/` sorts
+# after `bin/orckerd/` under pt_BR.UTF-8 and before it under C. Same file set,
+# two legal orders, and the diff below fails on whichever machine did not
+# generate the baseline. Byte order is the only order every machine agrees on.
 { rg -U -c "$CLIPPY_ALLOW_RE" crates bin --glob '*.rs' || true; } |
-  sort > "$CLIPPY_ALLOW_CURRENT"
+  LC_ALL=C sort > "$CLIPPY_ALLOW_CURRENT"
 if ! diff -u scripts/clippy-allow-baseline.txt "$CLIPPY_ALLOW_CURRENT"; then
   echo "[gate] clippy allow list changed"
   echo "[gate]   '-' line: an allow disappeared - good, refresh the baseline"
   echo "[gate]   '+' line: a new escape hatch - justify it in the spec first"
   echo "[gate] refresh with:"
   echo "[gate]   { rg -U -c '<see CLIPPY_ALLOW_RE in this script>' crates bin --glob '*.rs' || true; } |"
-  echo "[gate]     sort > scripts/clippy-allow-baseline.txt"
+  echo "[gate]     LC_ALL=C sort > scripts/clippy-allow-baseline.txt"
   exit 1
 fi
 

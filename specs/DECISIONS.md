@@ -127,3 +127,40 @@ Deviations, clarifications and trade-offs recorded by implementation cycles
   The `directories` qualifier also moved `io/yerd/Yerd` -> `io/orcker/Orcker`, so
   pre-existing local Yerd state is orphaned rather than migrated. Intended for a
   fork; no migration path exists or was tested.
+
+- Decision: pin the gate's clippy-allow `sort` to the C collation, in a spec of
+  its own, instead of merging PR #1 with a red gate or regenerating the baseline
+  to match one machine.
+- Why: `scripts/gate.sh` built the list with a bare `sort`, whose order follows
+  `LC_COLLATE`. Glibc's `pt_BR.UTF-8` ignores `-` at primary strength, so
+  `bin/orcker-helper/` sorts after `bin/orckerd/`; the C collation compares raw
+  bytes, where `-` (0x2D) precedes every letter, so it sorts before. One file
+  set, two legal orders, and step 5 fails on whichever machine did not generate
+  the baseline. A checked-in artifact cannot depend on the author's locale.
+- Impact: `scripts/clippy-allow-baseline.txt` was regenerated; 221 lines before
+  and after, identical set, only the `bin/orcker*` block relocated. The defect is
+  inherited from the bootstrap gate, not from the rename: SPEC-0001 merely added
+  `.github/workflows/gate.yml`, which ran the gate off this machine for the first
+  time and exposed it.
+
+- Decision: put `scripts/gate.sh` inside SPEC-0032's surface, which DT7 normally
+  keeps outside every surface.
+- Why: DT7 forbids *weakening* the gate. Pinning the collation makes step 5
+  locale-independent and therefore reproducible. The supervisor verified the
+  claim against the diff: `CLIPPY_ALLOW_RE`, the `rg` invocation and its scope,
+  `diff -u` and `exit 1` are byte-identical, and a bare `pt_BR` sort still fails
+  the new baseline, so the check was not silenced.
+- Impact: the precedent is narrow. Touching `scripts/gate.sh` needs a spec that
+  says so and a supervisor who confirms the change strengthens the check. The
+  declared surface `scripts/` was broader than the one file the diff needed; a
+  future spec of this shape should name `scripts/gate.sh`.
+
+- Decision: land SPEC-0032 on `feat/SPEC-0001-fork-bootstrap` rather than on a
+  branch of its own.
+- Why: AC6 is "both CI gate legs green". `main` carries no
+  `.github/workflows/gate.yml` — SPEC-0001 adds it — so a `feat/SPEC-0032-*`
+  branch cut from `main` would run no gate job, prove nothing, and leave PR #1
+  red anyway.
+- Impact: the branch-per-spec rule bends for a cycle whose acceptance depends on
+  CI that only exists on another branch. Per-spec commit atomicity is preserved:
+  the pull request carries two commits, one per spec.
