@@ -14,11 +14,10 @@ coordinates them.
 
 - Load `orcker-config`; build a `SiteRouter` from config + a filesystem scan of
   parked paths (`startup.rs`, `state.rs`).
-- Start `orcker-dns`, `orcker-proxy`, `orcker-php`, and apply doctor fix plans; own the
+- Start `orcker-dns` and `orcker-proxy`, and apply doctor fix plans; own the
   cert store (`cert_store.rs`) and backend resolution (`backend_resolver.rs`).
 - Serve the `orcker-ipc` server transport (`ipc_server.rs`), handle mutations
-  (`mutate.rs`), PHP install/update flows (`php_install.rs`, `php_updates.rs`),
-  signals, and single-instance enforcement.
+  (`mutate.rs`), signals, and single-instance enforcement.
 - Install the `tracing` subscriber + rolling file appender (`tracing_init.rs`).
   Libraries only emit spans/events; the daemon owns the subscriber.
 
@@ -34,9 +33,9 @@ coordinates them.
   relevant crate with tests and call it from here.
 - Run as root, or assume elevation. Unprivileged operation is the default; fall
   back to `8080`/`8443` when the user declines elevation.
-- Auto-install PHP. **PHP updates are notify-only**: the periodic checker
-  (startup + every 12h) and `list` only *report* newer patches. Installs happen
-  solely on an explicit update request. Keep it that way.
+- Install runtimes on the host. PHP and the databases run in containers; the
+  daemon orchestrates them through the engine, it never provisions a native
+  runtime.
 
 ## Tests / invariants
 
@@ -47,5 +46,5 @@ coordinates them.
 
 - [ ] New behaviour lives in a crate, not in a handler.
 - [ ] Privileged work routed through the helper; daemon stays unprivileged.
-- [ ] PHP updates remain notify-only; no silent auto-install.
+- [ ] Runtimes stay in containers; the daemon installs nothing on the host.
 - [ ] Daemon remains the single source of truth (no client-side state authority).

@@ -257,3 +257,28 @@ Deviations, clarifications and trade-offs recorded by implementation cycles
   is a bounded, enumerated set that the spec's own acceptance criteria cannot
   express, and it requires the follow-up spec to exist and block before the work
   it protects.
+
+## SPEC-0033 — the R2 wording grep stays in the cycle log, not in the gate
+
+- Decision: the `grep -rniE "native child process|PHP-FPM|FPM pool|native
+  (db|database|engine|runtime)"` criterion added at S3b is **cycle-local
+  evidence only**. It is not promoted into `scripts/`, into `scripts/gate.sh`,
+  or into any future acceptance criterion.
+- Why: two defects, both found by the supervisor at attempt 2. It is line-based,
+  so it cannot see a literal split across a wrap — a correct negation at
+  `.github/instructions/orckerd.instructions.md:36-38` survived it unseen, which
+  means its GREEN proves "absent from every single line", not "absent". And it
+  forbids `PHP-FPM`, which `docs/PRD.md:14` makes a *current* term: the app
+  container runs PHP-FPM + Supervisor. As a standing guard it would block
+  accurate documentation of the containerised app.
+- What was done instead: at attempt 2 two correct negations were reworded to
+  drop the banned literals rather than the pattern being weakened to admit them.
+  The rewordings are semantically identical to what they replaced. R2's real
+  verification was the supervisor's independent whole-file,
+  whitespace-normalised sweep of `.github/`.
+- If a durable guard is wanted it needs its own spec, and it must match
+  *assertions* about host-side runtimes rather than substrings. Related gap,
+  also unguarded: nothing detects an orphaned
+  `.github/instructions/*.instructions.md` after a crate deletion, so a future
+  SPEC-0002-style removal can re-orphan a file silently — which is exactly how
+  SPEC-0033 came to exist.

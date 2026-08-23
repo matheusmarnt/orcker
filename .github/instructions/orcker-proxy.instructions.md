@@ -18,13 +18,16 @@ are the async edge. Side effects (port binding, cert lookup) go through
 - Listening on `80`/`443` (or `8080`/`8443`) via a `PortBinder` from
   `orcker-platform` — never bind privileged ports directly.
 - Per-SNI leaf-cert selection from an in-memory cert store (a `CertStore` trait).
-- Forwarding: **FastCGI** to PHP-FPM (Unix socket on macOS/Linux, TCP loopback
-  on Windows) or HTTP to a FrankenPHP worker; WebSocket upgrade pass-through;
-  body streaming; HTTP/2.
+- Forwarding: HTTP to the per-project loopback port a container publishes;
+  WebSocket upgrade pass-through; body streaming; HTTP/2. The inherited
+  **FastCGI** path (`pure/fcgi_codec`, `forward/fcgi`) still compiles but has no
+  process manager left on the host to talk to; it is retired by the Docker proxy
+  specs (SPEC-0005, SPEC-0006), not by ad-hoc edits.
 
 ## Must not
 
-- Spawn or supervise PHP — that is `orcker-php`.
+- Spawn or supervise application runtimes — those live in containers, driven by
+  the engine crate.
 - Generate certificates — that is `orcker-tls` (this crate consumes cert types).
 - Own DNS, or bind privileged ports without the `PortBinder` abstraction.
 
