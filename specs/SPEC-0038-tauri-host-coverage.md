@@ -3,7 +3,7 @@ id: SPEC-0038
 title: Give the Tauri host real coverage, not just a text scan
 phase: 0
 covers: [FR-002]
-depends_on: [SPEC-0002]
+depends_on: [SPEC-0002, SPEC-0036]
 surface:
   - apps/orcker-gui/
 status: draft

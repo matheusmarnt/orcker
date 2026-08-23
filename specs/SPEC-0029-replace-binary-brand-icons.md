@@ -3,7 +3,7 @@ id: SPEC-0029
 title: Replace the inherited binary GUI brand icons with Orcker artwork
 phase: 0
 covers: [FR-001]
-depends_on: [SPEC-0001]
+depends_on: [SPEC-0001, SPEC-0036]
 surface:
   - apps/orcker-gui/
 status: draft
