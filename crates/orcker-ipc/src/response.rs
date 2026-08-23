@@ -3,24 +3,21 @@
 //! Internally tagged on `type`, `snake_case`. Wire-stability assertions
 //! live in `tests/wire_stability.rs`.
 
-use std::collections::BTreeMap;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 
-use orcker_core::{PhpVersion, Site};
+use orcker_core::Site;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
-use crate::dump::{DumpCounts, DumpEvent, DumpExtStatus};
 use crate::status::{
-    AddableServiceType, CloudflaredStatus, DatabaseSummary, Diagnosis, FixReport, MailDetail,
-    MailSummary, NamedTunnelMeta, ServiceAvailability, ServiceStatus, SiteHostname, StatusReport,
-    ToolStatus, TunnelInfo, WordPressVersionInfo,
+    CloudflaredStatus, Diagnosis, FixReport, MailDetail, MailSummary, NamedTunnelMeta,
+    SiteHostname, StatusReport, ToolStatus, TunnelInfo,
 };
 
 // Same rule: no per-field serde renames.
 /// A response sent from the daemon to a client.
 ///
-/// Not `Eq`: [`Response::Dumps`] carries [`DumpEvent`]s whose opaque
 /// `serde_json::Value` payloads are only `PartialEq`. `PartialEq` is all the
 /// wire-stability round-trips need.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -37,8 +34,7 @@ pub enum Response {
     },
     /// Generic success for mutating requests
     /// ([`crate::Request::Park`], [`crate::Request::Link`],
-    /// [`crate::Request::Unlink`], [`crate::Request::SetPhp`],
-    /// [`crate::Request::SetSecure`]).
+    /// [`crate::Request::Unlink`], /// [`crate::Request::SetSecure`]).
     Ok,
     /// Reply to [`crate::Request::ListProxies`] - whole-host proxies and
     /// per-site path-prefix rules.
@@ -121,64 +117,6 @@ pub enum Response {
         /// Seconds until the code expires.
         expires_in_secs: u64,
     },
-    /// Reply to [`crate::Request::ListPhp`] / `CheckPhpUpdates` / `UpdatePhp`.
-    PhpVersions {
-        /// Installed versions, ascending.
-        installed: Vec<PhpVersion>,
-        /// The current global default.
-        default: PhpVersion,
-        /// Installed minors with a newer patch available (from the daemon's
-        /// update cache). Empty when none / cache cold.
-        #[serde(default, skip_serializing_if = "Vec::is_empty")]
-        updates: Vec<PhpUpdate>,
-        /// Global PHP ini settings applied to every version's FPM pool
-        /// (`"memory_limit" -> "512M"`). Empty when none are set.
-        #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
-        settings: BTreeMap<String, String>,
-        /// Sparse per-version overrides of `settings`, keyed by version. A
-        /// version's effective value is its override when present, else the
-        /// global value. Empty when no overrides are set; `#[serde(default)]`
-        /// keeps older daemons (which omit it) decodable. Boxed so the nested
-        /// maps don't bloat every `Response` value (same reason as
-        /// [`Self::Status`]); `Box<T>` serializes transparently.
-        #[serde(default, skip_serializing_if = "boxed_version_map_is_empty")]
-        version_settings: Box<BTreeMap<PhpVersion, BTreeMap<String, String>>>,
-        /// Free-form per-version ini directives (`"xdebug.mode" -> "debug"`),
-        /// keyed by version. Empty when none are set; `#[serde(default)]`
-        /// keeps older daemons (which omit it) decodable. Boxed like
-        /// `version_settings`.
-        #[serde(default, skip_serializing_if = "boxed_version_map_is_empty")]
-        directives: Box<BTreeMap<PhpVersion, BTreeMap<String, String>>>,
-        /// Configured per-version FPM pool overrides (`"max_children" ->
-        /// "32"`), keyed by version. Only versions with an override appear; a
-        /// version that is absent runs the built-in default
-        /// ([`orcker_core::php_pool::DEFAULT_MAX_CHILDREN`]). Empty when none
-        /// are set; `#[serde(default)]` keeps older daemons (which omit it)
-        /// decodable. Boxed like `version_settings`.
-        #[serde(default, skip_serializing_if = "boxed_version_map_is_empty")]
-        pool: Box<BTreeMap<PhpVersion, BTreeMap<String, String>>>,
-    },
-    /// Reply to [`crate::Request::AvailablePhp`].
-    AvailablePhp {
-        /// Installable **stable** major.minor versions from `php.json`, ascending.
-        available: Vec<PhpVersion>,
-        /// Currently installed versions, ascending, so clients can hide (GUI
-        /// dropdown) or tag (CLI) them.
-        installed: Vec<PhpVersion>,
-        /// Installable **legacy** minors (< 8.2) from the separately-signed
-        /// `php-legacy.json`, ascending. Empty (and omitted on the wire) when the
-        /// legacy manifest is unreachable or a client is talking to an older
-        /// daemon, so the wire stays byte-identical for the stable-only case.
-        #[serde(default, skip_serializing_if = "Vec::is_empty")]
-        legacy: Vec<PhpVersion>,
-    },
-    /// Reply to [`crate::Request::ListPhpExtensions`] - registered custom
-    /// extensions keyed by PHP version (ascending), each tagged with whether its
-    /// `.so` currently exists on disk.
-    PhpExtensions {
-        /// Version → its registered extensions.
-        by_version: BTreeMap<PhpVersion, Vec<PhpExtInfo>>,
-    },
     /// Reply to [`crate::Request::Status`] - a runtime health snapshot.
     ///
     /// Boxed so the (large) report does not bloat every `Response` value;
@@ -196,99 +134,6 @@ pub enum Response {
     DoctorFix {
         /// The fix outcome.
         report: FixReport,
-    },
-    /// Reply to [`crate::Request::ListServices`].
-    Services {
-        /// One entry per manageable service.
-        services: Vec<ServiceStatus>,
-    },
-    /// Reply to [`crate::Request::AvailableServices`].
-    AvailableServices {
-        /// Installable vs installed versions, per service.
-        services: Vec<ServiceAvailability>,
-    },
-    /// Reply to [`crate::Request::AddableServiceTypes`].
-    AddableServices {
-        /// One entry per installable service type.
-        types: Vec<AddableServiceType>,
-    },
-    /// The (possibly new) instance wire id, e.g. after
-    /// [`crate::Request::SetServiceSite`] re-keys a per-site instance.
-    ServiceInstanceId {
-        /// The instance wire id to target in subsequent requests.
-        id: String,
-    },
-    /// Reply to [`crate::Request::AvailableWordpressVersions`].
-    WordpressVersions {
-        /// One entry per currently-offered `WordPress` core branch.
-        versions: Vec<WordPressVersionInfo>,
-    },
-    /// Reply to [`crate::Request::MintWordpressLoginToken`].
-    WordpressLoginToken {
-        /// Single-use, short-TTL token to append as `?orcker_login_token=` on
-        /// the site's `/wp-admin/` URL.
-        token: String,
-    },
-    /// Reply to [`crate::Request::WordpressAdminUsers`].
-    WordpressAdminUsers {
-        /// The site's administrator accounts, for the auto-login user picker.
-        users: Vec<WordPressAdminUser>,
-    },
-    /// Reply to [`crate::Request::ServiceOverrides`] - the instance's stored
-    /// configuration overrides, empty when it has none.
-    ServiceOverrides {
-        /// Override name → value, in name order.
-        overrides: BTreeMap<String, String>,
-    },
-    /// Reply to [`crate::Request::ServiceLogs`] - trailing log lines, oldest first.
-    ServiceLogs {
-        /// The log lines.
-        lines: Vec<String>,
-    },
-    /// Reply to [`crate::Request::ListDatabases`] - the user databases in a SQL
-    /// service (system schemas filtered out).
-    Databases {
-        /// One entry per database, sorted by name.
-        databases: Vec<DatabaseSummary>,
-    },
-    /// Reply to [`crate::Request::ListDumps`] - events newer than the client's
-    /// cursor, the ids removed since then, the per-category counts, and the
-    /// newest id currently buffered.
-    Dumps {
-        /// Events with `id > since_id`, oldest first.
-        events: Vec<DumpEvent>,
-        /// Ids deleted since the client's cursor, so it can drop stale rows it
-        /// still holds. Best-effort (bounded log); `min_live_id` is the
-        /// guaranteed lower bound for evicted/cleared rows.
-        removed_ids: Vec<u64>,
-        /// Current per-category counts of buffered events.
-        counts: DumpCounts,
-        /// The newest buffered event id (0 when the ring is empty); the client
-        /// uses it as the next `since_id`.
-        latest_id: u64,
-        /// Smallest id still buffered. Clients drop any held id `< min_live_id`
-        /// unconditionally - so dropping evicted/cleared rows never depends on
-        /// the bounded `removed_ids` log.
-        min_live_id: u64,
-    },
-    /// Reply to [`crate::Request::DumpsStatus`] - dump-server configuration and
-    /// liveness.
-    DumpsStatus {
-        /// Whether dump interception is enabled (the antenna).
-        enabled: bool,
-        /// The loopback port the dump server listens on.
-        port: u16,
-        /// Whether the dump server is currently bound and accepting.
-        running: bool,
-        /// Whether log persistence is on (off = clear on each new request).
-        persist: bool,
-        /// Per-installed-version extension presence (a orcker-side fact).
-        extensions: Vec<DumpExtStatus>,
-        /// Current per-category counts of buffered events.
-        counts: DumpCounts,
-        /// Resolved per-feature capture flags (every key present; absent in
-        /// config means on). `BTreeMap` for stable order.
-        features: BTreeMap<String, bool>,
     },
     /// Reply to [`crate::Request::ListMails`] - captured email metadata, newest first.
     Mails {
@@ -309,7 +154,7 @@ pub enum Response {
         /// One entry per tool, with install status.
         tools: Vec<ToolStatus>,
     },
-    /// Reply to [`crate::Request::CreateSite`] - the background job was started.
+    /// Reply to a streamed install request - the background job was started.
     JobStarted {
         /// The job id to poll with [`crate::Request::JobStatus`].
         job_id: crate::JobId,
@@ -418,20 +263,6 @@ pub enum Response {
         /// Per-site routing rules.
         rules: Vec<RouteRuleEntry>,
     },
-}
-
-/// One registered custom PHP extension (see [`Response::PhpExtensions`]).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct PhpExtInfo {
-    /// The removal/display name.
-    pub name: String,
-    /// Absolute path to the `.so`.
-    pub path: String,
-    /// Whether it loads as a `zend_extension`.
-    pub zend: bool,
-    /// Whether the `.so` currently exists on disk (a `false` here flags a
-    /// broken registration, e.g. after a Homebrew ABI-dir bump).
-    pub present: bool,
 }
 
 /// One entry in [`Response::Sites`]: the site plus WordPress-detection
@@ -547,35 +378,6 @@ pub struct RouteRuleEntry {
     /// `api/index.php`).
     pub target: String,
 }
-
-/// One `WordPress` administrator account, for the auto-login user picker -
-/// see [`Response::WordpressAdminUsers`].
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct WordPressAdminUser {
-    /// The `WordPress` login/username (what `wp_set_auth_cookie` and the
-    /// auto-login prepend script's `get_user_by('login', ...)` key on).
-    pub login: String,
-    /// The account's display name, shown in the picker.
-    pub display_name: String,
-}
-
-/// `skip_serializing_if` predicate for [`Response::PhpVersions`]'s boxed
-/// per-version maps (the `&Box<_>` field reference deref-coerces here).
-fn boxed_version_map_is_empty(m: &BTreeMap<PhpVersion, BTreeMap<String, String>>) -> bool {
-    m.is_empty()
-}
-
-/// An available newer patch for an installed PHP minor.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct PhpUpdate {
-    /// The installed minor (e.g. `8.5`).
-    pub version: PhpVersion,
-    /// The installed patch (e.g. `"8.5.6"`).
-    pub installed: String,
-    /// The newest published patch (e.g. `"8.5.7"`).
-    pub latest: String,
-}
-
 /// Machine-readable error category for [`Response::Error`].
 ///
 /// Fail-closed on unknown variants from a newer daemon (no
@@ -656,24 +458,9 @@ mod variant_name_pinning {
             Response::Parked { .. } => {}
             Response::Info { .. } => {}
             Response::RemoteSetup { .. } => {}
-            Response::PhpVersions { .. } => {}
-            Response::AvailablePhp { .. } => {}
-            Response::PhpExtensions { .. } => {}
             Response::Status { .. } => {}
             Response::Diagnoses { .. } => {}
             Response::DoctorFix { .. } => {}
-            Response::Services { .. } => {}
-            Response::AvailableServices { .. } => {}
-            Response::AddableServices { .. } => {}
-            Response::ServiceInstanceId { .. } => {}
-            Response::WordpressVersions { .. } => {}
-            Response::WordpressLoginToken { .. } => {}
-            Response::WordpressAdminUsers { .. } => {}
-            Response::ServiceOverrides { .. } => {}
-            Response::ServiceLogs { .. } => {}
-            Response::Databases { .. } => {}
-            Response::Dumps { .. } => {}
-            Response::DumpsStatus { .. } => {}
             Response::Mails { .. } => {}
             Response::Mail { .. } => {}
             Response::Tools { .. } => {}
@@ -740,31 +527,6 @@ mod variant_name_pinning {
             script_sha256: "ab".repeat(32),
             expires_in_secs: 900,
         });
-        pin_response(Response::PhpVersions {
-            installed: vec![PhpVersion::new(8, 5)],
-            default: PhpVersion::new(8, 5),
-            updates: vec![],
-            settings: BTreeMap::new(),
-            version_settings: Box::new(BTreeMap::new()),
-            directives: Box::new(BTreeMap::new()),
-            pool: Box::new(BTreeMap::new()),
-        });
-        pin_response(Response::AvailablePhp {
-            available: vec![PhpVersion::new(8, 4), PhpVersion::new(8, 5)],
-            installed: vec![PhpVersion::new(8, 5)],
-            legacy: vec![],
-        });
-        pin_response(Response::PhpExtensions {
-            by_version: BTreeMap::from([(
-                PhpVersion::new(8, 5),
-                vec![PhpExtInfo {
-                    name: "scrypt".into(),
-                    path: "/a/scrypt.so".into(),
-                    zend: false,
-                    present: true,
-                }],
-            )]),
-        });
         pin_response(Response::Status {
             report: Box::new(crate::status::StatusReport {
                 daemon_pid: 1,
@@ -786,19 +548,15 @@ mod variant_name_pinning {
                     path: PathBuf::from("/x/ca.cert.pem"),
                     fingerprint: "ab".repeat(32),
                     trusted_system: Some(false),
-                    php_trusts_ca: None,
                     browser_trust: None,
                 },
                 resolver_installed: None,
                 port_redirect: None,
                 foreign_web_listener: None,
                 resolver_backup: None,
-                default_php: PhpVersion::new(8, 5),
-                php: vec![],
                 sites: crate::status::SiteCounts::default(),
                 load_avg: Some([100, 50, 25]),
                 daemon_version: "9.9.9".into(),
-                services: vec![],
                 mail: None,
                 web_unbound: None,
                 dns_unbound: None,
@@ -828,52 +586,6 @@ mod variant_name_pinning {
                 performed: vec![],
                 manual: vec![],
             },
-        });
-        pin_response(Response::Services { services: vec![] });
-        pin_response(Response::AvailableServices { services: vec![] });
-        pin_response(Response::AddableServices { types: vec![] });
-        pin_response(Response::ServiceInstanceId {
-            id: "reverb:blog".into(),
-        });
-        pin_response(Response::WordpressVersions {
-            versions: vec![WordPressVersionInfo {
-                branch: "6.7".into(),
-                latest: "6.7.5".into(),
-                min_php: PhpVersion::new(7, 3),
-                max_php: PhpVersion::new(8, 4),
-            }],
-        });
-        pin_response(Response::WordpressLoginToken {
-            token: "deadbeef".into(),
-        });
-        pin_response(Response::WordpressAdminUsers {
-            users: vec![WordPressAdminUser {
-                login: "admin".into(),
-                display_name: "Admin".into(),
-            }],
-        });
-        pin_response(Response::ServiceOverrides {
-            overrides: BTreeMap::new(),
-        });
-        pin_response(Response::ServiceLogs { lines: vec![] });
-        pin_response(Response::Databases {
-            databases: vec![DatabaseSummary { name: "app".into() }],
-        });
-        pin_response(Response::Dumps {
-            events: vec![],
-            removed_ids: vec![],
-            counts: DumpCounts::default(),
-            latest_id: 0,
-            min_live_id: 0,
-        });
-        pin_response(Response::DumpsStatus {
-            enabled: true,
-            port: 2304,
-            running: true,
-            persist: false,
-            extensions: vec![],
-            counts: DumpCounts::default(),
-            features: BTreeMap::new(),
         });
         pin_response(Response::Mails {
             mails: vec![crate::status::MailSummary {

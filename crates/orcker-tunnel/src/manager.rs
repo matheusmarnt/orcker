@@ -1,7 +1,7 @@
-//! `TunnelManager` drives the shared `orcker-supervise` state machine for one
+//! `TunnelManager` drives the [`crate::supervise`] state machine for one
 //! supervised `cloudflared` child per site, doing the real I/O.
 //!
-//! Differs from `orcker_services::ServiceManager` in one important way: a tunnel's
+//! One thing sets it apart from a plain service supervisor: a tunnel's
 //! readiness can take tens of seconds (a cold edge connect), and the whole
 //! manager sits behind a single async mutex shared by every tunnel op. So rather
 //! than pump the FSM to a terminal state inside one `&mut self` call (which would
@@ -24,11 +24,11 @@ use std::path::{Path, PathBuf};
 use std::process::{Command as StdCommand, Stdio};
 use std::time::{Duration, Instant};
 
-use orcker_supervise::supervisor::{
+use crate::supervise::supervisor::{
     transition, Action, Elapsed, ErrorTag, Event, KillSignal, PoolState, StopProtocol,
     SupervisorPolicy,
 };
-use orcker_supervise::{ChildHandle, Clock, ExitReason, ProcessSpawner};
+use crate::supervise::{ChildHandle, Clock, ExitReason, ProcessSpawner};
 
 use crate::error::TunnelError;
 use crate::parse::{is_named_ready, parse_quick_url};
@@ -521,8 +521,8 @@ fn failed_reason(state: PoolState) -> ExitReason {
 )]
 mod tests {
     use super::*;
+    use crate::supervise::supervisor::{KillSignal, StopProtocol};
     use async_trait::async_trait;
-    use orcker_supervise::supervisor::{KillSignal, StopProtocol};
     use std::io;
     use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Arc;

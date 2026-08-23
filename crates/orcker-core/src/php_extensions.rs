@@ -6,11 +6,11 @@
 //! argument and into a double-quoted ini value, so [`validate_ext_path`] is the
 //! **injection boundary**: it runs when an extension is registered (CLI client +
 //! daemon), when the config is loaded from disk (`orcker-config`), and defensively
-//! before rendering (`orcker-php`, `bin/orckerd`).
+//! before rendering (`bin/orckerd`).
 //!
 //! This module is pure: it does string validation only. It does **not** touch
 //! the filesystem or run a load-probe. The daemon performs the strict, real
-//! load-probe (spawning PHP) at the I/O edge; that lives in `orcker-php`.
+//! load-probe (spawning PHP) at the I/O edge, which the fork no longer has.
 
 use std::fmt;
 use std::path::Path;

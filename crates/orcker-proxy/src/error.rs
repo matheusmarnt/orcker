@@ -1,9 +1,8 @@
 //! Errors produced by `orcker-proxy`.
 //!
 //! Not `Clone + Eq` - wraps `io::Error`, `hyper::Error`, `rustls::Error`,
-//! and a `Box<dyn Error>` source. The crate mirrors `orcker-config` /
-//! `orcker-php`'s shape; the daemon translates to a stable IPC code when
-//! crossing the wire.
+//! and a `Box<dyn Error>` source. The crate mirrors `orcker-config`'s shape;
+//! the daemon translates to a stable IPC code when crossing the wire.
 
 use std::io;
 
@@ -23,10 +22,9 @@ pub enum ProxyError {
         source: io::Error,
     },
 
-    /// A `BackendResolver` impl returned an error originating outside
-    /// this crate (typically `orcker_php::PhpError`). The daemon wraps
-    /// its foreign error here so `orcker-proxy` doesn't depend on
-    /// `orcker-php`.
+    /// A `BackendResolver` impl returned an error originating outside this
+    /// crate. The daemon wraps its foreign error here so `orcker-proxy` stays
+    /// independent of whatever resolves the backend.
     #[error("backend resolver failed for site {host}: {source}")]
     BackendResolver {
         /// Site hostname the resolver was asked about.

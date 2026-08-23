@@ -518,7 +518,7 @@ pub async fn start(state: &DaemonState) -> Response {
     if let Err(e) = ensure_secret_dirs(&state.dirs) {
         return internal(e);
     }
-    if let Err(e) = orcker_php::io::atomic_write::write(&config_path, config_yml.as_bytes()) {
+    if let Err(e) = crate::secure_fs::atomic_write(&config_path, config_yml.as_bytes()) {
         return internal(format!("write tunnel config: {e}"));
     }
 

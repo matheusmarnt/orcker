@@ -3205,24 +3205,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "orcker-php"
-version = "0.0.0"
-dependencies = [
- "async-trait",
- "nix",
- "orcker-core",
- "orcker-depcheck",
- "orcker-platform",
- "orcker-supervise",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 1.0.69",
- "tokio",
- "tracing",
-]
-
-[[package]]
 name = "orcker-platform"
 version = "0.0.0"
 dependencies = [
@@ -3284,31 +3266,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "orcker-services"
-version = "0.0.0"
-dependencies = [
- "async-trait",
- "orcker-core",
- "orcker-platform",
- "orcker-supervise",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 1.0.69",
- "tokio",
-]
-
-[[package]]
-name = "orcker-supervise"
-version = "0.0.0"
-dependencies = [
- "async-trait",
- "nix",
- "thiserror 1.0.69",
- "tokio",
-]
-
-[[package]]
 name = "orcker-tls"
 version = "0.0.0"
 dependencies = [
@@ -3327,7 +3284,7 @@ name = "orcker-tunnel"
 version = "0.0.0"
 dependencies = [
  "async-trait",
- "orcker-supervise",
+ "nix",
  "tempfile",
  "thiserror 1.0.69",
  "tokio",
@@ -3366,12 +3323,9 @@ dependencies = [
  "orcker-doctor",
  "orcker-ipc",
  "orcker-mail",
- "orcker-php",
  "orcker-platform",
  "orcker-proxy",
  "orcker-release-manifest",
- "orcker-services",
- "orcker-supervise",
  "orcker-tls",
  "orcker-tunnel",
  "orcker-update",

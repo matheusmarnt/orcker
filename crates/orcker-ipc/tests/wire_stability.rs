@@ -18,13 +18,11 @@ use std::path::PathBuf;
 
 use orcker_ipc::{
     types::{PhpVersion, Site},
-    AddableServiceType, CaStatus, Channel, CloudflaredSource, CloudflaredStatus, DatabaseSummary,
-    Diagnosis, DiagnosisCode, DumpCategory, DumpCounts, DumpEvent, DumpExtStatus, ErrorCode,
+    CaStatus, Channel, CloudflaredSource, CloudflaredStatus, Diagnosis, DiagnosisCode, ErrorCode,
     FixReport, FixResult, MailAttachment, MailDetail, MailHeader, MailStatus, MailSummary,
-    NamedTunnelMeta, PhpPoolStatus, PoolRunState, PortRedirectTargets, PortStatus, ProxyEntry,
-    ProxyRuleEntry, Request, Response, ServiceAvailability, ServiceRunState, ServiceStatus,
-    Severity, SiteCounts, SiteHostname, StagedArtifact, StatusReport, ToolStatus, TunnelInfo,
-    TunnelKind, TunnelRunState, UpdateSource,
+    NamedTunnelMeta, PortRedirectTargets, PortStatus, ProxyEntry, ProxyRuleEntry, Request,
+    Response, Severity, SiteCounts, SiteHostname, StagedArtifact, StatusReport, ToolStatus,
+    TunnelInfo, TunnelKind, TunnelRunState, UpdateSource,
 };
 
 // ---------- Request ----------
@@ -223,18 +221,6 @@ fn request_unpark_byte_shape() {
 }
 
 #[test]
-fn request_set_php_byte_shape() {
-    let r = Request::SetPhp {
-        name: "foo".into(),
-        version: PhpVersion::new(8, 3),
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(s, r#"{"type":"set_php","name":"foo","version":"8.3"}"#);
-    let back: Request = serde_json::from_str(&s).unwrap();
-    assert_eq!(back, r);
-}
-
-#[test]
 fn request_set_secure_byte_shape() {
     let r = Request::SetSecure {
         name: "foo".into(),
@@ -271,206 +257,6 @@ fn request_daemon_info_byte_shape() {
     assert_eq!(s, r#"{"type":"daemon_info"}"#);
     let back: Request = serde_json::from_str(&s).unwrap();
     assert_eq!(back, Request::DaemonInfo);
-}
-
-#[test]
-fn request_install_php_byte_shape() {
-    let r = Request::InstallPhp {
-        version: PhpVersion::new(8, 5),
-        confirm_legacy: false,
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(s, r#"{"type":"install_php","version":"8.5"}"#);
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-}
-
-#[test]
-fn request_install_php_legacy_byte_shape() {
-    let r = Request::InstallPhp {
-        version: PhpVersion::new(7, 4),
-        confirm_legacy: true,
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(
-        s,
-        r#"{"type":"install_php","version":"7.4","confirm_legacy":true}"#
-    );
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-}
-
-#[test]
-fn request_install_php_old_payload_decodes_without_confirm_legacy() {
-    let back: Request = serde_json::from_str(r#"{"type":"install_php","version":"8.5"}"#).unwrap();
-    assert_eq!(
-        back,
-        Request::InstallPhp {
-            version: PhpVersion::new(8, 5),
-            confirm_legacy: false,
-        }
-    );
-}
-
-#[test]
-fn request_install_php_streamed_byte_shape() {
-    let r = Request::InstallPhpStreamed {
-        version: PhpVersion::new(8, 5),
-        confirm_legacy: false,
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(s, r#"{"type":"install_php_streamed","version":"8.5"}"#);
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-}
-
-#[test]
-fn request_install_php_streamed_legacy_byte_shape() {
-    let r = Request::InstallPhpStreamed {
-        version: PhpVersion::new(8, 1),
-        confirm_legacy: true,
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(
-        s,
-        r#"{"type":"install_php_streamed","version":"8.1","confirm_legacy":true}"#
-    );
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-}
-
-#[test]
-fn request_set_default_php_byte_shape() {
-    let r = Request::SetDefaultPhp {
-        version: PhpVersion::new(8, 4),
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(s, r#"{"type":"set_default_php","version":"8.4"}"#);
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-}
-
-#[test]
-fn request_list_php_byte_shape() {
-    let s = serde_json::to_string(&Request::ListPhp).unwrap();
-    assert_eq!(s, r#"{"type":"list_php"}"#);
-    assert_eq!(
-        serde_json::from_str::<Request>(&s).unwrap(),
-        Request::ListPhp
-    );
-}
-
-#[test]
-fn request_update_php_byte_shape() {
-    let some = Request::UpdatePhp {
-        version: Some(PhpVersion::new(8, 5)),
-    };
-    let s = serde_json::to_string(&some).unwrap();
-    assert_eq!(s, r#"{"type":"update_php","version":"8.5"}"#);
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), some);
-
-    let all = Request::UpdatePhp { version: None };
-    let s = serde_json::to_string(&all).unwrap();
-    assert_eq!(s, r#"{"type":"update_php","version":null}"#);
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), all);
-}
-
-#[test]
-fn request_check_php_updates_byte_shape() {
-    let s = serde_json::to_string(&Request::CheckPhpUpdates).unwrap();
-    assert_eq!(s, r#"{"type":"check_php_updates"}"#);
-    assert_eq!(
-        serde_json::from_str::<Request>(&s).unwrap(),
-        Request::CheckPhpUpdates
-    );
-}
-
-#[test]
-fn request_available_php_byte_shape() {
-    let s = serde_json::to_string(&Request::AvailablePhp).unwrap();
-    assert_eq!(s, r#"{"type":"available_php"}"#);
-    assert_eq!(
-        serde_json::from_str::<Request>(&s).unwrap(),
-        Request::AvailablePhp
-    );
-}
-
-#[test]
-fn request_add_php_extension_byte_shape() {
-    let r = Request::AddPhpExtension {
-        version: PhpVersion::new(8, 5),
-        path: "/a/scrypt.so".into(),
-        name: Some("scrypt".into()),
-        zend: false,
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(
-        s,
-        r#"{"type":"add_php_extension","version":"8.5","path":"/a/scrypt.so","name":"scrypt","zend":false}"#
-    );
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-
-    let none = Request::AddPhpExtension {
-        version: PhpVersion::new(8, 5),
-        path: "/a/scrypt.so".into(),
-        name: None,
-        zend: true,
-    };
-    let s = serde_json::to_string(&none).unwrap();
-    assert_eq!(
-        s,
-        r#"{"type":"add_php_extension","version":"8.5","path":"/a/scrypt.so","name":null,"zend":true}"#
-    );
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), none);
-}
-
-#[test]
-fn request_remove_php_extension_byte_shape() {
-    let r = Request::RemovePhpExtension {
-        version: PhpVersion::new(8, 5),
-        name: "scrypt".into(),
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(
-        s,
-        r#"{"type":"remove_php_extension","version":"8.5","name":"scrypt"}"#
-    );
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-}
-
-#[test]
-fn request_list_php_extensions_byte_shape() {
-    let s = serde_json::to_string(&Request::ListPhpExtensions).unwrap();
-    assert_eq!(s, r#"{"type":"list_php_extensions"}"#);
-    assert_eq!(
-        serde_json::from_str::<Request>(&s).unwrap(),
-        Request::ListPhpExtensions
-    );
-}
-
-#[test]
-fn request_restart_php_byte_shape() {
-    let r = Request::RestartPhp {
-        version: PhpVersion::new(8, 3),
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(s, r#"{"type":"restart_php","version":"8.3"}"#);
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-}
-
-#[test]
-fn request_restart_all_php_byte_shape() {
-    let s = serde_json::to_string(&Request::RestartAllPhp).unwrap();
-    assert_eq!(s, r#"{"type":"restart_all_php"}"#);
-    assert_eq!(
-        serde_json::from_str::<Request>(&s).unwrap(),
-        Request::RestartAllPhp
-    );
-}
-
-#[test]
-fn request_uninstall_php_byte_shape() {
-    let r = Request::UninstallPhp {
-        version: PhpVersion::new(8, 3),
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(s, r#"{"type":"uninstall_php","version":"8.3"}"#);
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
 }
 
 #[test]
@@ -745,256 +531,6 @@ fn response_info_byte_shape() {
 }
 
 #[test]
-fn response_php_versions_byte_shape() {
-    let r = Response::PhpVersions {
-        installed: vec![PhpVersion::new(8, 3), PhpVersion::new(8, 5)],
-        default: PhpVersion::new(8, 5),
-        updates: vec![],
-        settings: BTreeMap::new(),
-        version_settings: Box::new(BTreeMap::new()),
-        directives: Box::new(BTreeMap::new()),
-        pool: Box::new(BTreeMap::new()),
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(
-        s,
-        r#"{"type":"php_versions","installed":["8.3","8.5"],"default":"8.5"}"#
-    );
-    assert_eq!(serde_json::from_str::<Response>(&s).unwrap(), r);
-}
-
-#[test]
-fn response_php_extensions_byte_shape() {
-    let r = Response::PhpExtensions {
-        by_version: BTreeMap::from([(
-            PhpVersion::new(8, 5),
-            vec![orcker_ipc::PhpExtInfo {
-                name: "scrypt".into(),
-                path: "/a/scrypt.so".into(),
-                zend: false,
-                present: true,
-            }],
-        )]),
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(
-        s,
-        r#"{"type":"php_extensions","by_version":{"8.5":[{"name":"scrypt","path":"/a/scrypt.so","zend":false,"present":true}]}}"#
-    );
-    assert_eq!(serde_json::from_str::<Response>(&s).unwrap(), r);
-}
-
-#[test]
-fn response_php_versions_with_updates_byte_shape() {
-    let r = Response::PhpVersions {
-        installed: vec![PhpVersion::new(8, 5)],
-        default: PhpVersion::new(8, 5),
-        updates: vec![orcker_ipc::PhpUpdate {
-            version: PhpVersion::new(8, 5),
-            installed: "8.5.6".into(),
-            latest: "8.5.7".into(),
-        }],
-        settings: BTreeMap::new(),
-        version_settings: Box::new(BTreeMap::new()),
-        directives: Box::new(BTreeMap::new()),
-        pool: Box::new(BTreeMap::new()),
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(
-        s,
-        r#"{"type":"php_versions","installed":["8.5"],"default":"8.5","updates":[{"version":"8.5","installed":"8.5.6","latest":"8.5.7"}]}"#
-    );
-    assert_eq!(serde_json::from_str::<Response>(&s).unwrap(), r);
-}
-
-#[test]
-fn response_php_versions_with_settings_byte_shape() {
-    let r = Response::PhpVersions {
-        installed: vec![PhpVersion::new(8, 5)],
-        default: PhpVersion::new(8, 5),
-        updates: vec![],
-        settings: BTreeMap::from([
-            ("memory_limit".to_string(), "512M".to_string()),
-            ("display_errors".to_string(), "On".to_string()),
-        ]),
-        version_settings: Box::new(BTreeMap::new()),
-        directives: Box::new(BTreeMap::new()),
-        pool: Box::new(BTreeMap::new()),
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(
-        s,
-        r#"{"type":"php_versions","installed":["8.5"],"default":"8.5","settings":{"display_errors":"On","memory_limit":"512M"}}"#
-    );
-    assert_eq!(serde_json::from_str::<Response>(&s).unwrap(), r);
-}
-
-#[test]
-fn response_php_versions_with_version_settings_and_directives_byte_shape() {
-    let r = Response::PhpVersions {
-        installed: vec![PhpVersion::new(8, 3)],
-        default: PhpVersion::new(8, 3),
-        updates: vec![],
-        settings: BTreeMap::new(),
-        version_settings: Box::new(BTreeMap::from([(
-            PhpVersion::new(8, 3),
-            BTreeMap::from([("memory_limit".to_string(), "1G".to_string())]),
-        )])),
-        directives: Box::new(BTreeMap::from([(
-            PhpVersion::new(8, 3),
-            BTreeMap::from([("xdebug.mode".to_string(), "debug".to_string())]),
-        )])),
-        pool: Box::new(BTreeMap::new()),
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(
-        s,
-        r#"{"type":"php_versions","installed":["8.3"],"default":"8.3","version_settings":{"8.3":{"memory_limit":"1G"}},"directives":{"8.3":{"xdebug.mode":"debug"}}}"#
-    );
-    assert_eq!(serde_json::from_str::<Response>(&s).unwrap(), r);
-
-    let legacy = r#"{"type":"php_versions","installed":["8.3"],"default":"8.3"}"#;
-    let decoded: Response = serde_json::from_str(legacy).unwrap();
-    assert!(matches!(
-        decoded,
-        Response::PhpVersions {
-            ref version_settings,
-            ref directives,
-            ref pool,
-            ..
-        } if version_settings.is_empty() && directives.is_empty() && pool.is_empty()
-    ));
-}
-
-#[test]
-fn response_php_versions_with_pool_byte_shape() {
-    let r = Response::PhpVersions {
-        installed: vec![PhpVersion::new(8, 4)],
-        default: PhpVersion::new(8, 4),
-        updates: vec![],
-        settings: BTreeMap::new(),
-        version_settings: Box::new(BTreeMap::new()),
-        directives: Box::new(BTreeMap::new()),
-        pool: Box::new(BTreeMap::from([(
-            PhpVersion::new(8, 4),
-            BTreeMap::from([("max_children".to_string(), "32".to_string())]),
-        )])),
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(
-        s,
-        r#"{"type":"php_versions","installed":["8.4"],"default":"8.4","pool":{"8.4":{"max_children":"32"}}}"#
-    );
-    assert_eq!(serde_json::from_str::<Response>(&s).unwrap(), r);
-}
-
-#[test]
-fn request_set_php_pool_settings_byte_shape() {
-    let r = Request::SetPhpPoolSettings {
-        version: PhpVersion::new(8, 4),
-        settings: BTreeMap::from([("max_children".to_string(), "32".to_string())]),
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(
-        s,
-        r#"{"type":"set_php_pool_settings","version":"8.4","settings":{"max_children":"32"}}"#
-    );
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-
-    let reset = Request::SetPhpPoolSettings {
-        version: PhpVersion::new(8, 4),
-        settings: BTreeMap::from([("max_children".to_string(), String::new())]),
-    };
-    let s = serde_json::to_string(&reset).unwrap();
-    assert_eq!(
-        s,
-        r#"{"type":"set_php_pool_settings","version":"8.4","settings":{"max_children":""}}"#
-    );
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), reset);
-}
-
-#[test]
-fn request_set_php_settings_byte_shape() {
-    let empty = Request::SetPhpSettings {
-        settings: BTreeMap::new(),
-    };
-    let s = serde_json::to_string(&empty).unwrap();
-    assert_eq!(s, r#"{"type":"set_php_settings","settings":{}}"#);
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), empty);
-
-    let populated = Request::SetPhpSettings {
-        settings: BTreeMap::from([
-            ("memory_limit".to_string(), "512M".to_string()),
-            ("max_execution_time".to_string(), "30".to_string()),
-        ]),
-    };
-    let s = serde_json::to_string(&populated).unwrap();
-    assert_eq!(
-        s,
-        r#"{"type":"set_php_settings","settings":{"max_execution_time":"30","memory_limit":"512M"}}"#
-    );
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), populated);
-}
-
-#[test]
-fn request_set_php_version_settings_byte_shape() {
-    let r = Request::SetPhpVersionSettings {
-        version: PhpVersion::new(8, 3),
-        settings: BTreeMap::from([("memory_limit".to_string(), "1G".to_string())]),
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(
-        s,
-        r#"{"type":"set_php_version_settings","version":"8.3","settings":{"memory_limit":"1G"}}"#
-    );
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-}
-
-#[test]
-fn request_set_php_directives_byte_shape() {
-    let r = Request::SetPhpDirectives {
-        version: PhpVersion::new(8, 3),
-        directives: BTreeMap::from([("xdebug.mode".to_string(), "debug".to_string())]),
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(
-        s,
-        r#"{"type":"set_php_directives","version":"8.3","directives":{"xdebug.mode":"debug"}}"#
-    );
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-}
-
-#[test]
-fn response_available_php_byte_shape() {
-    let r = Response::AvailablePhp {
-        available: vec![PhpVersion::new(8, 4), PhpVersion::new(8, 5)],
-        installed: vec![PhpVersion::new(8, 5)],
-        legacy: vec![],
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(
-        s,
-        r#"{"type":"available_php","available":["8.4","8.5"],"installed":["8.5"]}"#
-    );
-    assert_eq!(serde_json::from_str::<Response>(&s).unwrap(), r);
-}
-
-#[test]
-fn response_available_php_with_legacy_byte_shape() {
-    let r = Response::AvailablePhp {
-        available: vec![PhpVersion::new(8, 4), PhpVersion::new(8, 5)],
-        installed: vec![PhpVersion::new(8, 5)],
-        legacy: vec![PhpVersion::new(7, 4), PhpVersion::new(8, 1)],
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(
-        s,
-        r#"{"type":"available_php","available":["8.4","8.5"],"installed":["8.5"],"legacy":["7.4","8.1"]}"#
-    );
-    assert_eq!(serde_json::from_str::<Response>(&s).unwrap(), r);
-}
-
-#[test]
 fn response_error_each_code_byte_shape() {
     for (code, text) in [
         (ErrorCode::NotFound, "not_found"),
@@ -1040,23 +576,12 @@ fn response_status_byte_shape() {
                 path: PathBuf::from("/x/ca.cert.pem"),
                 fingerprint: "ab".repeat(32),
                 trusted_system: Some(false),
-                php_trusts_ca: None,
                 browser_trust: None,
             },
             resolver_installed: Some(true),
             port_redirect: None,
             foreign_web_listener: None,
             resolver_backup: None,
-            default_php: PhpVersion::new(8, 5),
-            php: vec![PhpPoolStatus {
-                version: PhpVersion::new(8, 5),
-                installed_patch: Some("8.5.6".into()),
-                state: PoolRunState::Running,
-                pid: Some(99),
-                listen: Some("/run/fpm.sock".into()),
-                rss_bytes: Some(1024),
-                update_available: None,
-            }],
             sites: SiteCounts {
                 parked: 1,
                 linked: 2,
@@ -1064,7 +589,6 @@ fn response_status_byte_shape() {
             },
             load_avg: Some([100, 50, 25]),
             daemon_version: "2.0.1".into(),
-            services: vec![],
             mail: None,
             web_unbound: None,
             dns_unbound: None,
@@ -1082,7 +606,7 @@ fn response_status_byte_shape() {
     };
     let s = serde_json::to_string(&r).unwrap();
     let expected = format!(
-        r#"{{"type":"status","report":{{"daemon_pid":4242,"uptime_secs":7,"daemon_rss_bytes":2048,"tld":"test","http":{{"requested":80,"bound":8080,"fell_back":true}},"https":{{"requested":443,"bound":8443,"fell_back":true}},"dns_addr":"127.0.0.1:1053","ca":{{"path":"/x/ca.cert.pem","fingerprint":"{}","trusted_system":false}},"resolver_installed":true,"default_php":"8.5","php":[{{"version":"8.5","installed_patch":"8.5.6","state":"running","pid":99,"listen":"/run/fpm.sock","rss_bytes":1024,"update_available":null}}],"sites":{{"parked":1,"linked":2,"secured":1}},"load_avg":[100,50,25],"daemon_version":"2.0.1","symlink_protection":true,"mcp_enabled":false,"lan_enabled":false}}}}"#,
+        r#"{{"type":"status","report":{{"daemon_pid":4242,"uptime_secs":7,"daemon_rss_bytes":2048,"tld":"test","http":{{"requested":80,"bound":8080,"fell_back":true}},"https":{{"requested":443,"bound":8443,"fell_back":true}},"dns_addr":"127.0.0.1:1053","ca":{{"path":"/x/ca.cert.pem","fingerprint":"{}","trusted_system":false}},"resolver_installed":true,"sites":{{"parked":1,"linked":2,"secured":1}},"load_avg":[100,50,25],"daemon_version":"2.0.1","symlink_protection":true,"mcp_enabled":false,"lan_enabled":false}}}}"#,
         "ab".repeat(32)
     );
     assert_eq!(s, expected);
@@ -1188,19 +712,15 @@ fn sample_status_report() -> StatusReport {
             path: PathBuf::from("/x/ca.cert.pem"),
             fingerprint: "ab".repeat(32),
             trusted_system: Some(true),
-            php_trusts_ca: None,
             browser_trust: None,
         },
         resolver_installed: Some(true),
         port_redirect: None,
         foreign_web_listener: None,
         resolver_backup: None,
-        default_php: PhpVersion::new(8, 5),
-        php: vec![],
         sites: SiteCounts::default(),
         load_avg: None,
         daemon_version: "2.0.1".into(),
-        services: vec![],
         mail: None,
         web_unbound: None,
         dns_unbound: None,
@@ -1215,40 +735,6 @@ fn sample_status_report() -> StatusReport {
         port_redirect_targets: None,
         lan_redirect_targets: None,
     }
-}
-
-#[test]
-fn status_services_appear_only_when_non_empty() {
-    let mut report = sample_status_report();
-    let s = serde_json::to_string(&report).unwrap();
-    assert!(
-        !s.contains("services"),
-        "empty services must be omitted: {s}"
-    );
-
-    report.services = vec![ServiceStatus {
-        service: "redis".into(),
-        display_name: "Redis (Valkey)".into(),
-        installed_versions: vec!["8".into()],
-        selected_version: Some("8".into()),
-        state: ServiceRunState::Running,
-        pid: Some(42),
-        listen: Some("127.0.0.1:6379".into()),
-        port: 6379,
-        enabled: true,
-        supports_databases: false,
-        type_id: String::new(),
-        site: None,
-        error: None,
-        supports_overrides: false,
-    }];
-    let s = serde_json::to_string(&report).unwrap();
-    assert!(
-        s.contains(r#""daemon_version":"2.0.1","services":[{"service":"redis""#),
-        "{s}"
-    );
-    let back: StatusReport = serde_json::from_str(&s).unwrap();
-    assert_eq!(back, report);
 }
 
 #[test]
@@ -1276,9 +762,9 @@ fn response_doctor_fix_byte_shape() {
     let r = Response::DoctorFix {
         report: FixReport {
             performed: vec![FixResult {
-                code: DiagnosisCode::FpmPoolFailed,
+                code: DiagnosisCode::ResolverNotInstalled,
                 ok: true,
-                message: "restarted 8.5".into(),
+                message: "installed the resolver".into(),
             }],
             manual: vec![Diagnosis {
                 code: DiagnosisCode::CaNotTrusted,
@@ -1292,21 +778,10 @@ fn response_doctor_fix_byte_shape() {
     let s = serde_json::to_string(&r).unwrap();
     assert_eq!(
         s,
-        r#"{"type":"doctor_fix","report":{"performed":[{"code":"fpm_pool_failed","ok":true,"message":"restarted 8.5"}],"manual":[{"code":"ca_not_trusted","severity":"warn","title":"t","detail":"d","remedy":"sudo orcker elevate trust"}]}}"#
+        r#"{"type":"doctor_fix","report":{"performed":[{"code":"resolver_not_installed","ok":true,"message":"installed the resolver"}],"manual":[{"code":"ca_not_trusted","severity":"warn","title":"t","detail":"d","remedy":"sudo orcker elevate trust"}]}}"#
     );
     let back: Response = serde_json::from_str(&s).unwrap();
     assert_eq!(back, r);
-}
-
-#[test]
-fn pool_run_state_each_variant_byte_shape() {
-    for (st, expected) in [
-        (PoolRunState::Running, r#""running""#),
-        (PoolRunState::Stopped, r#""stopped""#),
-        (PoolRunState::Failed, r#""failed""#),
-    ] {
-        assert_eq!(serde_json::to_string(&st).unwrap(), expected);
-    }
 }
 
 #[test]
@@ -1336,16 +811,6 @@ fn diagnosis_code_each_variant_byte_shape() {
             DiagnosisCode::ResolverNotInstalled,
             r#""resolver_not_installed""#,
         ),
-        (DiagnosisCode::NoPhpInstalled, r#""no_php_installed""#),
-        (
-            DiagnosisCode::DefaultPhpNotInstalled,
-            r#""default_php_not_installed""#,
-        ),
-        (DiagnosisCode::FpmPoolFailed, r#""fpm_pool_failed""#),
-        (
-            DiagnosisCode::PhpUpdateAvailable,
-            r#""php_update_available""#,
-        ),
         (DiagnosisCode::NoSites, r#""no_sites""#),
         (
             DiagnosisCode::ResolverBackupSaved,
@@ -1353,7 +818,6 @@ fn diagnosis_code_each_variant_byte_shape() {
         ),
         (DiagnosisCode::ServiceFailed, r#""service_failed""#),
         (DiagnosisCode::BinDirNotOnPath, r#""bin_dir_not_on_path""#),
-        (DiagnosisCode::PhpCaNotTrusted, r#""php_ca_not_trusted""#),
         (
             DiagnosisCode::SymlinkProtectionDisabled,
             r#""symlink_protection_disabled""#,
@@ -1361,10 +825,6 @@ fn diagnosis_code_each_variant_byte_shape() {
         (DiagnosisCode::DomainShadowed, r#""domain_shadowed""#),
         (DiagnosisCode::PortRedirectStale, r#""port_redirect_stale""#),
         (DiagnosisCode::LanRedirectStale, r#""lan_redirect_stale""#),
-        (
-            DiagnosisCode::ServiceOverrideInvalid,
-            r#""service_override_invalid""#,
-        ),
         (DiagnosisCode::AllGood, r#""all_good""#),
     ];
     for (code, expected) in cases {
@@ -1403,61 +863,6 @@ fn error_code_each_variant_byte_shape() {
 }
 
 // ---------- Services (request + response) ----------
-
-#[test]
-fn request_list_services_byte_shape() {
-    let s = serde_json::to_string(&Request::ListServices).unwrap();
-    assert_eq!(s, r#"{"type":"list_services"}"#);
-    assert_eq!(
-        serde_json::from_str::<Request>(&s).unwrap(),
-        Request::ListServices
-    );
-}
-
-#[test]
-fn request_available_services_byte_shape() {
-    let s = serde_json::to_string(&Request::AvailableServices).unwrap();
-    assert_eq!(s, r#"{"type":"available_services"}"#);
-    assert_eq!(
-        serde_json::from_str::<Request>(&s).unwrap(),
-        Request::AvailableServices
-    );
-}
-
-#[test]
-fn request_available_wordpress_versions_byte_shape() {
-    let s = serde_json::to_string(&Request::AvailableWordpressVersions).unwrap();
-    assert_eq!(s, r#"{"type":"available_wordpress_versions"}"#);
-    assert_eq!(
-        serde_json::from_str::<Request>(&s).unwrap(),
-        Request::AvailableWordpressVersions
-    );
-}
-
-#[test]
-fn request_mint_wordpress_login_token_byte_shape() {
-    let r = Request::MintWordpressLoginToken {
-        site: "blog".into(),
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(s, r#"{"type":"mint_wordpress_login_token","site":"blog"}"#);
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-}
-
-#[test]
-fn request_set_wordpress_auto_login_byte_shape() {
-    let r = Request::SetWordpressAutoLogin {
-        name: "blog".into(),
-        enabled: true,
-        user: Some("admin".into()),
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(
-        s,
-        r#"{"type":"set_wordpress_auto_login","name":"blog","enabled":true,"user":"admin"}"#
-    );
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-}
 
 #[test]
 fn request_set_front_controller_byte_shape() {
@@ -1527,716 +932,13 @@ fn response_routes_byte_shape() {
     assert_eq!(serde_json::from_str::<Response>(&s).unwrap(), r);
 }
 
-#[test]
-fn request_wordpress_admin_users_byte_shape() {
-    let r = Request::WordpressAdminUsers {
-        site: "blog".into(),
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(s, r#"{"type":"wordpress_admin_users","site":"blog"}"#);
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-}
-
-#[test]
-fn request_install_service_byte_shape() {
-    let r = Request::InstallService {
-        service: "redis".into(),
-        version: "8".into(),
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(
-        s,
-        r#"{"type":"install_service","service":"redis","version":"8"}"#
-    );
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-}
-
-#[test]
-fn request_uninstall_service_byte_shape() {
-    let r = Request::UninstallService {
-        service: "redis".into(),
-        version: "8".into(),
-        purge: true,
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(
-        s,
-        r#"{"type":"uninstall_service","service":"redis","version":"8","purge":true}"#
-    );
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-}
-
-#[test]
-fn request_start_stop_restart_service_byte_shape() {
-    let start = Request::StartService {
-        service: "redis".into(),
-    };
-    assert_eq!(
-        serde_json::to_string(&start).unwrap(),
-        r#"{"type":"start_service","service":"redis"}"#
-    );
-    let stop = Request::StopService {
-        service: "redis".into(),
-    };
-    assert_eq!(
-        serde_json::to_string(&stop).unwrap(),
-        r#"{"type":"stop_service","service":"redis"}"#
-    );
-    let restart = Request::RestartService {
-        service: "redis".into(),
-    };
-    assert_eq!(
-        serde_json::to_string(&restart).unwrap(),
-        r#"{"type":"restart_service","service":"redis"}"#
-    );
-    for r in [start, stop, restart] {
-        let s = serde_json::to_string(&r).unwrap();
-        assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-    }
-}
-
-#[test]
-fn request_set_service_port_byte_shape() {
-    let r = Request::SetServicePort {
-        service: "redis".into(),
-        port: 6380,
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(
-        s,
-        r#"{"type":"set_service_port","service":"redis","port":6380}"#
-    );
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-}
-
-#[test]
-fn request_set_service_overrides_byte_shape() {
-    let r = Request::SetServiceOverrides {
-        service: "mysql".into(),
-        overrides: BTreeMap::from([
-            ("max_connections".to_string(), "500".to_string()),
-            ("sql_mode".to_string(), String::new()),
-        ]),
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(
-        s,
-        r#"{"type":"set_service_overrides","service":"mysql","overrides":{"max_connections":"500","sql_mode":""}}"#
-    );
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-}
-
-#[test]
-fn request_service_overrides_byte_shape() {
-    let r = Request::ServiceOverrides {
-        service: "mysql".into(),
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(s, r#"{"type":"service_overrides","service":"mysql"}"#);
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-}
-
-#[test]
-fn response_service_overrides_byte_shape() {
-    let r = Response::ServiceOverrides {
-        overrides: BTreeMap::from([("max_connections".to_string(), "500".to_string())]),
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(
-        s,
-        r#"{"type":"service_overrides","overrides":{"max_connections":"500"}}"#
-    );
-    assert_eq!(serde_json::from_str::<Response>(&s).unwrap(), r);
-}
-
-#[test]
-fn response_service_overrides_empty_byte_shape() {
-    let r = Response::ServiceOverrides {
-        overrides: BTreeMap::new(),
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(s, r#"{"type":"service_overrides","overrides":{}}"#);
-    assert_eq!(serde_json::from_str::<Response>(&s).unwrap(), r);
-}
-
-#[test]
-fn request_add_service_byte_shape() {
-    let r = Request::AddService {
-        type_id: "reverb".into(),
-        site: Some("blog".into()),
-        port: Some(8081),
-        version: None,
-        autostart: Some(false),
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(
-        s,
-        r#"{"type":"add_service","type_id":"reverb","site":"blog","port":8081,"version":null,"autostart":false}"#
-    );
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-}
-
-#[test]
-fn request_remove_service_byte_shape() {
-    let r = Request::RemoveService {
-        service: "reverb:blog".into(),
-        purge: true,
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(
-        s,
-        r#"{"type":"remove_service","service":"reverb:blog","purge":true}"#
-    );
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-}
-
-#[test]
-fn request_set_service_autostart_byte_shape() {
-    let r = Request::SetServiceAutostart {
-        service: "redis".into(),
-        enabled: false,
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(
-        s,
-        r#"{"type":"set_service_autostart","service":"redis","enabled":false}"#
-    );
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-}
-
-#[test]
-fn request_set_service_site_byte_shape() {
-    let r = Request::SetServiceSite {
-        service: "reverb:blog".into(),
-        site: "shop".into(),
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(
-        s,
-        r#"{"type":"set_service_site","service":"reverb:blog","site":"shop"}"#
-    );
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-}
-
-#[test]
-fn request_addable_service_types_byte_shape() {
-    let r = Request::AddableServiceTypes;
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(s, r#"{"type":"addable_service_types"}"#);
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-}
-
-#[test]
-fn response_addable_services_byte_shape() {
-    let r = Response::AddableServices {
-        types: vec![AddableServiceType {
-            type_id: "reverb".into(),
-            display_name: "Reverb".into(),
-            multiplicity: "per_site".into(),
-            requires_site: true,
-            requires_version: false,
-            already_installed: false,
-            available_versions: vec![],
-            default_port: 8080,
-            suggested_port: 8081,
-        }],
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(
-        s,
-        r#"{"type":"addable_services","types":[{"type_id":"reverb","display_name":"Reverb","multiplicity":"per_site","requires_site":true,"requires_version":false,"already_installed":false,"available_versions":[],"default_port":8080,"suggested_port":8081}]}"#
-    );
-    assert_eq!(serde_json::from_str::<Response>(&s).unwrap(), r);
-}
-
-#[test]
-fn response_service_instance_id_byte_shape() {
-    let r = Response::ServiceInstanceId {
-        id: "reverb:shop".into(),
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(s, r#"{"type":"service_instance_id","id":"reverb:shop"}"#);
-    assert_eq!(serde_json::from_str::<Response>(&s).unwrap(), r);
-}
-
 /// A per-site instance status with the additive fields populated: `type_id`,
 /// `site`, and `error` appear after `supports_databases`, in that order.
-#[test]
-fn response_services_per_site_instance_byte_shape() {
-    let r = Response::Services {
-        services: vec![ServiceStatus {
-            service: "reverb:blog".into(),
-            display_name: "Reverb".into(),
-            installed_versions: vec![],
-            selected_version: None,
-            state: ServiceRunState::Failed,
-            pid: None,
-            listen: None,
-            port: 8081,
-            enabled: false,
-            supports_databases: false,
-            type_id: "reverb".into(),
-            site: Some("blog".into()),
-            error: Some("artisan reverb:start exited with code 1".into()),
-            supports_overrides: false,
-        }],
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(
-        s,
-        r#"{"type":"services","services":[{"service":"reverb:blog","display_name":"Reverb","installed_versions":[],"selected_version":null,"state":"failed","pid":null,"listen":null,"port":8081,"enabled":false,"supports_databases":false,"type_id":"reverb","site":"blog","error":"artisan reverb:start exited with code 1"}]}"#
-    );
-    assert_eq!(serde_json::from_str::<Response>(&s).unwrap(), r);
-}
-
-#[test]
-fn request_service_logs_byte_shape() {
-    let r = Request::ServiceLogs {
-        service: "redis".into(),
-        lines: 100,
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(
-        s,
-        r#"{"type":"service_logs","service":"redis","lines":100}"#
-    );
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-}
-
-#[test]
-fn request_create_database_byte_shape() {
-    let r = Request::CreateDatabase {
-        service: "mysql".into(),
-        name: "app".into(),
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(
-        s,
-        r#"{"type":"create_database","service":"mysql","name":"app"}"#
-    );
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-}
-
-#[test]
-fn request_change_service_version_byte_shape() {
-    let r = Request::ChangeServiceVersion {
-        service: "redis".into(),
-        version: "9.1.0".into(),
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(
-        s,
-        r#"{"type":"change_service_version","service":"redis","version":"9.1.0"}"#
-    );
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-}
-
-#[test]
-fn request_list_databases_byte_shape() {
-    let r = Request::ListDatabases {
-        service: "mysql".into(),
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(s, r#"{"type":"list_databases","service":"mysql"}"#);
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-}
-
-#[test]
-fn request_drop_database_byte_shape() {
-    let r = Request::DropDatabase {
-        service: "mysql".into(),
-        name: "app".into(),
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(
-        s,
-        r#"{"type":"drop_database","service":"mysql","name":"app"}"#
-    );
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-}
-
-#[test]
-fn request_backup_database_byte_shape() {
-    let r = Request::BackupDatabase {
-        service: "mysql".into(),
-        name: "app".into(),
-        path: PathBuf::from("/srv/app.sql"),
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(
-        s,
-        r#"{"type":"backup_database","service":"mysql","name":"app","path":"/srv/app.sql"}"#
-    );
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-}
-
-#[test]
-fn request_restore_database_byte_shape() {
-    let r = Request::RestoreDatabase {
-        service: "mysql".into(),
-        name: "app".into(),
-        path: PathBuf::from("/srv/app.sql"),
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(
-        s,
-        r#"{"type":"restore_database","service":"mysql","name":"app","path":"/srv/app.sql"}"#
-    );
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-}
-
-#[test]
-fn response_databases_byte_shape() {
-    let r = Response::Databases {
-        databases: vec![
-            DatabaseSummary { name: "app".into() },
-            DatabaseSummary {
-                name: "blog".into(),
-            },
-        ],
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(
-        s,
-        r#"{"type":"databases","databases":[{"name":"app"},{"name":"blog"}]}"#
-    );
-    assert_eq!(serde_json::from_str::<Response>(&s).unwrap(), r);
-}
-
-#[test]
-fn response_services_byte_shape() {
-    let r = Response::Services {
-        services: vec![ServiceStatus {
-            service: "redis".into(),
-            display_name: "Redis (Valkey)".into(),
-            installed_versions: vec!["8".into()],
-            selected_version: Some("8".into()),
-            state: ServiceRunState::Running,
-            pid: Some(42),
-            listen: Some("127.0.0.1:6379".into()),
-            port: 6379,
-            enabled: true,
-            supports_databases: false,
-            type_id: String::new(),
-            site: None,
-            error: None,
-            supports_overrides: false,
-        }],
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    let expected = r#"{"type":"services","services":[{"service":"redis","display_name":"Redis (Valkey)","installed_versions":["8"],"selected_version":"8","state":"running","pid":42,"listen":"127.0.0.1:6379","port":6379,"enabled":true,"supports_databases":false}]}"#;
-    assert_eq!(s, expected);
-    assert_eq!(serde_json::from_str::<Response>(&s).unwrap(), r);
-}
-
 /// `supports_overrides` is additive: omitted from the wire when `false` (the
 /// shape older clients already parse) and emitted last when `true`.
-#[test]
-fn response_services_supports_overrides_byte_shape() {
-    let r = Response::Services {
-        services: vec![ServiceStatus {
-            service: "mysql".into(),
-            display_name: "MySQL".into(),
-            installed_versions: vec!["9.7".into()],
-            selected_version: Some("9.7".into()),
-            state: ServiceRunState::Running,
-            pid: Some(42),
-            listen: Some("127.0.0.1:3306".into()),
-            port: 3306,
-            enabled: true,
-            supports_databases: true,
-            type_id: "mysql".into(),
-            site: None,
-            error: None,
-            supports_overrides: true,
-        }],
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    let expected = r#"{"type":"services","services":[{"service":"mysql","display_name":"MySQL","installed_versions":["9.7"],"selected_version":"9.7","state":"running","pid":42,"listen":"127.0.0.1:3306","port":3306,"enabled":true,"supports_databases":true,"type_id":"mysql","supports_overrides":true}]}"#;
-    assert_eq!(s, expected);
-    assert_eq!(serde_json::from_str::<Response>(&s).unwrap(), r);
-}
-
 /// An older daemon's payload, which has no `supports_overrides` key at all,
 /// still decodes and reads as "no overrides".
-#[test]
-fn service_status_without_supports_overrides_decodes_as_false() {
-    let s = r#"{"type":"services","services":[{"service":"redis","display_name":"Redis (Valkey)","installed_versions":["8"],"selected_version":"8","state":"running","pid":42,"listen":"127.0.0.1:6379","port":6379,"enabled":true,"supports_databases":false}]}"#;
-    match serde_json::from_str::<Response>(s).unwrap() {
-        Response::Services { services } => assert!(!services[0].supports_overrides),
-        other => panic!("expected Response::Services, got {other:?}"),
-    }
-}
-
-#[test]
-fn response_services_empty_byte_shape() {
-    let r = Response::Services { services: vec![] };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(s, r#"{"type":"services","services":[]}"#);
-    assert_eq!(serde_json::from_str::<Response>(&s).unwrap(), r);
-}
-
-#[test]
-fn response_available_services_byte_shape() {
-    let r = Response::AvailableServices {
-        services: vec![ServiceAvailability {
-            service: "redis".into(),
-            available: vec!["7".into(), "8".into()],
-            installed: vec!["8".into()],
-        }],
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    let expected = r#"{"type":"available_services","services":[{"service":"redis","available":["7","8"],"installed":["8"]}]}"#;
-    assert_eq!(s, expected);
-    assert_eq!(serde_json::from_str::<Response>(&s).unwrap(), r);
-}
-
-#[test]
-fn response_wordpress_versions_byte_shape() {
-    use orcker_ipc::WordPressVersionInfo;
-    let r = Response::WordpressVersions {
-        versions: vec![WordPressVersionInfo {
-            branch: "6.7".into(),
-            latest: "6.7.5".into(),
-            min_php: PhpVersion::new(7, 3),
-            max_php: PhpVersion::new(8, 4),
-        }],
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    let expected = r#"{"type":"wordpress_versions","versions":[{"branch":"6.7","latest":"6.7.5","min_php":"7.3","max_php":"8.4"}]}"#;
-    assert_eq!(s, expected);
-    assert_eq!(serde_json::from_str::<Response>(&s).unwrap(), r);
-}
-
-#[test]
-fn response_wordpress_versions_empty_byte_shape() {
-    let r = Response::WordpressVersions { versions: vec![] };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(s, r#"{"type":"wordpress_versions","versions":[]}"#);
-    assert_eq!(serde_json::from_str::<Response>(&s).unwrap(), r);
-}
-
-#[test]
-fn response_wordpress_login_token_byte_shape() {
-    let r = Response::WordpressLoginToken {
-        token: "deadbeef".into(),
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(s, r#"{"type":"wordpress_login_token","token":"deadbeef"}"#);
-    assert_eq!(serde_json::from_str::<Response>(&s).unwrap(), r);
-}
-
-#[test]
-fn response_wordpress_admin_users_byte_shape() {
-    let r = Response::WordpressAdminUsers {
-        users: vec![orcker_ipc::WordPressAdminUser {
-            login: "admin".into(),
-            display_name: "Admin".into(),
-        }],
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    let expected =
-        r#"{"type":"wordpress_admin_users","users":[{"login":"admin","display_name":"Admin"}]}"#;
-    assert_eq!(s, expected);
-    assert_eq!(serde_json::from_str::<Response>(&s).unwrap(), r);
-}
-
-#[test]
-fn response_wordpress_admin_users_empty_byte_shape() {
-    let r = Response::WordpressAdminUsers { users: vec![] };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(s, r#"{"type":"wordpress_admin_users","users":[]}"#);
-    assert_eq!(serde_json::from_str::<Response>(&s).unwrap(), r);
-}
-
-#[test]
-fn response_service_logs_byte_shape() {
-    let r = Response::ServiceLogs {
-        lines: vec!["starting".into(), "ready".into()],
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(s, r#"{"type":"service_logs","lines":["starting","ready"]}"#);
-    assert_eq!(serde_json::from_str::<Response>(&s).unwrap(), r);
-}
-
-#[test]
-fn service_run_state_each_variant_byte_shape() {
-    for (st, expected) in [
-        (ServiceRunState::Running, r#""running""#),
-        (ServiceRunState::Stopped, r#""stopped""#),
-        (ServiceRunState::Failed, r#""failed""#),
-    ] {
-        assert_eq!(serde_json::to_string(&st).unwrap(), expected);
-    }
-}
-
 // ---------- Dumps ----------
-
-#[test]
-fn request_list_dumps_byte_shape() {
-    let r = Request::ListDumps { since_id: 0 };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(s, r#"{"type":"list_dumps","since_id":0}"#);
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-}
-
-#[test]
-fn request_clear_dumps_byte_shape() {
-    let s = serde_json::to_string(&Request::ClearDumps).unwrap();
-    assert_eq!(s, r#"{"type":"clear_dumps"}"#);
-    assert_eq!(
-        serde_json::from_str::<Request>(&s).unwrap(),
-        Request::ClearDumps
-    );
-}
-
-#[test]
-fn request_delete_dump_byte_shape() {
-    let r = Request::DeleteDump { id: 7 };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(s, r#"{"type":"delete_dump","id":7}"#);
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-}
-
-#[test]
-fn request_set_dumps_enabled_byte_shape() {
-    let r = Request::SetDumpsEnabled { enabled: true };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(s, r#"{"type":"set_dumps_enabled","enabled":true}"#);
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-}
-
-#[test]
-fn request_set_dumps_port_byte_shape() {
-    let r = Request::SetDumpsPort { port: 2304 };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(s, r#"{"type":"set_dumps_port","port":2304}"#);
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-}
-
-#[test]
-fn request_set_dump_feature_byte_shape() {
-    let r = Request::SetDumpFeature {
-        feature: "queries".into(),
-        enabled: false,
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(
-        s,
-        r#"{"type":"set_dump_feature","feature":"queries","enabled":false}"#
-    );
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-}
-
-#[test]
-fn request_set_dumps_persist_byte_shape() {
-    let r = Request::SetDumpsPersist { persist: true };
-    let s = serde_json::to_string(&r).unwrap();
-    assert_eq!(s, r#"{"type":"set_dumps_persist","persist":true}"#);
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-}
-
-#[test]
-fn request_dumps_status_byte_shape() {
-    let s = serde_json::to_string(&Request::DumpsStatus).unwrap();
-    assert_eq!(s, r#"{"type":"dumps_status"}"#);
-    assert_eq!(
-        serde_json::from_str::<Request>(&s).unwrap(),
-        Request::DumpsStatus
-    );
-}
-
-#[test]
-fn dump_category_each_variant_byte_shape() {
-    for (c, expected) in [
-        (DumpCategory::Dump, r#""dump""#),
-        (DumpCategory::Query, r#""query""#),
-        (DumpCategory::Job, r#""job""#),
-        (DumpCategory::View, r#""view""#),
-        (DumpCategory::Request, r#""request""#),
-        (DumpCategory::Log, r#""log""#),
-        (DumpCategory::Cache, r#""cache""#),
-        (DumpCategory::Http, r#""http""#),
-    ] {
-        assert_eq!(serde_json::to_string(&c).unwrap(), expected);
-    }
-}
-
-#[test]
-fn dump_counts_byte_shape() {
-    let c = DumpCounts::default();
-    let s = serde_json::to_string(&c).unwrap();
-    assert_eq!(
-        s,
-        r#"{"dumps":0,"queries":0,"jobs":0,"views":0,"requests":0,"logs":0,"cache":0,"http":0}"#
-    );
-    assert_eq!(serde_json::from_str::<DumpCounts>(&s).unwrap(), c);
-}
-
-#[test]
-fn dump_event_byte_shape() {
-    let e = DumpEvent {
-        id: 1,
-        category: DumpCategory::Query,
-        ts_ms: 1_718_360_452_123,
-        site: "blog.test".into(),
-        request_id: "abc".into(),
-        payload: serde_json::json!({ "sql": "select 1" }),
-    };
-    let s = serde_json::to_string(&e).unwrap();
-    let expected = r#"{"id":1,"category":"query","ts_ms":1718360452123,"site":"blog.test","request_id":"abc","payload":{"sql":"select 1"}}"#;
-    assert_eq!(s, expected);
-    assert_eq!(serde_json::from_str::<DumpEvent>(&s).unwrap(), e);
-}
-
-#[test]
-fn dump_ext_status_byte_shape() {
-    let x = DumpExtStatus {
-        version: PhpVersion::new(8, 3),
-        present: true,
-        legacy: false,
-    };
-    let s = serde_json::to_string(&x).unwrap();
-    assert_eq!(s, r#"{"version":"8.3","present":true}"#);
-    assert_eq!(serde_json::from_str::<DumpExtStatus>(&s).unwrap(), x);
-}
-
-#[test]
-fn dump_ext_status_legacy_byte_shape() {
-    let x = DumpExtStatus {
-        version: PhpVersion::new(7, 4),
-        present: false,
-        legacy: true,
-    };
-    let s = serde_json::to_string(&x).unwrap();
-    assert_eq!(s, r#"{"version":"7.4","present":false,"legacy":true}"#);
-    assert_eq!(serde_json::from_str::<DumpExtStatus>(&s).unwrap(), x);
-}
-
-#[test]
-fn response_dumps_byte_shape() {
-    let r = Response::Dumps {
-        events: vec![DumpEvent {
-            id: 1,
-            category: DumpCategory::Dump,
-            ts_ms: 1_718_360_452_123,
-            site: "blog.test".into(),
-            request_id: "abc".into(),
-            payload: serde_json::json!({ "value_text": "hi" }),
-        }],
-        removed_ids: vec![3],
-        counts: DumpCounts {
-            dumps: 1,
-            ..DumpCounts::default()
-        },
-        latest_id: 1,
-        min_live_id: 1,
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    let expected = r#"{"type":"dumps","events":[{"id":1,"category":"dump","ts_ms":1718360452123,"site":"blog.test","request_id":"abc","payload":{"value_text":"hi"}}],"removed_ids":[3],"counts":{"dumps":1,"queries":0,"jobs":0,"views":0,"requests":0,"logs":0,"cache":0,"http":0},"latest_id":1,"min_live_id":1}"#;
-    assert_eq!(s, expected);
-    assert_eq!(serde_json::from_str::<Response>(&s).unwrap(), r);
-}
 
 // ---------- Mail ----------
 
@@ -2372,36 +1074,6 @@ fn response_mails_legacy_without_read_decodes_default() {
         }
         other => panic!("expected Mails, got {other:?}"),
     }
-}
-
-#[test]
-fn response_dumps_status_byte_shape() {
-    let mut features = BTreeMap::new();
-    features.insert("dumps".to_string(), true);
-    features.insert("queries".to_string(), false);
-    features.insert("jobs".to_string(), true);
-    features.insert("views".to_string(), true);
-    features.insert("requests".to_string(), true);
-    features.insert("logs".to_string(), true);
-    features.insert("cache".to_string(), true);
-    features.insert("http".to_string(), true);
-    let r = Response::DumpsStatus {
-        enabled: true,
-        port: 2304,
-        running: true,
-        persist: false,
-        extensions: vec![DumpExtStatus {
-            version: PhpVersion::new(8, 3),
-            present: false,
-            legacy: false,
-        }],
-        counts: DumpCounts::default(),
-        features,
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    let expected = r#"{"type":"dumps_status","enabled":true,"port":2304,"running":true,"persist":false,"extensions":[{"version":"8.3","present":false}],"counts":{"dumps":0,"queries":0,"jobs":0,"views":0,"requests":0,"logs":0,"cache":0,"http":0},"features":{"cache":true,"dumps":true,"http":true,"jobs":true,"logs":true,"queries":false,"requests":true,"views":true}}"#;
-    assert_eq!(s, expected);
-    assert_eq!(serde_json::from_str::<Response>(&s).unwrap(), r);
 }
 
 #[test]
@@ -2603,39 +1275,6 @@ fn response_tools_external_byte_shape() {
 // ---------- CreateSite / job model ----------
 
 #[test]
-fn request_create_site_byte_shape() {
-    use orcker_ipc::{
-        AuthProvider, CreateSiteSpec, Database, Framework, JsRuntime, LaravelOptions, StarterKit,
-        Testing,
-    };
-    let r = Request::CreateSite {
-        spec: CreateSiteSpec {
-            name: "blog".into(),
-            parent_dir: PathBuf::from("/srv"),
-            php: PhpVersion::new(8, 4),
-            secure: true,
-            framework: Framework::Laravel {
-                options: LaravelOptions {
-                    starter_kit: StarterKit::React,
-                    auth: AuthProvider::Laravel,
-                    livewire_class_components: false,
-                    teams: false,
-                    testing: Testing::Pest,
-                    database: Database::Sqlite,
-                    js: JsRuntime::Npm,
-                    git: true,
-                    boost: false,
-                },
-            },
-        },
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    let expected = r#"{"type":"create_site","spec":{"name":"blog","parent_dir":"/srv","php":"8.4","secure":true,"framework":{"framework":"laravel","options":{"starter_kit":"react","auth":"laravel","livewire_class_components":false,"teams":false,"testing":"pest","database":"sqlite","js":"npm","git":true,"boost":false}}}}"#;
-    assert_eq!(s, expected);
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
-}
-
-#[test]
 fn request_create_site_community_kit_byte_shape() {
     use orcker_ipc::StarterKit;
     let s = serde_json::to_string(&StarterKit::Community("acme/kit".into())).unwrap();
@@ -2644,40 +1283,6 @@ fn request_create_site_community_kit_byte_shape() {
         serde_json::from_str::<StarterKit>(&s).unwrap(),
         StarterKit::Community("acme/kit".into())
     );
-}
-
-#[test]
-fn request_create_site_wordpress_byte_shape() {
-    use orcker_ipc::{
-        CreateSiteSpec, Framework, WordPressDatabase, WordPressDbEngine, WordPressOptions,
-    };
-    let r = Request::CreateSite {
-        spec: CreateSiteSpec {
-            name: "blog".into(),
-            parent_dir: PathBuf::from("/srv"),
-            php: PhpVersion::new(8, 3),
-            secure: true,
-            framework: Framework::Wordpress {
-                options: WordPressOptions {
-                    core_version: None,
-                    locale: "en_GB".into(),
-                    admin_user: "admin".into(),
-                    admin_email: "admin@blog.test".into(),
-                    admin_password: "hunter2hunter2".into(),
-                    site_title: "My Blog".into(),
-                    table_prefix: "wp_".into(),
-                    database: WordPressDatabase {
-                        engine: WordPressDbEngine::Mysql,
-                        name: "blog".into(),
-                    },
-                },
-            },
-        },
-    };
-    let s = serde_json::to_string(&r).unwrap();
-    let expected = r#"{"type":"create_site","spec":{"name":"blog","parent_dir":"/srv","php":"8.3","secure":true,"framework":{"framework":"wordpress","options":{"core_version":null,"locale":"en_GB","admin_user":"admin","admin_email":"admin@blog.test","admin_password":"hunter2hunter2","site_title":"My Blog","table_prefix":"wp_","database":{"engine":"mysql","name":"blog"}}}}}"#;
-    assert_eq!(s, expected);
-    assert_eq!(serde_json::from_str::<Request>(&s).unwrap(), r);
 }
 
 #[test]

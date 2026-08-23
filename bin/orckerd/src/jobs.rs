@@ -3,11 +3,10 @@
 //! Some IPC operations (scaffolding a new site via `laravel new`) take far
 //! longer than a single request/response round-trip and stream output as they
 //! go. The IPC protocol is one-shot, so those operations run as a background
-//! **job**: [`Request::CreateSite`] starts one and returns a [`JobId`]
+//! **job**: a streaming request starts one and returns a [`JobId`]
 //! immediately; the client polls [`Request::JobStatus`] for the streamed log +
 //! phase until the job reaches a terminal [`JobState`].
 //!
-//! [`Request::CreateSite`]: orcker_ipc::Request::CreateSite
 //! [`Request::JobStatus`]: orcker_ipc::Request::JobStatus
 
 use std::collections::HashMap;

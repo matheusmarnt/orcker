@@ -4,7 +4,7 @@
 //! requires). `BackendResolver` is consulted per request to map a routed
 //! `&Site` to a concrete `Backend`. `LoginTokenConsumer` is consulted per
 //! request to check a one-click `WordPress` login token. All three keep
-//! `orcker-proxy` free of direct dependencies on `orcker-tls`, `orcker-php`, and
+//! `orcker-proxy` free of direct dependencies on `orcker-tls` and
 //! `orckerd`'s concrete daemon state.
 
 use std::sync::Arc;
@@ -28,7 +28,7 @@ pub trait CertStore: std::fmt::Debug + Send + Sync + 'static {
 /// Map a routed `&Site` to a concrete [`Backend`].
 ///
 /// The daemon's impl typically calls
-/// `orcker_php::PhpManager::ensure(site.php())` and translates the
+/// the daemon's backend resolver and translates the
 /// returned `Listen` into a [`Backend`].
 ///
 /// Implementer note: copy out the `Site` fields you need before any

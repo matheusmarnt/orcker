@@ -24,12 +24,6 @@ export const router = createRouter({
     // screen (rendered by AppShell when the socket is unreachable) shows the same
     // page header - without the view's action buttons.
     {
-      path: "/php",
-      name: "php",
-      meta: { title: "PHP", subtitle: "Installed versions, updates, and the global default" },
-      component: () => import("@/views/PhpView.vue"),
-    },
-    {
       path: "/sites",
       name: "sites",
       meta: { title: "Sites", subtitle: "Parked and linked .test sites" },
@@ -44,12 +38,6 @@ export const router = createRouter({
           "Install developer tools - bundled, self-contained, and added to your PATH alongside PHP.",
       },
       component: () => import("@/views/ToolingView.vue"),
-    },
-    {
-      path: "/services",
-      name: "services",
-      meta: { title: "Services", subtitle: "Databases and caches Orcker supervises" },
-      component: () => import("@/views/ServicesView.vue"),
     },
     {
       path: "/proxies",

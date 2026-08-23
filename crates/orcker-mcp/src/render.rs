@@ -13,7 +13,7 @@
 //! polling hint, because a bare job id tells an agent nothing about what to do
 //! next.
 
-use orcker_ipc::{ErrorCode, Response, ServiceRunState, StatusReport};
+use orcker_ipc::{ErrorCode, Response, StatusReport};
 use serde::Serialize;
 use serde_json::{json, Value};
 
@@ -53,7 +53,7 @@ fn render_error(tool: &str, code: ErrorCode, message: &str) -> Value {
         return tool_error(&format!(
             "{message}. Jobs are held in memory, so this one has either already been pruned or was \
              lost when the daemon restarted. Check the outcome directly instead, e.g. with \
-             list_sites or list_php."
+             list_sites or status."
         ));
     }
     let code = to_value(&code);
@@ -66,29 +66,6 @@ fn render_error(tool: &str, code: ErrorCode, message: &str) -> Value {
 /// its anchor target ports). This is an allowlist projection, so new host-only
 /// `StatusReport` fields are excluded by default.
 fn trim_status(report: &StatusReport) -> Value {
-    let php: Vec<Value> = report
-        .php
-        .iter()
-        .map(|p| {
-            json!({
-                "version": p.version.to_string(),
-                "state": to_value(&p.state),
-                "installed_patch": p.installed_patch,
-                "update_available": p.update_available,
-            })
-        })
-        .collect();
-    let services: Vec<Value> = report
-        .services
-        .iter()
-        .map(|s| {
-            json!({
-                "id": s.service,
-                "running": s.state == ServiceRunState::Running,
-                "port": s.port,
-            })
-        })
-        .collect();
     json!({
         "daemon_version": report.daemon_version,
         "uptime_secs": report.uptime_secs,
@@ -98,14 +75,11 @@ fn trim_status(report: &StatusReport) -> Value {
         "dns_addr": report.dns_addr.to_string(),
         "resolver_installed": report.resolver_installed,
         "ca_trusted_system": report.ca.trusted_system,
-        "default_php": report.default_php.to_string(),
-        "php": php,
         "sites": {
             "parked": report.sites.parked,
             "linked": report.sites.linked,
             "secured": report.sites.secured,
         },
-        "services": services,
         "mail": report.mail.as_ref().map(|m| json!({
             "enabled": m.enabled,
             "listening": m.listening,

@@ -8,7 +8,7 @@
 //!
 //! Note this deliberately checks the *declared manifest* rather than using
 //! [`orcker_depcheck::DepGraph`] like the other pure crates' guards. Those crates
-//! (`orcker-tls`, `orcker-platform`, `orcker-php`) do not depend on `orcker-ipc`. This
+//! (`orcker-tls`, `orcker-platform`) do not depend on `orcker-ipc`. This
 //! one does, and `cargo metadata`'s resolve unifies features across the whole
 //! workspace: because `orckerd` and `orcker` enable `orcker-ipc/transport`, the
 //! resolved graph shows a normal `orcker-ipc -> tokio` edge no matter who is

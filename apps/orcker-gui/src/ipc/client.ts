@@ -14,7 +14,6 @@ import type {
   AvailablePhpResponse,
   CreateSiteSpec,
   DaemonDiagnostics,
-  DatabaseSummary,
   Diagnosis,
   DoctorFixResponse,
   DumpCounts,
@@ -304,10 +303,6 @@ export async function availablePhp(): Promise<AvailablePhpResponse> {
   return ensureOk(await call<Response>("available_php")) as AvailablePhpResponse;
 }
 
-export async function installPhp(version: PhpVersion, confirmLegacy = false): Promise<void> {
-  ensureOk(await call<Response>("install_php", { version, confirmLegacy }));
-}
-
 /** Start a streamed PHP install as a background job; returns the job id to poll. */
 export async function installPhpStreamed(
   version: PhpVersion,
@@ -335,10 +330,6 @@ export async function installPhpWithProgress(
   if (final.state !== "succeeded") {
     throw new IpcError(final.error || `PHP ${version} install ${final.state}`);
   }
-}
-
-export async function setDefaultPhp(version: PhpVersion): Promise<void> {
-  ensureOk(await call<Response>("set_default_php", { version }));
 }
 
 /** `version === null` updates every installed version. */
@@ -809,16 +800,6 @@ export async function setServiceAutostart(service: string, enabled: boolean): Pr
 export async function setServiceSite(service: string, site: string): Promise<string> {
   const r = ensureOk(await call<Response>("set_service_site", { service, site }));
   return r.type === "service_instance_id" ? r.id : service;
-}
-
-export async function createDatabase(service: string, name: string): Promise<void> {
-  ensureOk(await call<Response>("create_database", { service, name }));
-}
-
-/** The user databases in a running SQL service (system schemas filtered out). */
-export async function listDatabases(service: string): Promise<DatabaseSummary[]> {
-  const r = ensureOk(await call<Response>("list_databases", { service }));
-  return r.type === "databases" ? r.databases : [];
 }
 
 export async function dropDatabase(service: string, name: string): Promise<void> {

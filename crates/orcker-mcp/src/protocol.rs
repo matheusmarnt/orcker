@@ -199,10 +199,9 @@ fn initialize_result(server: &Server, params: &Value) -> Value {
 fn instructions(availability: Availability) -> &'static str {
     match availability {
         Availability::Enabled => {
-            "Orcker runs local PHP sites on .test domains, plus databases, mail capture and dump \
-             telemetry. Tools that start background work (create_site, install_php) return a \
-             job_id immediately: poll job_status with the job_id and the returned next_cursor \
-             until state is succeeded, failed, or cancelled."
+            "Orcker serves local sites on .test domains, with mail capture. Tools that start \
+             background work return a job_id immediately: poll job_status with the job_id and \
+             the returned next_cursor until state is succeeded, failed, or cancelled."
         }
         Availability::Disabled => {
             "Orcker's MCP tools are currently disabled. The user can enable them in Orcker under \

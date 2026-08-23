@@ -54,21 +54,20 @@ export interface Command {
   run: (ctx: ShortcutCtx) => void;
 }
 
-/** Main-window views in sidebar order (About omitted). The first nine bind
- *  ⌘1…⌘9 via an explicit `digit`; Share has no digit (the digit slots are full),
- *  so it is reachable from the command palette only. */
+/** Main-window views in sidebar order (About omitted). Those with an explicit
+ *  `digit` bind ⌘1…⌘7; Proxies and Share have none and are reachable from the
+ *  command palette only. `tests/routeTargets.test.ts` pins that the digits stay
+ *  an unbroken run from 1 and that every path resolves in `router.ts`. */
 export const VIEW_TARGETS: { path: string; title: string; digit?: number }[] = [
   { path: "/overview", title: "Overview", digit: 1 },
-  { path: "/php", title: "PHP", digit: 2 },
-  { path: "/sites", title: "Sites", digit: 3 },
-  { path: "/tooling", title: "Tooling", digit: 4 },
-  { path: "/services", title: "Services", digit: 5 },
+  { path: "/sites", title: "Sites", digit: 2 },
+  { path: "/tooling", title: "Tooling", digit: 3 },
   { path: "/proxies", title: "Proxies" },
-  { path: "/mail", title: "Mail", digit: 6 },
-  { path: "/dumps", title: "Dumps", digit: 7 },
+  { path: "/mail", title: "Mail", digit: 4 },
+  { path: "/dumps", title: "Dumps", digit: 5 },
   { path: "/integrations", title: "Share" },
-  { path: "/general", title: "Settings", digit: 8 },
-  { path: "/doctor", title: "Doctor", digit: 9 },
+  { path: "/general", title: "Settings", digit: 6 },
+  { path: "/doctor", title: "Doctor", digit: 7 },
 ];
 
 /** Build the full command catalog. Pure: no side effects until a `run` fires. */

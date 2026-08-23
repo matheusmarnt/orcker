@@ -22,7 +22,7 @@ use std::fmt;
 use thiserror::Error;
 
 /// The pool's worker ceiling when a version has no override. Single source of
-/// truth: `orcker-php`'s `PoolConfig::dev_defaults` renders it and the CLI
+/// truth: the pool renderer applies it and the CLI
 /// displays it, so the two can never drift.
 pub const DEFAULT_MAX_CHILDREN: u32 = 16;
 

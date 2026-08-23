@@ -17,12 +17,10 @@ use std::time::Instant;
 
 use tokio::sync::{watch, Mutex, Notify, RwLock};
 
-use orcker_core::PhpVersion;
 use orcker_ipc::PortStatus;
 use orcker_platform::{CaFingerprint, PlatformDirs};
 use orcker_proxy::SharedRouter;
 
-use crate::backend_resolver::DaemonPhpManager;
 use crate::detect_cache::DetectCache;
 
 /// Mail-capture runtime fact captured at startup: whether the SMTP listener
@@ -68,15 +66,6 @@ pub struct DaemonState {
     pub ca_path: PathBuf,
     /// SHA-256 fingerprint of the CA cert (reported by `DaemonInfo`).
     pub ca_fingerprint: CaFingerprint,
-    /// Path to the managed PHP CA bundle (`{data}/cacert.pem` = host public
-    /// roots + the Orcker CA) that the bundled PHP verifies TLS against, or
-    /// `None` when no host roots were found (PHP keeps its compiled default).
-    /// Fed to FPM pools (`set_ca_bundle`) and the CLI `php.ini`.
-    pub php_ca_bundle: Option<PathBuf>,
-    /// Update cache: installed minor → newest build `(patch, revision)` known
-    /// from the last manifest poll. Populated by the periodic checker /
-    /// `CheckPhpUpdates` and served (no network) on `ListPhp`.
-    pub php_updates: RwLock<HashMap<PhpVersion, (String, u32)>>,
     /// Orcker self-update cache: the releases seen at the last GitHub poll. Empty
     /// until the first successful fetch. Populated by the periodic checker /
     /// `CheckUpdate` and served (no network) when a live fetch fails.
@@ -86,12 +75,6 @@ pub struct DaemonState {
     /// `CachedUpdateStatus` so the UI can pre-fill the Updates section on load and
     /// show a "last checked …" time without a network round-trip.
     pub update_snapshot: RwLock<Option<crate::self_update::UpdateSnapshot>>,
-    /// The FPM pool supervisor, shared with the proxy backend resolver and the
-    /// update task. `orcker status` / `orcker doctor` read live pool state from it.
-    pub php_manager: Arc<Mutex<DaemonPhpManager>>,
-    /// The database/cache service supervisor (Redis/Valkey in Phase 1). Holds
-    /// one supervised instance per engine; status/doctor read live state from it.
-    pub service_manager: Arc<Mutex<crate::services::DaemonServiceManager>>,
     /// The Cloudflare Tunnel supervisor. Holds one supervised `cloudflared`
     /// child per shared site; `TunnelStatus` reads live state from it. Quick
     /// tunnels are ephemeral (not persisted) and torn down on daemon shutdown.
@@ -155,9 +138,6 @@ pub struct DaemonState {
     /// reconciles its watch set (e.g. a newly-parked root) without waiting for
     /// an unrelated filesystem event.
     pub watch_dirty: Notify,
-    /// Dump-telemetry ring buffer + server control, shared with the dump-server
-    /// task and the IPC dump handlers.
-    pub dumps: Arc<crate::dump_server::DumpStore>,
     /// Serializes `php_install::reconcile_shims` runs. IPC dispatch is
     /// `tokio::spawn`-per-connection, so two clients can reconcile the `{data}/bin`
     /// shims concurrently; this guard keeps the (sync) scan→prune from interleaving.
@@ -187,23 +167,6 @@ pub struct DaemonState {
     /// Site names held by an in-flight `CreateSite` job, so two concurrent
     /// creates can't both scaffold (then fight over registering) the same name.
     pub reserved_names: Mutex<HashSet<String>>,
-    /// WordPress core-version availability cache (the WordPress wizard's
-    /// version dropdown): the last successful `meta/wordpress-versions.json`
-    /// fetch, plus when it happened so a request can decide whether to
-    /// re-fetch. `None` until the first successful fetch; served (no
-    /// network) when still fresh, or as a stale fallback when a re-fetch
-    /// fails. See [`crate::wordpress_versions`].
-    pub wordpress_versions: RwLock<Option<(Instant, Vec<orcker_ipc::WordPressVersionInfo>)>>,
-    /// One-click `WordPress` admin login token store, shared with `orcker-proxy`
-    /// via the [`orcker_proxy::LoginTokenConsumer`] trait. See
-    /// [`crate::wordpress_login`].
-    pub wordpress_login_tokens: Arc<crate::wordpress_login::LoginTokenRegistry>,
-    /// Path the `WordPress` auto-login prepend script was written to at
-    /// startup (see [`crate::wordpress_login::write_prepend_script`]), or
-    /// `None` if writing it failed - one-click login is then unavailable this
-    /// boot, but the ordinary, non-authenticated `/wp-admin/` link still
-    /// works.
-    pub wordpress_login_prepend_script: Option<PathBuf>,
     /// In-memory cache of which sites are `WordPress` (site name → bool),
     /// refreshed on every router rebuild (`startup::build_routing`, run on a
     /// mutation or a filesystem-watcher tick) rather than detected fresh on

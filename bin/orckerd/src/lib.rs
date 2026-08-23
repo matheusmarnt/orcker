@@ -14,24 +14,17 @@ pub mod ansi;
 pub mod args;
 pub mod backend_resolver;
 pub mod cert_store;
-pub mod create_site;
-pub mod db_admin;
 pub mod detect_cache;
-pub mod dump_server;
+pub mod download;
 pub mod error;
-pub mod ext_install;
 pub mod fs_watch;
 pub mod ipc_server;
 pub mod jobs;
 pub mod lan_setup;
 pub mod laravel_detect;
 pub mod mutate;
-pub mod php_install;
-pub mod php_updates;
 pub mod secure_fs;
 pub mod self_update;
-pub mod service_install;
-pub mod services;
 pub mod signals;
 pub mod single_instance;
 pub mod site_domains;
@@ -41,10 +34,6 @@ pub mod tools;
 pub mod tracing_init;
 pub mod tunnel;
 pub mod wordpress_detect;
-pub mod wordpress_login;
-pub mod wordpress_url_sync;
-pub mod wordpress_users;
-pub mod wordpress_versions;
 
 #[cfg(test)]
 pub mod test_support;
@@ -163,18 +152,15 @@ async fn run_until_shutdown(
         (daemon.http_listener, daemon.https_listener)
     {
         let router = daemon.state.router.clone();
-        let resolver = Arc::new(DaemonBackendResolver {
-            php_manager: daemon.php_manager.clone(),
-            wordpress_sites: daemon.state.wordpress_sites.clone(),
-        });
+        let resolver = Arc::new(DaemonBackendResolver {});
         let https = orcker_proxy::HttpsBinding {
             listener: tls_listener,
             public_port: daemon.state.redirect_https_port.clone(),
             cert_store: daemon.cert_store.clone(),
         };
         let mut rx = shutdown_rx.clone();
-        let login_tokens = daemon.state.wordpress_login_tokens.clone();
-        let login_prepend_script = daemon.state.wordpress_login_prepend_script.clone();
+        let login_tokens = std::sync::Arc::new(crate::backend_resolver::NoLoginTokens);
+        let login_prepend_script = None;
         let symlink_protection = daemon.state.symlink_protection.clone();
         let client_tls = build_proxy_client_tls()?;
         Some(tokio::spawn(orcker_proxy::ProxyServer::serve(
@@ -218,28 +204,14 @@ async fn run_until_shutdown(
         shutdown_rx.clone(),
     ));
 
-    let dump_handle = {
-        let state = daemon.state.clone();
-        tokio::spawn(crate::dump_server::run(state, shutdown_rx.clone()))
-    };
-
     let update_check_handle = {
         let state = daemon.state.clone();
         let mut rx = shutdown_rx.clone();
         tokio::spawn(async move {
-            let dl = crate::php_install::ReqwestDownloader::new();
-            let mut php_tick = tokio::time::interval(Duration::from_secs(12 * 60 * 60));
+            let dl = crate::download::ReqwestDownloader::new();
             let mut self_tick = tokio::time::interval(SELF_UPDATE_WAKE);
             loop {
                 tokio::select! {
-                    _ = php_tick.tick() => {
-                        crate::php_updates::poll_and_refresh(
-                            &state,
-                            &dl,
-                            orcker_update::PHP_LISTING_PUBLIC_KEY,
-                        )
-                        .await;
-                    }
                     _ = self_tick.tick() => {
                         crate::self_update::poll_if_due(&state, &dl, orcker_update::UPDATE_PUBLIC_KEY)
                             .await;
@@ -264,26 +236,6 @@ async fn run_until_shutdown(
         }))
     });
 
-    let _autostart = tokio::spawn(crate::services::auto_start_installed(daemon.state.clone()));
-
-    let _ext_install = {
-        let state = daemon.state.clone();
-        tokio::spawn(async move {
-            if state.config.lock().await.dumps.enabled {
-                let dl = crate::php_install::ReqwestDownloader::new();
-                crate::ext_install::ensure_for_installed(&state.dirs, &dl).await;
-            }
-        })
-    };
-
-    let _pcov_shims = {
-        let state = daemon.state.clone();
-        tokio::spawn(async move {
-            crate::ipc_server::refresh_pcov_and_shims(&state).await;
-            crate::ipc_server::write_cli_ini_now(&state).await;
-        })
-    };
-
     let _tool_shims = {
         let state = daemon.state.clone();
         tokio::spawn(async move {
@@ -307,21 +259,12 @@ async fn run_until_shutdown(
         let _ = tokio::time::timeout(Duration::from_secs(5), lan_setup_handle).await;
     }
     let _ = tokio::time::timeout(Duration::from_secs(5), ipc_handle).await;
-    let _ = tokio::time::timeout(Duration::from_secs(5), dump_handle).await;
     let _ = tokio::time::timeout(Duration::from_secs(5), update_check_handle).await;
     let _ = tokio::time::timeout(Duration::from_secs(5), watch_handle).await;
     if let Some(mail_handle) = mail_handle {
         let _ = tokio::time::timeout(Duration::from_secs(5), mail_handle).await;
     }
 
-    {
-        let mut mgr = daemon.php_manager.lock().await;
-        let _ = mgr.shutdown().await;
-    }
-    {
-        let mut mgr = daemon.state.service_manager.lock().await;
-        let _ = mgr.shutdown().await;
-    }
     {
         let mut mgr = daemon.state.tunnel_manager.lock().await;
         let _ = mgr.shutdown().await;
@@ -401,7 +344,7 @@ async fn spawn_lan_setup(
         return None;
     };
     let script = crate::lan_setup::pure::installer_script(lan_ip, &tld, dns_port, ca_str);
-    let script_sha256 = crate::ext_install::sha256_hex(script.as_bytes());
+    let script_sha256 = crate::download::sha256_hex(script.as_bytes());
 
     let bind = std::net::SocketAddr::from((std::net::Ipv4Addr::UNSPECIFIED, setup_port));
     let listener = match tokio::net::TcpListener::bind(bind).await {

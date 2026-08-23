@@ -1,10 +1,10 @@
 //! Cloudflare Tunnel support for Orcker.
 //!
 //! Lets a local `.test` site be published through Cloudflare's edge via
-//! `cloudflared`: outbound-only, unprivileged. Modeled on `orcker-php`: the
-//! [`origin`], [`args`], [`parse`], and [`config`] submodules are **pure** (sync,
-//! no I/O, table-tested), while [`manager`] is the async I/O edge that supervises
-//! the `cloudflared` child via the shared `orcker-supervise` state machine.
+//! `cloudflared`: outbound-only, unprivileged. The [`origin`], [`args`],
+//! [`parse`], and [`config`] submodules are **pure** (sync, no I/O,
+//! table-tested), while [`manager`] is the async I/O edge that supervises the
+//! `cloudflared` child via the [`supervise`] state machine.
 //!
 //! Two tunnel tiers share this machinery (see [`TunnelKind`]): ephemeral Quick
 //! Tunnels (random `*.trycloudflare.com` URL, no account) and Named Tunnels
@@ -18,6 +18,7 @@ pub mod error;
 pub mod manager;
 pub mod origin;
 pub mod parse;
+pub mod supervise;
 
 pub use config::IngressRule;
 pub use error::TunnelError;

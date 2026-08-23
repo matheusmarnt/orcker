@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members  = ["crates/orcker-core", "crates/orcker-ipc", "crates/orcker-config", "crates/orcker-tls", "crates/orcker-platform", "crates/orcker-dns", "crates/orcker-supervise", "crates/orcker-php", "crates/orcker-services", "crates/orcker-tunnel", "crates/orcker-proxy", "crates/orcker-doctor", "crates/orcker-mail", "crates/orcker-mcp", "crates/orcker-update", "crates/orcker-release-manifest", "crates/orcker-service-ctl", "crates/orcker-depcheck", "bin/orcker-helper", "bin/orckerd", "bin/orcker", "apps/orcker-gui/src-tauri", "xtask"]
+members  = ["crates/orcker-core", "crates/orcker-ipc", "crates/orcker-config", "crates/orcker-tls", "crates/orcker-platform", "crates/orcker-dns", "crates/orcker-tunnel", "crates/orcker-proxy", "crates/orcker-doctor", "crates/orcker-mail", "crates/orcker-mcp", "crates/orcker-update", "crates/orcker-release-manifest", "crates/orcker-service-ctl", "crates/orcker-depcheck", "bin/orcker-helper", "bin/orckerd", "bin/orcker", "apps/orcker-gui/src-tauri", "xtask"]
 
 [workspace.package]
 version      = "0.0.0"
@@ -114,9 +114,10 @@ strip = "symbols"
 #   * hyper-rustls 0.27.6+ requires rustc 1.85 (edition2024 in a transitive
 #     dep); Cargo.lock pins it to 0.27.5 via
 #     `cargo update -p hyper-rustls --precise 0.27.5`. Pulled by `reqwest`,
-#     which is only activated by orcker-php's optional `download` feature — so
-#     this trap is invisible to the default build and only bites
-#     `--all-features`.
+#     which SPEC-0002 made an unconditional `bin/orckerd` dependency when the
+#     downloader moved out of the deleted PHP crate — so this trap now bites the
+#     default build, not just `--all-features`. Bumping it raises the effective
+#     MSRV for everyone.
 #   * zip (bin/orckerd, for Bun's archive) is held at 2.x: zip 4+ requires
 #     edition2024 / rust-version 1.88. The `version = "2"` req keeps the resolver
 #     on the 2.x line; do not bump to 4 until MSRV moves past edition2024. Built

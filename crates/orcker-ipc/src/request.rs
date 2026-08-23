@@ -5,10 +5,8 @@
 //! rename, and let `tests/wire_stability.rs` pin the byte-exact wire
 //! shape.
 
-use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-use orcker_core::PhpVersion;
 use serde::{Deserialize, Serialize};
 
 // IMPORTANT: per-field serde renames are forbidden in this crate. Add
@@ -57,13 +55,6 @@ pub enum Request {
         /// **not** canonicalise it (so a folder deleted from disk is still
         /// removable).
         path: String,
-    },
-    /// Change a site's PHP version.
-    SetPhp {
-        /// The site name.
-        name: String,
-        /// The new PHP version.
-        version: PhpVersion,
     },
     /// Toggle whether a site is served over HTTPS.
     SetSecure {
@@ -149,123 +140,6 @@ pub enum Request {
     /// Fetch read-only daemon runtime facts (DNS address, TLD, CA path +
     /// fingerprint). Used by `orcker elevate` to drive the privileged helper.
     DaemonInfo,
-    /// Download + install a prebuilt PHP version into orcker's data dir.
-    InstallPhp {
-        /// The major.minor version to install (resolved to a pinned patch).
-        version: PhpVersion,
-        /// Explicit opt-in to install an out-of-support legacy minor (< 8.2).
-        /// The daemon refuses a legacy install unless this is `true`. Defaults
-        /// to `false` so older clients (which omit it) can never trigger a
-        /// legacy install; skipped-when-false so the existing stable wire
-        /// literal stays byte-identical.
-        #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-        confirm_legacy: bool,
-    },
-    /// Install a PHP version as a streamed background job. The daemon replies
-    /// [`super::Response::JobStarted`] immediately; phase + byte-count progress is
-    /// polled via [`Self::JobStatus`]. The streaming sibling of [`Self::InstallPhp`]
-    /// (used by the GUI so a multi-minute download shows progress / can cancel).
-    InstallPhpStreamed {
-        /// The major.minor version to install (resolved to a pinned patch).
-        version: PhpVersion,
-        /// Explicit opt-in to install a legacy minor; see the `InstallPhp`
-        /// variant's `confirm_legacy` for the full contract.
-        #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-        confirm_legacy: bool,
-    },
-    /// Set the global default PHP version (terminal `php` shim + site fallback).
-    SetDefaultPhp {
-        /// The version to make the default; must already be installed.
-        version: PhpVersion,
-    },
-    /// List installed PHP versions and the current default.
-    ListPhp,
-    /// Upgrade installed PHP to the latest published patch. `Some` = one minor,
-    /// `None` = every installed version.
-    UpdatePhp {
-        /// The minor to update, or `None` for all installed.
-        version: Option<PhpVersion>,
-    },
-    /// Force a poll of the distribution + refresh the update cache, then return
-    /// the (enriched) version list.
-    CheckPhpUpdates,
-    /// List the major.minor versions installable from the distribution (the GUI
-    /// install dropdown / `orcker list php --available`). Fetched on demand.
-    AvailablePhp,
-    /// Merge global PHP ini settings into the config and apply them to all
-    /// installed versions' FPM pools. An empty-string value removes a key
-    /// (resets it to PHP's built-in default).
-    SetPhpSettings {
-        /// Setting name → value (e.g. `"memory_limit" -> "512M"`); `""` removes.
-        settings: BTreeMap<String, String>,
-    },
-    /// Merge per-version overrides of the allowlisted PHP ini settings into the
-    /// config and apply them to that version's FPM pool and CLI ini. An
-    /// empty-string value removes the override (the global value applies again).
-    SetPhpVersionSettings {
-        /// The installed PHP version the overrides apply to.
-        version: PhpVersion,
-        /// Setting name → value (e.g. `"memory_limit" -> "1G"`); `""` removes
-        /// the per-version override so the global default falls through.
-        settings: BTreeMap<String, String>,
-    },
-    /// Merge free-form per-version ini directives (e.g. `"xdebug.mode" ->
-    /// "debug"`) into the config and apply them to that version's FPM pool and
-    /// CLI ini. An empty-string value removes the directive.
-    SetPhpDirectives {
-        /// The installed PHP version the directives apply to.
-        version: PhpVersion,
-        /// Directive name → value; `""` removes the directive.
-        directives: BTreeMap<String, String>,
-    },
-    /// Merge per-version FPM pool settings into the config and apply them to
-    /// that version's pool. These are pool-block values, not ini directives,
-    /// so they never reach the CLI ini. An empty-string value resets the
-    /// setting to its built-in default.
-    SetPhpPoolSettings {
-        /// The installed PHP version the pool settings apply to.
-        version: PhpVersion,
-        /// Setting name → value; currently only `"max_children"` (`1..=1024`).
-        /// `""` resets to the default.
-        settings: BTreeMap<String, String>,
-    },
-    /// Register a custom PHP extension for a version: the daemon validates and
-    /// load-probes the `.so`, persists it, and loads it into that version's FPM
-    /// pool and CLI ini.
-    AddPhpExtension {
-        /// The PHP version the extension is built for and applies to.
-        version: PhpVersion,
-        /// Absolute path to the `.so`.
-        path: String,
-        /// Optional display/removal handle; defaults to the `.so` basename.
-        name: Option<String>,
-        /// Load as a `zend_extension` rather than a plain `extension`.
-        zend: bool,
-    },
-    /// Remove a registered custom extension by name for a version.
-    RemovePhpExtension {
-        /// The PHP version the extension is registered under.
-        version: PhpVersion,
-        /// The extension's registered name.
-        name: String,
-    },
-    /// List registered custom extensions across all versions, each tagged with
-    /// whether its `.so` currently exists on disk.
-    ListPhpExtensions,
-    /// Restart one installed version's FPM pool (stop + ensure).
-    RestartPhp {
-        /// The version whose pool to restart.
-        version: PhpVersion,
-    },
-    /// Restart every started FPM pool (running or failed).
-    RestartAllPhp,
-    /// Uninstall an installed PHP version. Blocked when the version is in use by
-    /// a site, is the last version while sites remain, or is the current default
-    /// while other versions are installed.
-    UninstallPhp {
-        /// The version to uninstall.
-        version: PhpVersion,
-    },
     /// Fetch a read-only [`crate::StatusReport`] of daemon/proxy/DNS/PHP health.
     Status,
     /// Run the doctor checks and return the resulting diagnoses.
@@ -277,250 +151,6 @@ pub enum Request {
     /// `Ok` *before* tearing down; the connection then closes as it restarts.
     /// Unix-only.
     RestartDaemon,
-    /// List every manageable service with its live status (installed versions,
-    /// run state, port, enabled flag).
-    ListServices,
-    /// List installable vs installed versions per service (the GUI install
-    /// dropdown). Fetched on demand from orcker's services distribution.
-    AvailableServices,
-    /// List `WordPress` core version branches with their PHP compatibility
-    /// range (the `WordPress` wizard's core-version dropdown). Sourced from
-    /// the hand-maintained `meta/wordpress-versions.json` in the orcker repo,
-    /// daemon-side cached; see [`crate::Response::WordpressVersions`].
-    AvailableWordpressVersions,
-    /// Mint a short-TTL, single-use token for one-click, pre-authenticated
-    /// `WordPress` admin login (the "WP Admin" site action). The site must
-    /// exist and be detected as `WordPress`; the returned token is consumed by
-    /// `orcker-proxy` the moment it's presented on a `/wp-admin` request for
-    /// that same site. See [`crate::Response::WordpressLoginToken`].
-    MintWordpressLoginToken {
-        /// The site name to mint a login token for.
-        site: String,
-    },
-    /// Toggle `WordPress` one-click admin login for a site, and set which
-    /// admin user it signs in as.
-    SetWordpressAutoLogin {
-        /// The site name.
-        name: String,
-        /// The desired auto-login state.
-        enabled: bool,
-        /// The `WordPress` login/username to sign in as, or `None` to fall
-        /// back to the earliest-created administrator.
-        user: Option<String>,
-    },
-    /// List a `WordPress` site's administrator accounts (the auto-login
-    /// user-picker's dropdown). Fetched on demand via `wp user list`.
-    WordpressAdminUsers {
-        /// The site name.
-        site: String,
-    },
-    /// Download + install a prebuilt service version into orcker's data dir.
-    InstallService {
-        /// Service id (`"redis"`, `"mysql"`, `"mariadb"`, `"postgres"`, `"meilisearch"`).
-        service: String,
-        /// The version to install.
-        version: String,
-    },
-    /// Uninstall a service version. `purge` also deletes the datadir; without
-    /// it the data is retained and its path reported.
-    UninstallService {
-        /// Service id.
-        service: String,
-        /// The version to remove.
-        version: String,
-        /// When true, also delete the engine's datadir (destructive).
-        purge: bool,
-    },
-    /// Start (and enable) a service instance.
-    StartService {
-        /// Service id.
-        service: String,
-    },
-    /// Stop a service instance. Does not change its autostart preference (use
-    /// [`Request::SetServiceAutostart`] for that).
-    StopService {
-        /// Service id.
-        service: String,
-    },
-    /// Restart a service instance (stop + start).
-    RestartService {
-        /// Service id.
-        service: String,
-    },
-    /// Change the port a service listens on. Takes effect on the next start /
-    /// restart (no implicit hot restart of a live socket).
-    SetServicePort {
-        /// Service id.
-        service: String,
-        /// The new loopback port.
-        port: u16,
-    },
-    /// Merge free-form configuration overrides into a service instance. An
-    /// empty-string value removes a key, exactly like
-    /// [`Self::SetPhpDirectives`]. The daemon validates each name/value shape
-    /// and refuses a directive it manages itself, with a hint naming the typed
-    /// path. Takes effect on the next start/restart (nothing is reloaded or
-    /// restarted implicitly), like [`Self::SetServicePort`]. A service that
-    /// accepts no overrides (Meilisearch, Reverb) is refused.
-    SetServiceOverrides {
-        /// Service id.
-        service: String,
-        /// Override name → value; `""` removes the override.
-        overrides: BTreeMap<String, String>,
-    },
-    /// Read back a service instance's stored configuration overrides. Refused
-    /// for a service that accepts none.
-    ServiceOverrides {
-        /// Service id.
-        service: String,
-    },
-    /// Fetch the last `lines` lines of a service's log file.
-    ServiceLogs {
-        /// Service id.
-        service: String,
-        /// How many trailing lines to return.
-        lines: u32,
-    },
-    /// Add a new service instance. For a versioned type (DB/cache) this downloads
-    /// the version; for a per-site type (Reverb) it links `site`. Runs as a
-    /// background job (reply is [`crate::Response::JobStarted`]) so a slow
-    /// download or a failing first start never blocks the daemon.
-    AddService {
-        /// The service type id (`"redis"`, `"reverb"`, ...).
-        type_id: String,
-        /// The linked site name, for a per-site type; `None` otherwise.
-        site: Option<String>,
-        /// An explicit port, or `None` to take the next free one from the type's
-        /// default.
-        port: Option<u16>,
-        /// The version to install, for a versioned type; `None` otherwise.
-        version: Option<String>,
-        /// Whether the instance starts with Orcker. `None` uses the type's default
-        /// (engines start with Orcker; per-site app servers do not).
-        autostart: Option<bool>,
-    },
-    /// Remove a service instance (a per-site instance, or an engine with no
-    /// version tracking). `purge` also deletes any on-disk state. Versioned
-    /// engines are removed per-version via [`Request::UninstallService`].
-    RemoveService {
-        /// Instance wire id.
-        service: String,
-        /// When true, also delete the instance's on-disk state (destructive).
-        purge: bool,
-    },
-    /// Set whether a service instance starts with Orcker (its boot-autostart flag).
-    SetServiceAutostart {
-        /// Instance wire id.
-        service: String,
-        /// The desired autostart state.
-        enabled: bool,
-    },
-    /// Re-link a per-site instance (Reverb) to a different site. Changes the
-    /// instance's identity; the reply is the new wire id in
-    /// [`crate::Response::ServiceInstanceId`].
-    SetServiceSite {
-        /// Current instance wire id.
-        service: String,
-        /// The new site to link to.
-        site: String,
-    },
-    /// List the installable service *types* for the "Add Service" dialog (with
-    /// per-type multiplicity, install state, versions, and a suggested port). See
-    /// [`crate::Response::AddableServices`].
-    AddableServiceTypes,
-    /// Create a database in a running SQL service (no-op error for caches).
-    CreateDatabase {
-        /// Service id (must be a SQL engine).
-        service: String,
-        /// The database name to create (validated as a safe identifier).
-        name: String,
-    },
-    /// List the user databases in a running SQL service (system schemas
-    /// filtered out).
-    ListDatabases {
-        /// Service id (must be a SQL engine).
-        service: String,
-    },
-    /// Drop a database from a running SQL service.
-    DropDatabase {
-        /// Service id (must be a SQL engine).
-        service: String,
-        /// The database name to drop (validated; system databases refused).
-        name: String,
-    },
-    /// Back a database up to a plain-SQL file (streamed from the bundled dump tool).
-    BackupDatabase {
-        /// Service id (must be a SQL engine).
-        service: String,
-        /// The database name to dump (validated as a safe identifier).
-        name: String,
-        /// Absolute destination file the daemon writes the dump to. The client
-        /// absolutises this against the user's cwd before sending (the daemon's cwd
-        /// differs); the path never reaches the dump tool's argv.
-        path: PathBuf,
-    },
-    /// Restore a database from a plain-SQL file (streamed into the bundled client's
-    /// stdin). The target database must already exist.
-    RestoreDatabase {
-        /// Service id (must be a SQL engine).
-        service: String,
-        /// The database name to restore into (validated; system databases refused).
-        name: String,
-        /// Absolute source file the daemon reads the dump from. The client
-        /// canonicalises this before sending; the path never reaches the client's argv.
-        path: PathBuf,
-    },
-    /// Switch a service to a different version: install `version`, restart the
-    /// running instance onto it, then remove the previously-installed version
-    /// (the datadir is retained). A service holds one installed version at a
-    /// time; this upgrades or downgrades it.
-    ChangeServiceVersion {
-        /// Service id.
-        service: String,
-        /// The version to switch to.
-        version: String,
-    },
-    /// Page the buffered dump-telemetry events newer than `since_id` (0 = all),
-    /// plus the ids removed since then and the current per-category counts.
-    ListDumps {
-        /// Return events with `id > since_id`. Clients track the latest id.
-        since_id: u64,
-    },
-    /// Drop every buffered dump event (pinned ones included).
-    ClearDumps,
-    /// Delete one buffered dump event by id.
-    DeleteDump {
-        /// The event id to delete.
-        id: u64,
-    },
-    /// Turn dump interception on or off (the "antenna"). Writes the runtime
-    /// state file the extension reads; never restarts FPM.
-    SetDumpsEnabled {
-        /// Desired enabled state.
-        enabled: bool,
-    },
-    /// Set the loopback port the dump server listens on and the extension
-    /// connects to.
-    SetDumpsPort {
-        /// The new loopback port.
-        port: u16,
-    },
-    /// Enable or disable capture of one telemetry feature (e.g. `"queries"`).
-    SetDumpFeature {
-        /// Feature key (`dumps`/`queries`/`jobs`/`views`/`requests`/`logs`/`cache`).
-        feature: String,
-        /// Desired enabled state.
-        enabled: bool,
-    },
-    /// Toggle log persistence. `false` (default) clears the buffer on each new
-    /// request (latest-request view); `true` accumulates across requests.
-    SetDumpsPersist {
-        /// Desired persist state.
-        persist: bool,
-    },
-    /// Fetch dump-server status (enabled, port, running, per-version extension
-    /// presence, current counts).
-    DumpsStatus,
     /// List captured emails (metadata only), newest first.
     ListMails,
     /// Fetch one captured email's full decoded content by id.
@@ -590,13 +220,6 @@ pub enum Request {
     InstallToolStreamed {
         /// Tool id (`"composer"`, `"node"`, `"bun"`, `"laravel"`).
         tool: String,
-    },
-    /// Scaffold and register a brand-new site (e.g. `laravel new`). Long-running:
-    /// the daemon starts a background job and replies [`super::Response::JobStarted`]
-    /// immediately; progress is polled via [`Self::JobStatus`].
-    CreateSite {
-        /// What to create and where.
-        spec: crate::CreateSiteSpec,
     },
     /// Poll a running job's progress. `cursor` is the number of log lines the
     /// client has already seen; the daemon returns only newer lines plus the
@@ -849,7 +472,6 @@ mod variant_name_pinning {
             Request::Unlink { .. } => {}
             Request::ListParked => {}
             Request::Unpark { .. } => {}
-            Request::SetPhp { .. } => {}
             Request::SetSecure { .. } => {}
             Request::SetWebRoot { .. } => {}
             Request::AddDomain { .. } => {}
@@ -857,61 +479,10 @@ mod variant_name_pinning {
             Request::SetPrimaryDomain { .. } => {}
             Request::ResetDomains { .. } => {}
             Request::DaemonInfo => {}
-            Request::InstallPhp { .. } => {}
-            Request::InstallPhpStreamed { .. } => {}
-            Request::SetDefaultPhp { .. } => {}
-            Request::ListPhp => {}
-            Request::UpdatePhp { .. } => {}
-            Request::CheckPhpUpdates => {}
-            Request::AvailablePhp => {}
-            Request::SetPhpSettings { .. } => {}
-            Request::SetPhpVersionSettings { .. } => {}
-            Request::SetPhpDirectives { .. } => {}
-            Request::SetPhpPoolSettings { .. } => {}
-            Request::AddPhpExtension { .. } => {}
-            Request::RemovePhpExtension { .. } => {}
-            Request::ListPhpExtensions => {}
-            Request::RestartPhp { .. } => {}
-            Request::RestartAllPhp => {}
-            Request::UninstallPhp { .. } => {}
             Request::Status => {}
             Request::Diagnose => {}
             Request::DoctorFix => {}
             Request::RestartDaemon => {}
-            Request::ListServices => {}
-            Request::AvailableServices => {}
-            Request::AvailableWordpressVersions => {}
-            Request::MintWordpressLoginToken { .. } => {}
-            Request::SetWordpressAutoLogin { .. } => {}
-            Request::WordpressAdminUsers { .. } => {}
-            Request::InstallService { .. } => {}
-            Request::UninstallService { .. } => {}
-            Request::StartService { .. } => {}
-            Request::StopService { .. } => {}
-            Request::RestartService { .. } => {}
-            Request::SetServicePort { .. } => {}
-            Request::SetServiceOverrides { .. } => {}
-            Request::ServiceOverrides { .. } => {}
-            Request::ServiceLogs { .. } => {}
-            Request::AddService { .. } => {}
-            Request::RemoveService { .. } => {}
-            Request::SetServiceAutostart { .. } => {}
-            Request::SetServiceSite { .. } => {}
-            Request::AddableServiceTypes => {}
-            Request::CreateDatabase { .. } => {}
-            Request::ListDatabases { .. } => {}
-            Request::DropDatabase { .. } => {}
-            Request::BackupDatabase { .. } => {}
-            Request::RestoreDatabase { .. } => {}
-            Request::ChangeServiceVersion { .. } => {}
-            Request::ListDumps { .. } => {}
-            Request::ClearDumps => {}
-            Request::DeleteDump { .. } => {}
-            Request::SetDumpsEnabled { .. } => {}
-            Request::SetDumpsPort { .. } => {}
-            Request::SetDumpFeature { .. } => {}
-            Request::SetDumpsPersist { .. } => {}
-            Request::DumpsStatus => {}
             Request::ListMails => {}
             Request::GetMail { .. } => {}
             Request::ClearMails => {}
@@ -925,7 +496,6 @@ mod variant_name_pinning {
             Request::InstallTool { .. } => {}
             Request::UninstallTool { .. } => {}
             Request::InstallToolStreamed { .. } => {}
-            Request::CreateSite { .. } => {}
             Request::JobStatus { .. } => {}
             Request::JobCancel { .. } => {}
             Request::CheckUpdate { .. } => {}
@@ -982,10 +552,6 @@ mod variant_name_pinning {
         pin(Request::Unlink { name: "x".into() });
         pin(Request::ListParked);
         pin(Request::Unpark { path: "/x".into() });
-        pin(Request::SetPhp {
-            name: "x".into(),
-            version: PhpVersion::new(8, 3),
-        });
         pin(Request::SetSecure {
             name: "x".into(),
             secure: true,
@@ -1008,127 +574,10 @@ mod variant_name_pinning {
         });
         pin(Request::ResetDomains { name: "foo".into() });
         pin(Request::DaemonInfo);
-        pin(Request::InstallPhp {
-            version: PhpVersion::new(8, 5),
-            confirm_legacy: false,
-        });
-        pin(Request::SetDefaultPhp {
-            version: PhpVersion::new(8, 5),
-        });
-        pin(Request::ListPhp);
-        pin(Request::UpdatePhp {
-            version: Some(PhpVersion::new(8, 5)),
-        });
-        pin(Request::CheckPhpUpdates);
-        pin(Request::AvailablePhp);
-        pin(Request::SetPhpSettings {
-            settings: BTreeMap::new(),
-        });
-        pin(Request::AddPhpExtension {
-            version: PhpVersion::new(8, 5),
-            path: "/a/scrypt.so".into(),
-            name: None,
-            zend: false,
-        });
-        pin(Request::RemovePhpExtension {
-            version: PhpVersion::new(8, 5),
-            name: "scrypt".into(),
-        });
-        pin(Request::ListPhpExtensions);
-        pin(Request::RestartPhp {
-            version: PhpVersion::new(8, 5),
-        });
-        pin(Request::RestartAllPhp);
-        pin(Request::UninstallPhp {
-            version: PhpVersion::new(8, 5),
-        });
         pin(Request::Status);
         pin(Request::Diagnose);
         pin(Request::DoctorFix);
         pin(Request::RestartDaemon);
-        pin(Request::ListServices);
-        pin(Request::AvailableServices);
-        pin(Request::AvailableWordpressVersions);
-        pin(Request::MintWordpressLoginToken {
-            site: "blog".into(),
-        });
-        pin(Request::SetWordpressAutoLogin {
-            name: "blog".into(),
-            enabled: true,
-            user: Some("admin".into()),
-        });
-        pin(Request::WordpressAdminUsers {
-            site: "blog".into(),
-        });
-        pin(Request::InstallService {
-            service: "redis".into(),
-            version: "8".into(),
-        });
-        pin(Request::UninstallService {
-            service: "redis".into(),
-            version: "8".into(),
-            purge: false,
-        });
-        pin(Request::StartService {
-            service: "redis".into(),
-        });
-        pin(Request::StopService {
-            service: "redis".into(),
-        });
-        pin(Request::RestartService {
-            service: "redis".into(),
-        });
-        pin(Request::SetServicePort {
-            service: "redis".into(),
-            port: 6380,
-        });
-        pin(Request::SetServiceOverrides {
-            service: "mysql".into(),
-            overrides: BTreeMap::new(),
-        });
-        pin(Request::ServiceOverrides {
-            service: "mysql".into(),
-        });
-        pin(Request::ServiceLogs {
-            service: "redis".into(),
-            lines: 100,
-        });
-        pin(Request::CreateDatabase {
-            service: "mysql".into(),
-            name: "app".into(),
-        });
-        pin(Request::ListDatabases {
-            service: "mysql".into(),
-        });
-        pin(Request::DropDatabase {
-            service: "mysql".into(),
-            name: "app".into(),
-        });
-        pin(Request::BackupDatabase {
-            service: "mysql".into(),
-            name: "app".into(),
-            path: PathBuf::from("/x/app.sql"),
-        });
-        pin(Request::RestoreDatabase {
-            service: "mysql".into(),
-            name: "app".into(),
-            path: PathBuf::from("/x/app.sql"),
-        });
-        pin(Request::ChangeServiceVersion {
-            service: "redis".into(),
-            version: "9.1.0".into(),
-        });
-        pin(Request::ListDumps { since_id: 0 });
-        pin(Request::ClearDumps);
-        pin(Request::DeleteDump { id: 1 });
-        pin(Request::SetDumpsEnabled { enabled: true });
-        pin(Request::SetDumpsPort { port: 2304 });
-        pin(Request::SetDumpFeature {
-            feature: "queries".into(),
-            enabled: true,
-        });
-        pin(Request::SetDumpsPersist { persist: true });
-        pin(Request::DumpsStatus);
         pin(Request::ListMails);
         pin(Request::GetMail {
             id: "000001".into(),
@@ -1155,17 +604,6 @@ mod variant_name_pinning {
         });
         pin(Request::InstallToolStreamed {
             tool: "laravel".into(),
-        });
-        pin(Request::CreateSite {
-            spec: crate::CreateSiteSpec {
-                name: "blog".into(),
-                parent_dir: PathBuf::from("/srv"),
-                php: PhpVersion::new(8, 4),
-                secure: true,
-                framework: crate::Framework::Laravel {
-                    options: laravel_options_fixture(),
-                },
-            },
         });
         pin(Request::JobStatus {
             job_id: "j1".into(),
@@ -1257,19 +695,5 @@ mod variant_name_pinning {
         pin(Request::SetMcpEnabled { enabled: true });
         pin(Request::SetLanEnabled { enabled: true });
         pin(Request::MintRemoteSetupCode);
-    }
-
-    fn laravel_options_fixture() -> crate::LaravelOptions {
-        crate::LaravelOptions {
-            starter_kit: crate::StarterKit::React,
-            auth: crate::AuthProvider::Laravel,
-            livewire_class_components: false,
-            teams: false,
-            testing: crate::Testing::Pest,
-            database: crate::Database::Sqlite,
-            js: crate::JsRuntime::Npm,
-            git: true,
-            boost: false,
-        }
     }
 }

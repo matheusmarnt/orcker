@@ -9,15 +9,13 @@
     clippy::indexing_slicing
 )]
 
-use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use orcker_ipc::{
     decode_message, encode_message,
     types::{PhpVersion, Site},
-    CaStatus, Diagnosis, DiagnosisCode, ErrorCode, FixReport, FixResult, IpcError, PhpPoolStatus,
-    PoolRunState, PortStatus, Request, Response, RouteRuleEntry, Severity, SiteCounts,
-    StatusReport,
+    CaStatus, Diagnosis, DiagnosisCode, ErrorCode, FixReport, FixResult, IpcError, PortStatus,
+    Request, Response, RouteRuleEntry, Severity, SiteCounts, StatusReport,
 };
 
 fn assert_request_roundtrips(r: Request) {
@@ -48,28 +46,11 @@ fn encode_then_decode_request_roundtrip() {
     assert_request_roundtrips(Request::Unpark {
         path: "/srv/sites".into(),
     });
-    assert_request_roundtrips(Request::SetPhp {
-        name: "foo".into(),
-        version: PhpVersion::new(8, 3),
-    });
     assert_request_roundtrips(Request::SetSecure {
         name: "foo".into(),
         secure: true,
     });
     assert_request_roundtrips(Request::DaemonInfo);
-    assert_request_roundtrips(Request::InstallPhp {
-        version: PhpVersion::new(8, 5),
-        confirm_legacy: false,
-    });
-    assert_request_roundtrips(Request::SetDefaultPhp {
-        version: PhpVersion::new(8, 4),
-    });
-    assert_request_roundtrips(Request::ListPhp);
-    assert_request_roundtrips(Request::UpdatePhp {
-        version: Some(PhpVersion::new(8, 5)),
-    });
-    assert_request_roundtrips(Request::UpdatePhp { version: None });
-    assert_request_roundtrips(Request::CheckPhpUpdates);
     assert_request_roundtrips(Request::Status);
     assert_request_roundtrips(Request::Diagnose);
     assert_request_roundtrips(Request::DoctorFix);
@@ -133,37 +114,6 @@ fn encode_then_decode_response_roundtrip() {
         dns_port: 1053,
         lan_ip: Some("192.168.1.42".parse().unwrap()),
     });
-    assert_response_roundtrips(Response::PhpVersions {
-        installed: vec![PhpVersion::new(8, 3), PhpVersion::new(8, 5)],
-        default: PhpVersion::new(8, 5),
-        updates: vec![],
-        settings: BTreeMap::new(),
-        version_settings: Box::new(BTreeMap::new()),
-        directives: Box::new(BTreeMap::new()),
-        pool: Box::new(BTreeMap::new()),
-    });
-    assert_response_roundtrips(Response::PhpVersions {
-        installed: vec![PhpVersion::new(8, 5)],
-        default: PhpVersion::new(8, 5),
-        updates: vec![orcker_ipc::PhpUpdate {
-            version: PhpVersion::new(8, 5),
-            installed: "8.5.6".into(),
-            latest: "8.5.7".into(),
-        }],
-        settings: BTreeMap::from([("memory_limit".to_string(), "512M".to_string())]),
-        version_settings: Box::new(BTreeMap::from([(
-            PhpVersion::new(8, 5),
-            BTreeMap::from([("memory_limit".to_string(), "1G".to_string())]),
-        )])),
-        directives: Box::new(BTreeMap::from([(
-            PhpVersion::new(8, 5),
-            BTreeMap::from([("xdebug.mode".to_string(), "debug".to_string())]),
-        )])),
-        pool: Box::new(BTreeMap::from([(
-            PhpVersion::new(8, 5),
-            BTreeMap::from([("max_children".to_string(), "32".to_string())]),
-        )])),
-    });
     assert_response_roundtrips(Response::Parked { paths: vec![] });
     assert_response_roundtrips(Response::Parked {
         paths: vec!["/a".into(), "/b".into()],
@@ -224,23 +174,12 @@ fn encode_then_decode_response_roundtrip() {
                 path: PathBuf::from("/x/ca.cert.pem"),
                 fingerprint: "ab".repeat(32),
                 trusted_system: None,
-                php_trusts_ca: Some(true),
                 browser_trust: Some(orcker_ipc::BrowserTrust::Untrusted),
             },
             resolver_installed: Some(false),
             port_redirect: Some(true),
             foreign_web_listener: Some(true),
             resolver_backup: None,
-            default_php: PhpVersion::new(8, 5),
-            php: vec![PhpPoolStatus {
-                version: PhpVersion::new(8, 5),
-                installed_patch: Some("8.5.6".into()),
-                state: PoolRunState::Stopped,
-                pid: None,
-                listen: None,
-                rss_bytes: None,
-                update_available: Some("8.5.7".into()),
-            }],
             sites: SiteCounts {
                 parked: 1,
                 linked: 0,
@@ -248,7 +187,6 @@ fn encode_then_decode_response_roundtrip() {
             },
             load_avg: None,
             daemon_version: "2.0.1".into(),
-            services: vec![],
             mail: None,
             web_unbound: Some(orcker_ipc::UnboundWeb {
                 http: 8080,
@@ -282,7 +220,7 @@ fn encode_then_decode_response_roundtrip() {
     assert_response_roundtrips(Response::DoctorFix {
         report: FixReport {
             performed: vec![FixResult {
-                code: DiagnosisCode::FpmPoolFailed,
+                code: DiagnosisCode::ResolverNotInstalled,
                 ok: true,
                 message: "restarted".into(),
             }],

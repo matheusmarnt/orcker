@@ -10,8 +10,9 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
-use orcker_php::{current_os_arch, is_safe_member, Arch, Downloader, Os};
+use crate::download::Downloader;
 use orcker_platform::PlatformDirs;
+use orcker_platform::{current_target, is_safe_member, Arch, Os};
 
 use super::{
     extract_root_dir, sha_for_asset, stage_and_swap, tool_dir, verify_sha256, Tool, ToolError,
@@ -28,7 +29,7 @@ struct LatestRelease {
 /// The platform token Bun uses in artifact names for the host, e.g.
 /// `darwin-aarch64`. `None` if Bun publishes no build for this OS/arch.
 fn host_platform() -> Option<&'static str> {
-    let (os, arch) = current_os_arch().ok()?;
+    let (os, arch) = current_target().ok()?;
     Some(match (os, arch) {
         (Os::Macos, Arch::Aarch64) => "darwin-aarch64",
         (Os::Macos, Arch::X86_64) => "darwin-x64",

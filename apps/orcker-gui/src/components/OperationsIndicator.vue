@@ -11,7 +11,7 @@ import { useOperations } from "@/composables/useOperations";
 // when several run at once. Renders nothing when idle.
 //
 // PHP installs are deliberately excluded: they run behind a dedicated blocking
-// progress dialog (PhpView) that owns their status, so surfacing them here too
+// progress dialog that owns their status, so surfacing them here too
 // would duplicate the same "Installing PHP …" line beside it.
 const { active } = useOperations();
 

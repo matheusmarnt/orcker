@@ -286,13 +286,7 @@ fn argument_validation_errors_are_invalid_params() {
     let cases = [
         ("link_site", json!({ "name": "foo" })),
         ("link_site", json!({ "name": 42, "path": "/srv/foo" })),
-        ("set_site_php", json!({ "name": "foo", "version": "nope" })),
         ("set_site_secure", json!({ "name": "foo" })),
-        (
-            "create_site",
-            json!({ "name": "foo", "parent_dir": "/srv", "php": "8.4", "starter_kit": "angular" }),
-        ),
-        ("list_dumps", json!({ "since_id": -1 })),
         ("job_status", json!({ "cursor": 0 })),
     ];
     let mut s = ready(Availability::Enabled);

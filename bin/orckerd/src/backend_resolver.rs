@@ -1,114 +1,77 @@
-//! `BackendResolver` impl driving `orcker_php::PhpManager::ensure`.
-
-use std::collections::HashMap;
-use std::sync::Arc;
+//! The proxy's document-root seams: backend resolution and login tokens.
+//!
+//! Yerd resolved a linked site to the FPM pool serving its PHP version. That
+//! pool is gone with the native runtime, and the container that replaces it is
+//! not wired yet (SPEC-0003+), so every document-root site now resolves to a
+//! typed error naming the gap rather than to a backend.
+//!
+//! Sites registered as proxy entries are unaffected: they never reach this
+//! resolver, the proxy forwards them to their configured upstream directly.
 
 use async_trait::async_trait;
-use tokio::sync::{Mutex, RwLock};
 
-use orcker_php::{io::FastCgiProbe, PhpManager, SystemClock, TokioProcessSpawner};
-use orcker_proxy::{Backend, BackendResolver, ProxyError};
+use orcker_proxy::{Backend, BackendResolver, LoginTokenConsumer, ProxyError};
 
-/// Concrete `PhpManager` shape the daemon uses everywhere.
-pub type DaemonPhpManager = PhpManager<TokioProcessSpawner, SystemClock, FastCgiProbe>;
-
-/// Translates a routed `&Site` into a `Backend` by ensuring the matching
-/// FPM pool is alive.
-pub struct DaemonBackendResolver {
-    /// Mutex-wrapped supervisor; the lock is held only for the duration
-    /// of `ensure`, which has a fast-path for already-running pools.
-    pub php_manager: Arc<Mutex<DaemonPhpManager>>,
-    /// Mirrors [`crate::state::DaemonState::wordpress_sites`] - supplies the
-    /// runtime `is_wordpress` fact to [`orcker_core::Site::uses_front_controller`]
-    /// so a site's front-controller default is resolved correctly (WordPress,
-    /// any layout, defaults to direct script execution).
-    pub wordpress_sites: Arc<RwLock<HashMap<String, bool>>>,
-}
+/// Resolver for document-root sites while the fork has no runtime to serve
+/// them with.
+pub struct DaemonBackendResolver;
 
 #[async_trait]
 impl BackendResolver for DaemonBackendResolver {
     async fn backend_for(&self, site: &orcker_core::Site) -> Result<Backend, ProxyError> {
-        let listen = {
-            let mut mgr = self.php_manager.lock().await;
-            mgr.ensure(site.php())
-                .await
-                .map_err(|e| ProxyError::BackendResolver {
-                    host: site.name().to_owned(),
-                    source: Box::new(e),
-                })?
-        };
-        match listen {
-            orcker_php::Listen::UnixSocket(p) => Ok(Backend::PhpFpm { socket: p }),
-            orcker_php::Listen::TcpLoopback(a) => Ok(Backend::PhpFpmTcp { addr: a }),
-        }
+        Err(ProxyError::BackendResolver {
+            host: site.name().to_owned(),
+            source: Box::new(std::io::Error::other(
+                "no runtime is wired for document-root sites yet; register the site \
+                 as a proxy entry, or wait for the Docker engine",
+            )),
+        })
     }
+}
 
-    async fn allows_direct_script_execution(&self, site: &orcker_core::Site) -> bool {
-        let is_wordpress = self
-            .wordpress_sites
-            .read()
-            .await
-            .get(site.name())
-            .copied()
-            .unwrap_or(false);
-        !site.uses_front_controller(is_wordpress)
+/// Token consumer for the `WordPress` one-click login.
+///
+/// Always `None`: minting died with the native runtime (the flow needed an
+/// `auto_prepend_file` injected into the FPM pool), so no token can be valid.
+/// Fail-closed by construction rather than by an empty registry that a future
+/// caller could accidentally populate.
+pub struct NoLoginTokens;
+
+impl LoginTokenConsumer for NoLoginTokens {
+    fn consume(&self, site: &str, token: &str) -> Option<String> {
+        let _ = (site, token);
+        None
     }
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 mod tests {
     use super::*;
     use orcker_core::{PhpVersion, Site};
 
-    fn resolver(wordpress_sites: HashMap<String, bool>) -> DaemonBackendResolver {
-        let tmp = tempfile::tempdir().unwrap();
-        let state = crate::test_support::state_in(tmp.path());
-        DaemonBackendResolver {
-            php_manager: state.php_manager.clone(),
-            wordpress_sites: Arc::new(RwLock::new(wordpress_sites)),
+    #[tokio::test]
+    async fn every_document_root_site_resolves_to_a_typed_error() {
+        let site = Site::linked("blog", "/srv/www/blog", PhpVersion::new(8, 3)).unwrap();
+        let err = DaemonBackendResolver.backend_for(&site).await.unwrap_err();
+        match err {
+            ProxyError::BackendResolver { host, .. } => assert_eq!(host, "blog"),
+            other => panic!("expected BackendResolver, got {other:?}"),
         }
     }
 
-    fn site(name: &str, subpath: &str, front_controller: Option<bool>) -> Site {
-        let mut s = Site::parked(name, "/srv/site", PhpVersion::new(8, 3)).unwrap();
-        s.set_web_subpath(subpath);
-        s.set_front_controller(front_controller);
-        s
-    }
-
     #[tokio::test]
-    async fn subdir_framework_funnels_but_root_served_executes_directly() {
-        let r = resolver(HashMap::new());
+    async fn direct_script_execution_stays_off_by_default() {
+        let site = Site::linked("blog", "/srv/www/blog", PhpVersion::new(8, 3)).unwrap();
         assert!(
-            !r.allows_direct_script_execution(&site("app", "public", None))
-                .await
-        );
-        assert!(
-            r.allows_direct_script_execution(&site("plain", "", None))
+            !DaemonBackendResolver
+                .allows_direct_script_execution(&site)
                 .await
         );
     }
 
-    #[tokio::test]
-    async fn wordpress_in_subdir_still_executes_directly() {
-        let wp = resolver(HashMap::from([("blog".to_owned(), true)]));
-        assert!(
-            wp.allows_direct_script_execution(&site("blog", "web", None))
-                .await
-        );
-    }
-
-    #[tokio::test]
-    async fn explicit_override_beats_the_detected_default() {
-        let r = resolver(HashMap::new());
-        assert!(
-            !r.allows_direct_script_execution(&site("a", "", Some(true)))
-                .await
-        );
-        assert!(
-            r.allows_direct_script_execution(&site("b", "public", Some(false)))
-                .await
-        );
+    #[test]
+    fn no_login_token_is_ever_accepted() {
+        assert_eq!(NoLoginTokens.consume("blog", "deadbeef"), None);
     }
 }

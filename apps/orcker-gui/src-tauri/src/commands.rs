@@ -11,7 +11,6 @@ use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use orcker_core::PhpVersion;
 use orcker_ipc::{ErrorCode, Request, Response, SiteEntry};
 use orcker_platform::{
     DetectedIde, IdeErrorReason, IdeLauncher, PlatformError, SystemOpener, TerminalLauncher,
@@ -96,11 +95,6 @@ pub async fn list_parked() -> Result<Response, GuiError> {
 #[tauri::command]
 pub async fn unpark(path: String) -> Result<Response, GuiError> {
     finish(exchange(&Request::Unpark { path }).await?)
-}
-
-#[tauri::command]
-pub async fn set_php(name: String, version: PhpVersion) -> Result<Response, GuiError> {
-    finish(exchange(&Request::SetPhp { name, version }).await?)
 }
 
 #[tauri::command]
@@ -238,59 +232,6 @@ pub async fn rename_group(from: String, to: String) -> Result<Response, GuiError
 
 // ── php versions ───────────────────────────────────────────────────────────
 
-#[tauri::command]
-pub async fn list_php() -> Result<Response, GuiError> {
-    finish(exchange(&Request::ListPhp).await?)
-}
-
-#[tauri::command]
-pub async fn check_php_updates() -> Result<Response, GuiError> {
-    finish(exchange(&Request::CheckPhpUpdates).await?)
-}
-
-#[tauri::command]
-pub async fn available_php() -> Result<Response, GuiError> {
-    finish(exchange(&Request::AvailablePhp).await?)
-}
-
-#[tauri::command]
-pub async fn install_php(version: PhpVersion, confirm_legacy: bool) -> Result<Response, GuiError> {
-    finish(
-        exchange(&Request::InstallPhp {
-            version,
-            confirm_legacy,
-        })
-        .await?,
-    )
-}
-
-/// Start a streamed PHP install; replies `JobStarted` for the client to poll via
-/// `job_status`. The non-blocking sibling of `install_php`, used by the GUI so a
-/// multi-minute download streams progress instead of spinning a single request.
-#[tauri::command]
-pub async fn install_php_streamed(
-    version: PhpVersion,
-    confirm_legacy: bool,
-) -> Result<Response, GuiError> {
-    finish(
-        exchange(&Request::InstallPhpStreamed {
-            version,
-            confirm_legacy,
-        })
-        .await?,
-    )
-}
-
-#[tauri::command]
-pub async fn set_default_php(version: PhpVersion) -> Result<Response, GuiError> {
-    finish(exchange(&Request::SetDefaultPhp { version }).await?)
-}
-
-#[tauri::command]
-pub async fn update_php(version: Option<PhpVersion>) -> Result<Response, GuiError> {
-    finish(exchange(&Request::UpdatePhp { version }).await?)
-}
-
 // ── self-update ────────────────────────────────────────────────────────────
 
 /// Parse a channel string (`"stable"` / `"edge"`) from the frontend.
@@ -396,87 +337,6 @@ fn spawn_applier(_orcker: &std::path::Path, _path: &str, _kind: &str) -> Result<
 }
 
 #[tauri::command]
-pub async fn set_php_settings(
-    settings: std::collections::BTreeMap<String, String>,
-) -> Result<Response, GuiError> {
-    finish(exchange(&Request::SetPhpSettings { settings }).await?)
-}
-
-#[tauri::command]
-pub async fn set_php_version_settings(
-    version: PhpVersion,
-    settings: std::collections::BTreeMap<String, String>,
-) -> Result<Response, GuiError> {
-    finish(exchange(&Request::SetPhpVersionSettings { version, settings }).await?)
-}
-
-#[tauri::command]
-pub async fn set_php_directives(
-    version: PhpVersion,
-    directives: std::collections::BTreeMap<String, String>,
-) -> Result<Response, GuiError> {
-    finish(
-        exchange(&Request::SetPhpDirectives {
-            version,
-            directives,
-        })
-        .await?,
-    )
-}
-
-/// Update one PHP version's FPM pool settings (`""` resets to the default).
-#[tauri::command]
-pub async fn set_php_pool_settings(
-    version: PhpVersion,
-    settings: std::collections::BTreeMap<String, String>,
-) -> Result<Response, GuiError> {
-    finish(exchange(&Request::SetPhpPoolSettings { version, settings }).await?)
-}
-
-#[tauri::command]
-pub async fn list_php_extensions() -> Result<Response, GuiError> {
-    finish(exchange(&Request::ListPhpExtensions).await?)
-}
-
-#[tauri::command]
-pub async fn add_php_extension(
-    version: PhpVersion,
-    path: String,
-    name: Option<String>,
-    zend: bool,
-) -> Result<Response, GuiError> {
-    finish(
-        exchange(&Request::AddPhpExtension {
-            version,
-            path,
-            name,
-            zend,
-        })
-        .await?,
-    )
-}
-
-#[tauri::command]
-pub async fn remove_php_extension(version: PhpVersion, name: String) -> Result<Response, GuiError> {
-    finish(exchange(&Request::RemovePhpExtension { version, name }).await?)
-}
-
-#[tauri::command]
-pub async fn restart_php(version: PhpVersion) -> Result<Response, GuiError> {
-    finish(exchange(&Request::RestartPhp { version }).await?)
-}
-
-#[tauri::command]
-pub async fn restart_all_php() -> Result<Response, GuiError> {
-    finish(exchange(&Request::RestartAllPhp).await?)
-}
-
-#[tauri::command]
-pub async fn uninstall_php(version: PhpVersion) -> Result<Response, GuiError> {
-    finish(exchange(&Request::UninstallPhp { version }).await?)
-}
-
-#[tauri::command]
 pub async fn restart_daemon() -> Result<Response, GuiError> {
     finish(exchange(&Request::RestartDaemon).await?)
 }
@@ -484,206 +344,8 @@ pub async fn restart_daemon() -> Result<Response, GuiError> {
 // ── services (databases / caches) ────────────────────────────────────────────
 
 #[tauri::command]
-pub async fn list_services() -> Result<Response, GuiError> {
-    finish(exchange(&Request::ListServices).await?)
-}
-
-#[tauri::command]
-pub async fn available_services() -> Result<Response, GuiError> {
-    finish(exchange(&Request::AvailableServices).await?)
-}
-
-#[tauri::command]
-pub async fn install_service(service: String, version: String) -> Result<Response, GuiError> {
-    finish(exchange(&Request::InstallService { service, version }).await?)
-}
-
-#[tauri::command]
-pub async fn available_wordpress_versions() -> Result<Response, GuiError> {
-    finish(exchange(&Request::AvailableWordpressVersions).await?)
-}
-
-#[tauri::command]
-pub async fn mint_wordpress_login_token(site: String) -> Result<Response, GuiError> {
-    finish(exchange(&Request::MintWordpressLoginToken { site }).await?)
-}
-
-#[tauri::command]
-pub async fn set_wordpress_auto_login(
-    name: String,
-    enabled: bool,
-    user: Option<String>,
-) -> Result<Response, GuiError> {
-    finish(
-        exchange(&Request::SetWordpressAutoLogin {
-            name,
-            enabled,
-            user,
-        })
-        .await?,
-    )
-}
-
-#[tauri::command]
 pub async fn set_front_controller(name: String, enabled: bool) -> Result<Response, GuiError> {
     finish(exchange(&Request::SetFrontController { name, enabled }).await?)
-}
-
-#[tauri::command]
-pub async fn wordpress_admin_users(site: String) -> Result<Response, GuiError> {
-    finish(exchange(&Request::WordpressAdminUsers { site }).await?)
-}
-
-#[tauri::command]
-pub async fn change_service_version(
-    service: String,
-    version: String,
-) -> Result<Response, GuiError> {
-    finish(exchange(&Request::ChangeServiceVersion { service, version }).await?)
-}
-
-#[tauri::command]
-pub async fn uninstall_service(
-    service: String,
-    version: String,
-    purge: bool,
-) -> Result<Response, GuiError> {
-    finish(
-        exchange(&Request::UninstallService {
-            service,
-            version,
-            purge,
-        })
-        .await?,
-    )
-}
-
-#[tauri::command]
-pub async fn start_service(service: String) -> Result<Response, GuiError> {
-    finish(exchange(&Request::StartService { service }).await?)
-}
-
-#[tauri::command]
-pub async fn stop_service(service: String) -> Result<Response, GuiError> {
-    finish(exchange(&Request::StopService { service }).await?)
-}
-
-#[tauri::command]
-pub async fn restart_service(service: String) -> Result<Response, GuiError> {
-    finish(exchange(&Request::RestartService { service }).await?)
-}
-
-#[tauri::command]
-pub async fn set_service_port(service: String, port: u16) -> Result<Response, GuiError> {
-    finish(exchange(&Request::SetServicePort { service, port }).await?)
-}
-
-/// Merge configuration overrides into a service instance (`""` removes a key).
-/// Takes effect on the next start/restart; nothing is restarted here.
-#[tauri::command]
-pub async fn set_service_overrides(
-    service: String,
-    overrides: std::collections::BTreeMap<String, String>,
-) -> Result<Response, GuiError> {
-    finish(exchange(&Request::SetServiceOverrides { service, overrides }).await?)
-}
-
-/// Read back a service instance's stored configuration overrides.
-#[tauri::command]
-pub async fn service_overrides(service: String) -> Result<Response, GuiError> {
-    finish(exchange(&Request::ServiceOverrides { service }).await?)
-}
-
-#[tauri::command]
-pub async fn service_logs(service: String, lines: u32) -> Result<Response, GuiError> {
-    finish(exchange(&Request::ServiceLogs { service, lines }).await?)
-}
-
-#[tauri::command]
-pub async fn addable_service_types() -> Result<Response, GuiError> {
-    finish(exchange(&Request::AddableServiceTypes).await?)
-}
-
-#[tauri::command]
-pub async fn add_service(
-    type_id: String,
-    site: Option<String>,
-    port: Option<u16>,
-    version: Option<String>,
-    autostart: bool,
-) -> Result<Response, GuiError> {
-    finish(
-        exchange(&Request::AddService {
-            type_id,
-            site,
-            port,
-            version,
-            autostart: Some(autostart),
-        })
-        .await?,
-    )
-}
-
-#[tauri::command]
-pub async fn remove_service(service: String, purge: bool) -> Result<Response, GuiError> {
-    finish(exchange(&Request::RemoveService { service, purge }).await?)
-}
-
-#[tauri::command]
-pub async fn set_service_autostart(service: String, enabled: bool) -> Result<Response, GuiError> {
-    finish(exchange(&Request::SetServiceAutostart { service, enabled }).await?)
-}
-
-#[tauri::command]
-pub async fn set_service_site(service: String, site: String) -> Result<Response, GuiError> {
-    finish(exchange(&Request::SetServiceSite { service, site }).await?)
-}
-
-#[tauri::command]
-pub async fn create_database(service: String, name: String) -> Result<Response, GuiError> {
-    finish(exchange(&Request::CreateDatabase { service, name }).await?)
-}
-
-#[tauri::command]
-pub async fn list_databases(service: String) -> Result<Response, GuiError> {
-    finish(exchange(&Request::ListDatabases { service }).await?)
-}
-
-#[tauri::command]
-pub async fn drop_database(service: String, name: String) -> Result<Response, GuiError> {
-    finish(exchange(&Request::DropDatabase { service, name }).await?)
-}
-
-#[tauri::command]
-pub async fn backup_database(
-    service: String,
-    name: String,
-    path: String,
-) -> Result<Response, GuiError> {
-    finish(
-        exchange(&Request::BackupDatabase {
-            service,
-            name,
-            path: PathBuf::from(path),
-        })
-        .await?,
-    )
-}
-
-#[tauri::command]
-pub async fn restore_database(
-    service: String,
-    name: String,
-    path: String,
-) -> Result<Response, GuiError> {
-    finish(
-        exchange(&Request::RestoreDatabase {
-            service,
-            name,
-            path: PathBuf::from(path),
-        })
-        .await?,
-    )
 }
 
 // ── mail capture ───────────────────────────────────────────────────────────
@@ -860,46 +522,6 @@ pub async fn untrust_ca() -> Result<bool, GuiError> {
 
 // ── dumps (Laravel telemetry) ────────────────────────────────────────────────
 
-#[tauri::command]
-pub async fn list_dumps(since: u64) -> Result<Response, GuiError> {
-    finish(exchange(&Request::ListDumps { since_id: since }).await?)
-}
-
-#[tauri::command]
-pub async fn clear_dumps() -> Result<Response, GuiError> {
-    finish(exchange(&Request::ClearDumps).await?)
-}
-
-#[tauri::command]
-pub async fn delete_dump(id: u64) -> Result<Response, GuiError> {
-    finish(exchange(&Request::DeleteDump { id }).await?)
-}
-
-#[tauri::command]
-pub async fn set_dumps_enabled(enabled: bool) -> Result<Response, GuiError> {
-    finish(exchange(&Request::SetDumpsEnabled { enabled }).await?)
-}
-
-#[tauri::command]
-pub async fn set_dumps_persist(persist: bool) -> Result<Response, GuiError> {
-    finish(exchange(&Request::SetDumpsPersist { persist }).await?)
-}
-
-#[tauri::command]
-pub async fn set_dumps_port(port: u16) -> Result<Response, GuiError> {
-    finish(exchange(&Request::SetDumpsPort { port }).await?)
-}
-
-#[tauri::command]
-pub async fn set_dump_feature(feature: String, enabled: bool) -> Result<Response, GuiError> {
-    finish(exchange(&Request::SetDumpFeature { feature, enabled }).await?)
-}
-
-#[tauri::command]
-pub async fn dumps_status() -> Result<Response, GuiError> {
-    finish(exchange(&Request::DumpsStatus).await?)
-}
-
 // ── dev tools (composer / node / bun) ────────────────────────────────────────
 
 #[tauri::command]
@@ -997,11 +619,6 @@ pub async fn stop_named_tunnel() -> Result<Response, GuiError> {
 }
 
 // ── site creation ──────────────────────────────────────────────────────────
-
-#[tauri::command]
-pub async fn create_site(spec: orcker_ipc::CreateSiteSpec) -> Result<Response, GuiError> {
-    finish(exchange(&Request::CreateSite { spec }).await?)
-}
 
 #[tauri::command]
 pub async fn job_status(job_id: String, cursor: u64) -> Result<Response, GuiError> {
@@ -1383,19 +1000,6 @@ mod tests {
         }
     }
 
-    fn site_entry(name: &str, root: &str) -> SiteEntry {
-        SiteEntry {
-            site: orcker_core::Site::linked(name, PathBuf::from(root), PhpVersion::new(8, 3))
-                .expect("valid site"),
-            is_wordpress: false,
-            primary_domain: None,
-            domains: Vec::new(),
-            apex_shadowed_by: None,
-            uses_front_controller: false,
-            is_laravel: false,
-        }
-    }
-
     #[test]
     fn ide_options_preserve_wire_and_display_names() {
         let options = ide_options(&[
@@ -1407,21 +1011,6 @@ mod tests {
         assert_eq!(options[0].label, "VS Code");
         assert_eq!(options[1].id, "phpstorm");
         assert_eq!(options[1].label, "PhpStorm");
-    }
-
-    #[test]
-    fn resolve_site_root_matches_by_name_only() {
-        let sites = vec![
-            site_entry("blog", "/srv/blog"),
-            site_entry("shop", "/srv/shop"),
-        ];
-
-        assert_eq!(
-            resolve_site_root(&sites, "shop"),
-            Some(PathBuf::from("/srv/shop"))
-        );
-        assert_eq!(resolve_site_root(&sites, "missing"), None);
-        assert_eq!(resolve_site_root(&[], "blog"), None);
     }
 
     #[test]
@@ -1569,5 +1158,37 @@ mod tests {
         assert_ne!(first, second);
         assert_eq!(std::fs::read(&first).expect("read first"), b"one");
         assert_eq!(std::fs::read(&second).expect("read second"), b"two");
+    }
+
+    fn site_entry(name: &str, root: &str) -> SiteEntry {
+        SiteEntry {
+            site: orcker_core::Site::linked(
+                name,
+                PathBuf::from(root),
+                orcker_core::PhpVersion::new(8, 3),
+            )
+            .expect("valid site"),
+            is_wordpress: false,
+            primary_domain: None,
+            domains: Vec::new(),
+            apex_shadowed_by: None,
+            uses_front_controller: false,
+            is_laravel: false,
+        }
+    }
+
+    #[test]
+    fn resolve_site_root_matches_by_name_only() {
+        let sites = vec![
+            site_entry("blog", "/srv/blog"),
+            site_entry("shop", "/srv/shop"),
+        ];
+
+        assert_eq!(
+            resolve_site_root(&sites, "shop"),
+            Some(PathBuf::from("/srv/shop"))
+        );
+        assert_eq!(resolve_site_root(&sites, "missing"), None);
+        assert_eq!(resolve_site_root(&[], "blog"), None);
     }
 }

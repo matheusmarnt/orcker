@@ -6,7 +6,7 @@
 //! lines. The values flow, unescaped, straight into the FPM master config
 //! file, so [`validate_value`] is the **security boundary**: it is run when a
 //! value is set (CLI + daemon), when the config is loaded from disk
-//! (`orcker-config`), and again defensively at render time (`orcker-php`).
+//! (`orcker-config`), and again defensively at render time.
 //!
 //! This module is pure: an allowlist of supported directives plus per-kind
 //! value validators, hand-rolled (no `regex` dependency).
@@ -223,7 +223,7 @@ pub fn render_cover_ini(base: &str, pcov_so: &std::path::Path) -> Option<String>
 /// the union of both maps with the override value winning per key. Unsupported
 /// keys are dropped defensively from either side, so the result only ever
 /// contains allowlisted settings. This is the single home of the
-/// global-vs-per-version precedence rule; `orcker-php` and the daemon both call
+/// global-vs-per-version precedence rule; the daemon calls
 /// it rather than re-deriving effective values.
 #[must_use]
 pub fn merge_effective(

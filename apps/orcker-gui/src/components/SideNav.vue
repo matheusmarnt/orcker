@@ -3,14 +3,12 @@ import type { Component } from "vue";
 import { computed, onMounted, ref } from "vue";
 import {
   ClipboardList,
-  Database,
   Info,
   LayoutDashboard,
   LayoutGrid,
   Mail,
   Settings,
   Share2,
-  SquareCode,
   Stethoscope,
   Waypoints,
   Wrench,
@@ -21,8 +19,7 @@ import OperationsIndicator from "@/components/OperationsIndicator.vue";
 import StatusPill from "@/components/StatusPill.vue";
 import { useDaemon } from "@/composables/useDaemon";
 import { loadPlatform, usePlatform } from "@/composables/usePlatform";
-import { useResource } from "@/composables/useResource";
-import { cachedUpdateStatus, listPhp, showMailsWindow } from "@/ipc/client";
+import { cachedUpdateStatus, showMailsWindow } from "@/ipc/client";
 import { needsElevation } from "@/lib/elevation";
 import logoUrl from "@/assets/logo.svg";
 
@@ -48,11 +45,6 @@ const { connected, report } = useDaemon();
 const { isMac } = usePlatform();
 const unread = computed(() => report.value?.mail?.unread ?? 0);
 const sharedSites = computed(() => report.value?.shared_sites ?? 0);
-
-// Same shared "php" cache the PHP view uses, so the badge count matches what
-// that page shows. `updates` is populated on the list_php response.
-const { data: phpData } = useResource("php", listPhp);
-const phpUpdates = computed(() => phpData.value?.updates?.length ?? 0);
 
 // Orcker self-update: the daemon's last stored check (no network). Shows a 1 when
 // an update is available on the current track, nothing when up to date.
@@ -83,8 +75,6 @@ const sections = computed<{ title: string; items: Item[] }[]>(() => [
     title: "Environment",
     items: [
       { to: "/sites", label: "Sites", icon: LayoutGrid },
-      { to: "/php", label: "PHP", icon: SquareCode, badge: phpUpdates.value },
-      { to: "/services", label: "Services", icon: Database },
     ],
   },
   {
