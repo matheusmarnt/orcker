@@ -11,7 +11,7 @@ them with `/spec-new` when the queue approaches them.
 |---|------|--------|--------|------------|
 | 1 | SPEC-0001-fork-bootstrap | accepted | FR-001 | — |
 | 2 | SPEC-0002-remove-native-runtime | accepted | FR-002 | SPEC-0001 |
-| 33 | SPEC-0033-remove-stale-php-instruction-file | draft | FR-002 | SPEC-0002 |
+| 33 | SPEC-0033-remove-stale-php-instruction-file | accepted | FR-002 | SPEC-0002 |
 | 36 | SPEC-0036-remove-dead-gui-surfaces | draft | FR-002 | SPEC-0002 |
 | 37 | SPEC-0037-restore-coverage-deleted-by-spec-0002 | draft | FR-002 | SPEC-0002 |
 | 3 | SPEC-0003-stack-compose-renderer | draft | FR-022 (partial) | SPEC-0001 |

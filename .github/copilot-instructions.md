@@ -7,10 +7,11 @@ they match; this file is the always-on baseline.
 
 ## What Orcker is
 
-Orcker is a cross-platform local PHP development environment for **macOS, Linux,
-and Windows**. It serves projects on `.test`
-domains over HTTP/HTTPS, runs multiple PHP versions per site, and optionally
-supervises databases and caches as native child processes. The product runs
+Orcker is a cross-platform orchestrator for containerised PHP/Laravel
+development environments, for **macOS, Linux, and Windows**. It serves projects
+on `.test` domains over HTTP/HTTPS and drives a per-project Docker Compose stack
+(app, web server, database) plus shared global services, so each site picks its
+own PHP version without anything being installed on the host. The product runs
 **without root** in normal operation; setup may elevate once.
 
 It is a Rust workspace plus a Tauri v2 + Vue 3 desktop app. macOS and Linux are
@@ -50,7 +51,7 @@ Internal dependencies flow strictly downhill, no cycles:
 ```
 orcker-core ◄── everything
 orcker-core ◄── orcker-ipc ◄── orcker-config, orcker-doctor, binaries, gui
-orcker-tls  ◄── orcker-platform ◄── orcker-php, orcker-proxy, binaries
+orcker-tls  ◄── orcker-platform ◄── orcker-proxy, binaries
 ```
 
 - `orcker-core` depends on no other `orcker-*` crate.
