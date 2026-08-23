@@ -12,9 +12,6 @@ const getPreferredIde = vi.fn();
 const getSiteIdeOverrides = vi.fn();
 const setSiteIdeOverride = vi.fn();
 const pickDirectory = vi.fn();
-const showDumpsWindow = vi.fn();
-const mintWordPressLoginToken = vi.fn();
-const wordpressAdminUsers = vi.fn();
 const addDomain = vi.fn();
 const removeDomain = vi.fn();
 const setPrimaryDomain = vi.fn();
@@ -34,9 +31,6 @@ vi.mock("@/ipc/client", () => ({
   getSiteIdeOverrides: (...args: unknown[]) => getSiteIdeOverrides(...args),
   setSiteIdeOverride: (...args: unknown[]) => setSiteIdeOverride(...args),
   pickDirectory: (...args: unknown[]) => pickDirectory(...args),
-  showDumpsWindow: (...args: unknown[]) => showDumpsWindow(...args),
-  mintWordPressLoginToken: (...args: unknown[]) => mintWordPressLoginToken(...args),
-  wordpressAdminUsers: (...args: unknown[]) => wordpressAdminUsers(...args),
   addDomain: (...args: unknown[]) => addDomain(...args),
   removeDomain: (...args: unknown[]) => removeDomain(...args),
   setPrimaryDomain: (...args: unknown[]) => setPrimaryDomain(...args),
@@ -136,9 +130,6 @@ describe("SiteDetailsSidebar", () => {
     hostPlatform.value = "linux";
     resetIdes();
     pickDirectory.mockReset();
-    showDumpsWindow.mockReset();
-    mintWordPressLoginToken.mockReset();
-    wordpressAdminUsers.mockReset().mockResolvedValue([]);
     addDomain.mockReset().mockResolvedValue(undefined);
     removeDomain.mockReset().mockResolvedValue(undefined);
     setPrimaryDomain.mockReset().mockResolvedValue(undefined);
@@ -159,11 +150,9 @@ describe("SiteDetailsSidebar", () => {
     expect(wrapper.text()).toContain("blog.test");
     expect(wrapper.text()).toContain("/srv/blog");
     expect(wrapper.text()).toContain("Laravel");
-    expect(wrapper.text()).toContain("8.3");
     expect(wrapper.text()).toContain("Editor");
     expect(wrapper.text()).not.toContain("Tinker");
     expect(wrapper.text()).toContain("Terminal");
-    expect(wrapper.text()).toContain("Dumps");
     expect(wrapper.text()).not.toContain("Edit site");
 
     const openButton = wrapper.findAll("button").find((button) => button.text() === "Open site");
@@ -191,10 +180,6 @@ describe("SiteDetailsSidebar", () => {
     await terminal.trigger("click");
     expect(openInTerminal).toHaveBeenCalledWith("/srv/blog");
 
-    const dumps = wrapper.findAll("button").find((button) => button.text().includes("Dumps"));
-    if (!dumps) throw new Error("Dumps button not rendered");
-    await dumps.trigger("click");
-    expect(showDumpsWindow).toHaveBeenCalledOnce();
   });
 
   it("opens the site folder with the system file manager when no IDE is detected", async () => {
@@ -469,10 +454,6 @@ describe("SiteDetailsSidebar", () => {
   it("provides General controls and keeps application details under Information", async () => {
     const wrapper = mountSidebar();
 
-    const php = wrapper.get('[aria-label="Site PHP version"]');
-    await php.setValue("8.4");
-    expect(wrapper.emitted("changePhp")).toEqual([[site(), "8.4"]]);
-
     const webRoot = wrapper.get('[aria-label="Site web root"]');
     await webRoot.setValue("public");
     const saveWebRoot = wrapper.findAll("button").find((button) => button.text() === "Save");
@@ -550,7 +531,7 @@ describe("SiteDetailsSidebar", () => {
     await wrapper.setProps({ open: false });
     await wrapper.setProps({ open: true });
 
-    expect(wrapper.text()).toContain("PHP version");
+    expect(wrapper.text()).toContain("Web root");
   });
 
   it("offers the group picker only when groups exist", async () => {
@@ -596,102 +577,18 @@ describe("SiteDetailsSidebar", () => {
     const wrapper = mountSidebar();
 
     expect(wrapper.findAll("button").find((b) => b.text().includes("WP Admin"))).toBeUndefined();
-    expect(wrapper.find('[aria-label="WordPress Auto Admin Login"]').exists()).toBe(false);
-    expect(wordpressAdminUsers).not.toHaveBeenCalled();
   });
 });
 
 describe("SiteDetailsSidebar WordPress controls", () => {
   beforeEach(() => {
     openInBrowser.mockReset();
-    mintWordPressLoginToken.mockReset();
     toastError.mockReset();
-    wordpressAdminUsers.mockReset().mockResolvedValue([]);
-  });
-
-  it("turns auto-login back off and toasts when the admin users can't be read", async () => {
-    wordpressAdminUsers.mockRejectedValue(new Error("wp-cli exploded"));
-    const on = wpSite({ wp_auto_login: true });
-    const wrapper = mountSidebar(on);
-    await flushPromises();
-
-    expect(toastError).toHaveBeenCalledWith(
-      "Couldn't load WordPress admin users",
-      "wp-cli exploded",
-    );
-    expect(wrapper.emitted("changeWpAutoLogin")).toEqual([[on, false, null, { silent: true }]]);
-    expect(wrapper.find('[aria-label="Sign in as"]').exists()).toBe(false);
-  });
-
-  it("ignores an admin-user failure that lands after the sidebar closes", async () => {
-    let fail!: (e: Error) => void;
-    wordpressAdminUsers.mockReturnValue(
-      new Promise((_resolve, reject) => {
-        fail = reject;
-      }),
-    );
-    const wrapper = mountSidebar(wpSite({ wp_auto_login: true }));
-
-    await wrapper.setProps({ open: false });
-    fail(new Error("wp-cli exploded"));
-    await flushPromises();
-
-    expect(toastError).not.toHaveBeenCalled();
-    expect(wrapper.emitted("changeWpAutoLogin")).toBeUndefined();
-  });
-
-  it("reads no admin users at all while auto-login is off", async () => {
-    wordpressAdminUsers.mockRejectedValue(new Error("wp-cli exploded"));
-    const wrapper = mountSidebar(wpSite({ wp_auto_login: false }));
-    await flushPromises();
-
-    expect(wordpressAdminUsers).not.toHaveBeenCalled();
-    expect(toastError).not.toHaveBeenCalled();
-    expect(wrapper.emitted("changeWpAutoLogin")).toBeUndefined();
-  });
-
-  it("writes nothing when the fetch the switch triggers fails", async () => {
-    wordpressAdminUsers.mockRejectedValue(new Error("still broken"));
-    const wrapper = mountSidebar(wpSite({ wp_auto_login: false }));
-    await flushPromises();
-
-    await wrapper.get('[aria-label="WordPress Auto Admin Login"]').trigger("click");
-    await flushPromises();
-
-    expect(wordpressAdminUsers).toHaveBeenCalledOnce();
-    expect(toastError).toHaveBeenCalledOnce();
-    expect(wrapper.emitted("changeWpAutoLogin")).toBeUndefined();
-  });
-
-  it("writes the change once a retried fetch succeeds", async () => {
-    wordpressAdminUsers.mockRejectedValueOnce(new Error("transient"));
-    const off = wpSite({ wp_auto_login: false });
-    const wrapper = mountSidebar(off);
-    await flushPromises();
-
-    await wrapper.get('[aria-label="WordPress Auto Admin Login"]').trigger("click");
-    await flushPromises();
-    expect(wrapper.emitted("changeWpAutoLogin")).toBeUndefined();
-
-    wordpressAdminUsers.mockResolvedValue([{ login: "editor", display_name: "Editor" }]);
-    await wrapper.get('[aria-label="WordPress Auto Admin Login"]').trigger("click");
-    await flushPromises();
-
-    expect(wrapper.emitted("changeWpAutoLogin")).toEqual([[off, true, null]]);
-  });
-
-  it("shows the user picker only once the admin list has loaded", async () => {
-    const wrapper = mountSidebar(wpSite({ wp_auto_login: true }));
-    expect(wrapper.find('[aria-label="Sign in as"]').exists()).toBe(false);
-
-    await flushPromises();
-    expect(wrapper.find('[aria-label="Sign in as"]').exists()).toBe(true);
   });
 
   it("hides the controls that don't apply to WordPress", async () => {
     const wrapper = mountSidebar(wpSite());
 
-    expect(wrapper.findAll("button").some((b) => b.text().includes("Dumps"))).toBe(false);
     expect(wrapper.find('[aria-label="Site web root"]').exists()).toBe(false);
   });
 
@@ -703,37 +600,7 @@ describe("SiteDetailsSidebar WordPress controls", () => {
     await wpAdmin.trigger("click");
     await flushPromises();
 
-    expect(mintWordPressLoginToken).not.toHaveBeenCalled();
     expect(openInBrowser).toHaveBeenCalledWith("https://blog.test/wp-admin/");
   });
 
-  it("mints a pre-authenticated WP Admin link when auto-login is on", async () => {
-    mintWordPressLoginToken.mockResolvedValue("sekrit-token");
-    const wrapper = mountSidebar(wpSite({ wp_auto_login: true }));
-
-    const wpAdmin = wrapper.findAll("button").find((b) => b.text().includes("WP Admin"));
-    if (!wpAdmin) throw new Error("WP Admin button not rendered");
-    await wpAdmin.trigger("click");
-    await flushPromises();
-
-    expect(openInBrowser).toHaveBeenCalledWith(
-      "https://blog.test/wp-admin/?orcker_login_token=sekrit-token",
-    );
-  });
-
-  it("toggles auto-login and changes the signed-in user", async () => {
-    wordpressAdminUsers.mockResolvedValue([{ login: "editor", display_name: "Editor" }]);
-    const off = wpSite({ wp_auto_login: false });
-    const wrapper = mountSidebar(off);
-
-    await wrapper.get('[aria-label="WordPress Auto Admin Login"]').trigger("click");
-    expect(wrapper.emitted("changeWpAutoLogin")).toEqual([[off, true, null]]);
-
-    const on = wpSite({ wp_auto_login: true });
-    await wrapper.setProps({ site: on });
-    await flushPromises();
-
-    await wrapper.get('[aria-label="Sign in as"]').setValue("editor");
-    expect(wrapper.emitted("changeWpAutoLogin")?.[1]).toEqual([on, true, "editor"]);
-  });
 });

@@ -7,7 +7,7 @@
  * Unlike the theme preference (`lib/theme.ts`, `localStorage`), the source of
  * truth here is the host settings file, since we mirror the tray-icon storage
  * model. But the title bar - unlike the tray icon - is drawn once per window
- * (main/mails/dumps), so a change still needs the same cross-window broadcast
+ * (main/mails), so a change still needs the same cross-window broadcast
  * `theme.ts` uses: each webview is a separate JS context, so one window's
  * change is invisible to the others without it.
  */
@@ -17,7 +17,7 @@ import { ref } from "vue";
 import { getTitleBarStyle, setTitleBarStyle as ipcSetTitleBarStyle } from "@/ipc/client";
 import type { TitleBarStyle } from "@/ipc/types";
 
-/** Cross-window broadcast: each webview (main, mails, dumps) is a separate JS
+/** Cross-window broadcast: each webview (main, mails) is a separate JS
  *  context + DOM, so a change in one is published to the others. */
 const TITLE_BAR_STYLE_EVENT = "orcker:title-bar-style-changed";
 
@@ -31,7 +31,7 @@ const style = ref<TitleBarStyle>("auto");
 let latestCall = 0;
 
 /** Set + persist the preference, then broadcast to the app's other windows
- *  (mails/dumps) so they switch in lockstep. Optimistic: the ref updates
+ *  (mails) so they switch in lockstep. Optimistic: the ref updates
  *  immediately, but a failed IPC call rolls it back and does NOT broadcast -
  *  other windows must never see a value that wasn't actually persisted. */
 export async function setTitleBarStyle(next: TitleBarStyle): Promise<void> {

@@ -49,12 +49,6 @@ export const router = createRouter({
       component: () => import("@/views/ProxiesView.vue"),
     },
     {
-      path: "/dumps",
-      name: "dumps",
-      meta: { title: "Dumps", subtitle: "Intercept dump() calls and Laravel telemetry" },
-      component: () => import("@/views/LaravelDumpsView.vue"),
-    },
-    {
       path: "/integrations",
       name: "integrations",
       meta: {
@@ -62,12 +56,6 @@ export const router = createRouter({
         subtitle: "Publish a local site to the internet over a secure public URL",
       },
       component: () => import("@/views/IntegrationsView.vue"),
-    },
-    {
-      // Standalone viewer rendered in the separate "dumps" window (no app shell).
-      path: "/dumps-window",
-      name: "dumps-window",
-      component: () => import("@/views/DumpsWindowView.vue"),
     },
     {
       path: "/mail",

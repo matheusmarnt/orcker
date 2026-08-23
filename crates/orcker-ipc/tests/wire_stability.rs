@@ -1275,17 +1275,6 @@ fn response_tools_external_byte_shape() {
 // ---------- CreateSite / job model ----------
 
 #[test]
-fn request_create_site_community_kit_byte_shape() {
-    use orcker_ipc::StarterKit;
-    let s = serde_json::to_string(&StarterKit::Community("acme/kit".into())).unwrap();
-    assert_eq!(s, r#"{"community":"acme/kit"}"#);
-    assert_eq!(
-        serde_json::from_str::<StarterKit>(&s).unwrap(),
-        StarterKit::Community("acme/kit".into())
-    );
-}
-
-#[test]
 fn request_job_status_byte_shape() {
     let r = Request::JobStatus {
         job_id: "j1".into(),

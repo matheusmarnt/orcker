@@ -66,33 +66,14 @@ export function siteUrl(s: SiteLike, report: StatusReport | null | undefined): s
 }
 
 /**
- * The plain WP Admin URL for a WordPress site - the site's own URL plus
- * `/wp-admin/`. Not pre-authenticated: this opens the ordinary WordPress
- * login screen. Used as the fallback when one-click login isn't available
- * (unbound/resolver-off mode, or a failed token mint) - see
- * `wpAdminLoginUrl` for the pre-authenticated variant. `siteUrl` never
- * returns a trailing slash in either branch, so straight concatenation is
- * safe here.
+ * The WP Admin URL for a WordPress site - the site's own URL plus
+ * `/wp-admin/`. Never pre-authenticated: this opens the ordinary WordPress
+ * login screen. The one-click variant needed a daemon handler SPEC-0002
+ * removed. `siteUrl` never returns a trailing slash in either branch, so
+ * straight concatenation is safe here.
  */
 export function wpAdminUrl(s: SiteLike, report: StatusReport | null | undefined): string {
   return `${siteUrl(s, report)}/wp-admin/`;
-}
-
-/**
- * The one-click, pre-authenticated WP Admin URL: `wpAdminUrl` plus the
- * single-use login token as a query param. `orcker-proxy` recognizes this
- * param on `/wp-admin` requests, validates + consumes the token, and signs
- * the browser in as the site's admin before redirecting - see
- * `bin/orckerd/src/wordpress_login.rs`. Never use this in unbound/resolver-off
- * mode (the token can never validate there - see that module's docs); callers
- * should check `isUnbound(report)` first and fall back to `wpAdminUrl`.
- */
-export function wpAdminLoginUrl(
-  s: SiteLike,
-  report: StatusReport | null | undefined,
-  token: string,
-): string {
-  return `${wpAdminUrl(s, report)}?orcker_login_token=${encodeURIComponent(token)}`;
 }
 
 /**

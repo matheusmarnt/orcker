@@ -131,7 +131,6 @@ fn main() {
             commands::job_status,
             commands::job_cancel,
             commands::save_mail_attachment,
-            show_dumps_window,
             daemon::daemon_installed,
             daemon::daemon_diagnostics,
             daemon::start_daemon,
@@ -465,7 +464,7 @@ fn move_window_to_active_space(win: &tauri::WebviewWindow) {
     ns_window.setCollectionBehavior(behavior);
 }
 
-/// Reveal an auxiliary window (mails/dumps): if it's already open just focus it,
+/// Reveal an auxiliary window: if it's already open just focus it,
 /// otherwise center it on the monitor under the cursor (the user's active screen)
 /// before showing. `cfg_w`/`cfg_h` are the window's configured *logical* size - a
 /// hidden/never-presented window's `outer_size()` is unreliable, so the caller
@@ -507,39 +506,6 @@ fn position_on_cursor_monitor(win: &tauri::WebviewWindow, cfg_w: f64, cfg_h: f64
     let x = pos.x + ((f64::from(size.width) - cfg_w * scale) / 2.0) as i32;
     let y = pos.y + ((f64::from(size.height) - cfg_h * scale) / 2.0) as i32;
     let _ = win.set_position(tauri::PhysicalPosition::new(x, y));
-}
-
-/// Show (or lazily create) the auxiliary "dumps" window - the live Laravel
-/// telemetry viewer. Reuses the statically-declared window when it already
-/// exists; rebuilds it only if a prior close destroyed it.
-pub(crate) fn show_dumps(app: &tauri::AppHandle) -> tauri::Result<()> {
-    if let Some(win) = app.get_webview_window("dumps") {
-        reveal_aux_window(&win, 900.0, 640.0);
-        return Ok(());
-    }
-    let win = tauri::WebviewWindowBuilder::new(
-        app,
-        "dumps",
-        tauri::WebviewUrl::App("index.html#/dumps-window".into()),
-    )
-    .title("Orcker Dumps")
-    .inner_size(900.0, 640.0)
-    .min_inner_size(640.0, 420.0)
-    .decorations(false)
-    .transparent(true)
-    .visible(false)
-    .build()?;
-    reveal_aux_window(&win, 900.0, 640.0);
-    Ok(())
-}
-
-/// Open the dumps window from the frontend ("Show Dumps" button). Returns the
-/// crate's `GuiError` so the frontend sees the same typed `{ code, message }`
-/// failure shape as every other command.
-#[tauri::command]
-fn show_dumps_window(app: tauri::AppHandle) -> Result<(), crate::error::GuiError> {
-    show_dumps(&app)
-        .map_err(|e| crate::error::GuiError::internal(format!("failed to show dumps window: {e}")))
 }
 
 /// Show or hide the app's Dock presence by flipping the macOS activation policy:

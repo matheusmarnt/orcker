@@ -17,8 +17,8 @@ export function phpVersionInRange(php: PhpVersion, minPhp: PhpVersion, maxPhp: P
 }
 
 /**
- * Whether `php` is an out-of-support legacy version (< 8.2): no coverage, no
- * dumps, and never eligible as the global default. Mirrors the authoritative
+ * Whether `php` is an out-of-support legacy version (< 8.2): no coverage and
+ * never eligible as the global default. Mirrors the authoritative
  * cutoff in `orcker_core::PhpVersion::is_legacy` (FIRST_SUPPORTED_MINOR = 8.2);
  * the daemon remains the real gate, so this is a UI convenience only.
  */

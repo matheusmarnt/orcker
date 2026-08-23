@@ -357,124 +357,7 @@ export interface FixReport {
   manual: Diagnosis[];
 }
 
-// ── dumps (dump.rs) ─────────────────────────────────────────────────────────
-
-/** crates/orcker-ipc/src/dump.rs - DumpCategory (the viewer tabs). */
-export type DumpCategory =
-  | "dump"
-  | "query"
-  | "job"
-  | "view"
-  | "request"
-  | "log"
-  | "cache"
-  | "http";
-
-/**
- * crates/orcker-ipc/src/dump.rs - DumpEvent. `payload` is category-specific and
- * opaque to the daemon; the viewer renders it per `category` (see the
- * dump extension architecture doc for the per-category shape).
- */
-export interface DumpEvent {
-  id: number;
-  category: DumpCategory;
-  /** Capture time, Unix epoch milliseconds. */
-  ts_ms: number;
-  /** Originating `.test` site; may be empty. */
-  site: string;
-  /** Stable per-request id, so the viewer groups rows by request. */
-  request_id: string;
-  payload: Record<string, unknown>;
-}
-
-/** crates/orcker-ipc/src/dump.rs - DumpCounts (current per-category buffer counts). */
-export interface DumpCounts {
-  dumps: number;
-  queries: number;
-  jobs: number;
-  views: number;
-  requests: number;
-  logs: number;
-  cache: number;
-  http: number;
-}
-
-/** crates/orcker-ipc/src/dump.rs - DumpExtStatus (per-version extension presence). */
-export interface DumpExtStatus {
-  version: PhpVersion;
-  present: boolean;
-  /** True for legacy (< 8.2) versions, which never capture dumps. */
-  legacy?: boolean;
-}
-
-// ── site creation (create.rs) ───────────────────────────────────────────────
-// Unlike most requests, the GUI *does* build this payload (the wizard), so the
-// spec types live here and are sent via `createSite`.
-
-/** StarterKit unit variants (externally tagged enum). */
-export type StarterKitTag = "none" | "react" | "vue" | "livewire" | "svelte";
-/** StarterKit: a unit tag, or a community kit `{ community: "<package>" }`. */
-export type StarterKit = StarterKitTag | { community: string };
-
-export type AuthProvider = "laravel" | "work_os";
-export type Testing = "pest" | "php_unit";
-export type Database = "sqlite" | "mysql" | "mariadb" | "pgsql" | "sqlsrv";
-export type JsRuntime = "npm" | "bun" | "skip";
-
-/** crates/orcker-ipc/src/create.rs - LaravelOptions. */
-export interface LaravelOptions {
-  starter_kit: StarterKit;
-  auth: AuthProvider;
-  livewire_class_components: boolean;
-  teams: boolean;
-  testing: Testing;
-  database: Database;
-  js: JsRuntime;
-  git: boolean;
-  boost: boolean;
-}
-
-export type WordPressDbEngine = "mysql" | "mariadb";
-
-/** crates/orcker-ipc/src/create.rs - WordPressDatabase. */
-export interface WordPressDatabase {
-  engine: WordPressDbEngine;
-  name: string;
-}
-
-/** crates/orcker-ipc/src/create.rs - WordPressOptions. */
-export interface WordPressOptions {
-  /** `null` installs the latest stable release. */
-  core_version: string | null;
-  locale: string;
-  admin_user: string;
-  admin_email: string;
-  admin_password: string;
-  site_title: string;
-  table_prefix: string;
-  database: WordPressDatabase;
-}
-
-/**
- * Framework is internally tagged on `framework`. The Rust variant is spelled
- * `Wordpress` (one capital) so `rename_all = "snake_case"` produces the wire
- * tag `"wordpress"` rather than `"word_press"` - see create.rs's doc comment.
- */
-export type Framework =
-  | { framework: "laravel"; options: LaravelOptions }
-  | { framework: "wordpress"; options: WordPressOptions };
-
-/** crates/orcker-ipc/src/create.rs - CreateSiteSpec. */
-export interface CreateSiteSpec {
-  name: string;
-  /** Directory the new project dir is created inside (parked root or any folder). */
-  parent_dir: string;
-  php: PhpVersion;
-  secure: boolean;
-  framework: Framework;
-}
-
-/** crates/orcker-ipc/src/create.rs - JobState. */
+/** crates/orcker-ipc/src/create.rs - JobState. Terminal states end a poll. */
 export type JobState = "running" | "succeeded" | "failed" | "cancelled";
 
 // ── response variants (response.rs) ────────────────────────────────────────
@@ -611,27 +494,6 @@ export type Response =
   | { type: "service_logs"; lines: string[] }
   | { type: "service_overrides"; overrides: Record<string, string> }
   | { type: "databases"; databases: DatabaseSummary[] }
-  | {
-      type: "dumps";
-      events: DumpEvent[];
-      removed_ids: number[];
-      counts: DumpCounts;
-      latest_id: number;
-      /** Smallest id still buffered; drop any held id below this. */
-      min_live_id: number;
-    }
-  | {
-      type: "dumps_status";
-      enabled: boolean;
-      port: number;
-      running: boolean;
-      /** Whether logs persist across requests (off = clear on each new request). */
-      persist: boolean;
-      extensions: DumpExtStatus[];
-      counts: DumpCounts;
-      /** Resolved per-feature flags (every key present). */
-      features: Record<string, boolean>;
-    }
   | { type: "mails"; mails: MailSummary[] }
   | { type: "mail"; mail: MailDetail }
   | { type: "tools"; tools: ToolStatus[] }
@@ -782,8 +644,6 @@ export type DoctorFixResponse = Extract<Response, { type: "doctor_fix" }>;
 export type ServicesResponse = Extract<Response, { type: "services" }>;
 export type AvailableServicesResponse = Extract<Response, { type: "available_services" }>;
 export type ServiceLogsResponse = Extract<Response, { type: "service_logs" }>;
-export type DumpsResponse = Extract<Response, { type: "dumps" }>;
-export type DumpsStatusResponse = Extract<Response, { type: "dumps_status" }>;
 export type MailsResponse = Extract<Response, { type: "mails" }>;
 export type MailResponse = Extract<Response, { type: "mail" }>;
 export type JobStartedResponse = Extract<Response, { type: "job_started" }>;

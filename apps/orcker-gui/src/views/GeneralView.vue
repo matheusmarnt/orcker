@@ -21,7 +21,6 @@ import { useToast } from "@/composables/useToast";
 import {
   cliPathStatus,
   daemonInfo,
-  dumpsStatus,
   getAutostart,
   getPreferredIde,
   getTrayIconVariant,
@@ -226,20 +225,18 @@ watch(running, (up) => {
   if (up) void loadApplicationPorts();
 });
 
-// ── application ports (HTTP/HTTPS fallback, DNS, mail, dumps) ──
+// ── application ports (HTTP/HTTPS fallback, DNS, mail) ──
 const { applyAndRestart, validate: validateFallbackPorts, validateLoopback } =
   useFallbackPorts();
 const fbHttp = ref("");
 const fbHttps = ref("");
 const dnsPort = ref("");
 const mailPort = ref("");
-const dumpsPort = ref("");
 // The values last loaded from / saved to the daemon, to detect a real change.
 const fbHttpSaved = ref("");
 const fbHttpsSaved = ref("");
 const dnsPortSaved = ref("");
 const mailPortSaved = ref("");
-const dumpsPortSaved = ref("");
 const applicationPortsOpen = ref(false);
 
 /** Extract the port from a `host:port` socket address (e.g. `127.0.0.1:1053`). */
@@ -250,8 +247,8 @@ function portFromAddr(addr: string | undefined): number {
 }
 
 async function loadApplicationPorts(): Promise<void> {
-  // HTTP/HTTPS fallback + DNS come from `daemonInfo`; dumps from its own status
-  // call; mail from the live status report.
+  // HTTP/HTTPS fallback + DNS come from `daemonInfo`; mail from the live
+  // status report.
   try {
     const info = await daemonInfo();
     fbHttp.value = info.fallback_http ? String(info.fallback_http) : "";
@@ -268,19 +265,12 @@ async function loadApplicationPorts(): Promise<void> {
     fbHttps.value = "";
     dnsPort.value = "";
   }
-  try {
-    const d = await dumpsStatus();
-    dumpsPort.value = d.port ? String(d.port) : "";
-  } catch {
-    dumpsPort.value = "";
-  }
   const mp = report.value?.mail?.port;
   mailPort.value = mp ? String(mp) : "";
   fbHttpSaved.value = fbHttp.value;
   fbHttpsSaved.value = fbHttps.value;
   dnsPortSaved.value = dnsPort.value;
   mailPortSaved.value = mailPort.value;
-  dumpsPortSaved.value = dumpsPort.value;
 }
 
 // The mail port lives in the status report, which can lag the first paint by one
@@ -310,7 +300,7 @@ watch(
 
 // macOS pf redirect is pinned to the current HTTP/HTTPS ports, so block edits to
 // those until the user un-elevates. Only fires on macOS (Linux reports null).
-// DNS/mail/dumps are unaffected and stay editable.
+// DNS/mail are unaffected and stay editable.
 const portsElevated = computed(() => report.value?.port_redirect === true);
 const webPortsChanged = computed(
   () => fbHttp.value !== fbHttpSaved.value || fbHttps.value !== fbHttpsSaved.value,
@@ -321,8 +311,7 @@ const applicationPortsChanged = computed(
     // web delta must not flip Save on (or get snapshotted as if applied).
     (!portsElevated.value && webPortsChanged.value) ||
     dnsPort.value !== dnsPortSaved.value ||
-    mailPort.value !== mailPortSaved.value ||
-    dumpsPort.value !== dumpsPortSaved.value,
+    mailPort.value !== mailPortSaved.value,
 );
 
 function openApplicationPorts(): void {
@@ -338,7 +327,6 @@ function openApplicationPorts(): void {
   for (const [label, ref_, saved] of [
     ["DNS", dnsPort, dnsPortSaved],
     ["mail", mailPort, mailPortSaved],
-    ["dumps", dumpsPort, dumpsPortSaved],
   ] as const) {
     if (ref_.value !== saved.value) {
       const err = validateLoopback(label, Number(ref_.value));
@@ -364,7 +352,6 @@ async function confirmApplicationPorts(close: () => void): Promise<void> {
     }
     if (dnsPort.value !== dnsPortSaved.value) changes.dns = Number(dnsPort.value);
     if (mailPort.value !== mailPortSaved.value) changes.mail = Number(mailPort.value);
-    if (dumpsPort.value !== dumpsPortSaved.value) changes.dumps = Number(dumpsPort.value);
 
     const res = await applyAndRestart(changes);
     if (res.ok) {
@@ -377,7 +364,6 @@ async function confirmApplicationPorts(close: () => void): Promise<void> {
       }
       dnsPortSaved.value = dnsPort.value;
       mailPortSaved.value = mailPort.value;
-      dumpsPortSaved.value = dumpsPort.value;
       toast.success("Ports updated", "Orcker restarted with the new ports.");
     } else {
       // Leave the user's edits in place so they can adjust and retry.
@@ -575,7 +561,7 @@ async function toggleGuiMinimized(on: boolean): Promise<void> {
         </Button>
       </div>
 
-      <!-- Application ports (HTTP/HTTPS fallback, DNS, mail, dumps) -->
+      <!-- Application ports (HTTP/HTTPS fallback, DNS, mail) -->
       <Card v-if="running">
         <CardHeader>
           <CardTitle>Application Ports</CardTitle>
@@ -615,8 +601,8 @@ async function toggleGuiMinimized(on: boolean): Promise<void> {
           <!-- Elevated: editing HTTP/HTTPS would break the pinned redirect. -->
           <p v-if="portsElevated" class="text-xs text-muted-foreground">
             HTTP/HTTPS ports are elevated, so they're pinned to the active
-            redirect. Un-elevate ports (Doctor) before changing them. DNS, mail
-            and dumps ports can still be changed.
+            redirect. Un-elevate ports (Doctor) before changing them. DNS and
+            mail ports can still be changed.
           </p>
           <div class="grid grid-cols-2 gap-4 sm:grid-cols-3">
             <div class="space-y-1">
@@ -677,21 +663,6 @@ async function toggleGuiMinimized(on: boolean): Promise<void> {
                 aria-label="Mail server port"
                 class="w-full font-mono"
                 placeholder="2525"
-              />
-            </div>
-            <div class="space-y-1">
-              <label for="ap-dumps" class="text-xs font-medium text-muted-foreground">Dumps</label>
-              <Input
-                id="ap-dumps"
-                v-model="dumpsPort"
-                type="number"
-                inputmode="numeric"
-                min="1"
-                :max="MAX_PORT"
-                :disabled="busy === 'application-ports'"
-                aria-label="Dump server port"
-                class="w-full font-mono"
-                placeholder="2304"
               />
             </div>
           </div>
@@ -801,7 +772,7 @@ async function toggleGuiMinimized(on: boolean): Promise<void> {
               <p class="text-sm font-medium">Enable Orcker's MCP server</p>
               <p id="mcp-enabled-desc" class="text-xs text-muted-foreground">
                 {{ mcpEnabled
-                  ? "On - agents can list and create sites, manage PHP versions and proxies, and read captured mail and dumps. No tool deletes data. Turning this off applies to agent sessions started afterwards."
+                  ? "On - agents can list sites and proxies, and read captured mail. No tool deletes data. Turning this off applies to agent sessions started afterwards."
                   : "Off - agents can't use Orcker's tools. Turning it on takes effect on a running agent's next tool call." }}
               </p>
             </div>

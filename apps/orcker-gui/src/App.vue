@@ -5,7 +5,6 @@ import { computed, onMounted, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 import AppShell from "@/components/AppShell.vue";
-import DumpsWindowView from "@/views/DumpsWindowView.vue";
 import MailsViewerView from "@/views/MailsViewerView.vue";
 import WelcomeView from "@/views/WelcomeView.vue";
 import Toaster from "@/components/ui/Toaster.vue";
@@ -16,18 +15,15 @@ import { useOnboarding } from "@/composables/useOnboarding";
 import { useShortcuts } from "@/lib/shortcuts/useShortcuts";
 import { sitesIntent } from "@/lib/shortcuts/sitesIntent";
 
-// The auxiliary "dumps" and "mails" windows render standalone viewers with no app
+// The auxiliary "mails" window renders a standalone viewer with no app
 // shell and must NOT run the daemon poller or the first-run auto-start (the main
 // window owns both). Branch on the window label, not the route (which is racy at
 // first paint: Vue Router's initial navigation is async, so `route.meta` is still
 // empty on first render and a route-based check would briefly fall through to the
 // main AppShell).
 const windowLabel = getCurrentWindow().label;
-const isDumpsWindow = windowLabel === "dumps";
 const isMailsWindow = windowLabel === "mails";
-
-if (isDumpsWindow) useShortcuts("dumps");
-else if (isMailsWindow) useShortcuts("mails");
+if (isMailsWindow) useShortcuts("mails");
 
 // Start the single shared daemon poller for the app's lifetime.
 const { start, stop } = useDaemon();
@@ -51,7 +47,7 @@ const standalone = computed(() => route.meta.standalone === true);
 // showing a static "not running" screen until a manual click retries it.
 // `useDaemonStart` is acquired here rather than at setup-time: unlike
 // `useDaemon`, merely calling it registers a `daemon-start-phase` listener as a
-// side effect, and this path never runs for the dumps/mails windows.
+// side effect, and this path never runs for the mails window.
 async function autoStart(): Promise<void> {
   await useDaemonStart().start();
 }
@@ -59,8 +55,8 @@ async function autoStart(): Promise<void> {
 /**
  * Subscribe to the tray's navigation events for the main window. `navigate`
  * carries a route path the tray's "go to <page>" items emit after showing the
- * window; `sites-intent` carries a "link"/"park"/"create" action from the
- * New-site / Link / Park items (validated at this external boundary), which routes
+ * window; `sites-intent` carries a "link"/"park" action from the Link / Park
+ * items (validated at this external boundary), which routes
  * to /sites where SitesView opens the matching dialog. Registered before the probe
  * so an event fired during the probe round-trip isn't dropped, and wrapped so a
  * `listen` failure (tray nav is non-critical) never strands the user on the splash.
@@ -71,7 +67,7 @@ async function registerTrayNav(): Promise<void> {
       router.push(event.payload);
     });
     unlistenSitesIntent = await listen<string>("sites-intent", (event) => {
-      if (event.payload !== "link" && event.payload !== "park" && event.payload !== "create") {
+      if (event.payload !== "link" && event.payload !== "park") {
         return;
       }
       sitesIntent.value = event.payload;
@@ -86,7 +82,7 @@ async function registerTrayNav(): Promise<void> {
 }
 
 onMounted(async () => {
-  if (isDumpsWindow || isMailsWindow || standalone.value) return;
+  if (isMailsWindow || standalone.value) return;
   start(4000);
   await registerTrayNav();
   const { reachable } = await probe();
@@ -95,7 +91,7 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
-  if (isDumpsWindow || isMailsWindow || standalone.value) return;
+  if (isMailsWindow || standalone.value) return;
   stop();
   unlistenNav?.();
   unlistenSitesIntent?.();
@@ -103,11 +99,9 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <!-- The standalone dumps window renders its viewer directly (no SideNav). -->
-  <DumpsWindowView v-if="isDumpsWindow" />
   <!-- The standalone mails window renders its viewer directly (no SideNav).
        Branch on the window label, not the route, to avoid the first-paint race. -->
-  <MailsViewerView v-else-if="isMailsWindow" />
+  <MailsViewerView v-if="isMailsWindow" />
   <!-- Other standalone routes render bare - no shell. -->
   <RouterView v-else-if="standalone" />
   <!-- First-run probe in flight: a brief splash so we never flash the wrong

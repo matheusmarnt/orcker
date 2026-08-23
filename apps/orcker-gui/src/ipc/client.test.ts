@@ -14,7 +14,6 @@ import {
   getMail,
   IpcError,
   listMails,
-  listPhp,
   listRoutes,
   listSites,
   removeDomain,
@@ -23,15 +22,11 @@ import {
   setFrontController,
   setMailEnabled,
   setMailPort,
-  setPhpDirectives,
-  setPhpPoolSettings,
-  setPhpVersionSettings,
   setPrimaryDomain,
   setSymlinkProtection,
   setMcpEnabled,
   status,
   unlink,
-  updatePhp,
 } from "./client";
 import type { Site, StatusReport } from "./types";
 
@@ -56,24 +51,6 @@ describe("client → command mapping", () => {
     const report = { daemon_pid: 7, tld: "test" } as unknown as StatusReport;
     invokeMock.mockResolvedValue({ type: "status", report });
     await expect(status()).resolves.toBe(report);
-  });
-
-  it("listPhp passes through installed/default/updates", async () => {
-    invokeMock.mockResolvedValue({
-      type: "php_versions",
-      installed: ["8.4", "8.5"],
-      default: "8.5",
-      updates: [{ version: "8.5", installed: "8.5.6", latest: "8.5.7" }],
-    });
-    const r = await listPhp();
-    expect(r.installed).toEqual(["8.4", "8.5"]);
-    expect(r.updates?.[0].latest).toBe("8.5.7");
-  });
-
-  it("updatePhp(null) sends a null version (update-all)", async () => {
-    invokeMock.mockResolvedValue({ type: "ok" });
-    await updatePhp(null);
-    expect(invokeMock).toHaveBeenCalledWith("update_php", { version: null });
   });
 
   it("listMails unwraps the mails array", async () => {
@@ -217,51 +194,6 @@ describe("client → command mapping", () => {
       name: "blog",
       domain: "corp.test",
     });
-  });
-
-  it("setPhpVersionSettings sends the version and settings map", async () => {
-    invokeMock.mockResolvedValue({
-      type: "php_versions",
-      installed: ["8.3"],
-      default: "8.3",
-      version_settings: { "8.3": { memory_limit: "1G" } },
-    });
-    const r = await setPhpVersionSettings("8.3", { memory_limit: "1G" });
-    expect(invokeMock).toHaveBeenCalledWith("set_php_version_settings", {
-      version: "8.3",
-      settings: { memory_limit: "1G" },
-    });
-    expect(r.version_settings?.["8.3"]?.memory_limit).toBe("1G");
-  });
-
-  it("setPhpDirectives sends the version and directives map", async () => {
-    invokeMock.mockResolvedValue({
-      type: "php_versions",
-      installed: ["8.3"],
-      default: "8.3",
-      directives: { "8.3": { "xdebug.mode": "debug" } },
-    });
-    const r = await setPhpDirectives("8.3", { "xdebug.mode": "debug" });
-    expect(invokeMock).toHaveBeenCalledWith("set_php_directives", {
-      version: "8.3",
-      directives: { "xdebug.mode": "debug" },
-    });
-    expect(r.directives?.["8.3"]?.["xdebug.mode"]).toBe("debug");
-  });
-
-  it("setPhpPoolSettings sends the version and settings map", async () => {
-    invokeMock.mockResolvedValue({
-      type: "php_versions",
-      installed: ["8.4"],
-      default: "8.4",
-      pool: { "8.4": { max_children: "32" } },
-    });
-    const r = await setPhpPoolSettings("8.4", { max_children: "32" });
-    expect(invokeMock).toHaveBeenCalledWith("set_php_pool_settings", {
-      version: "8.4",
-      settings: { max_children: "32" },
-    });
-    expect(r.pool?.["8.4"]?.["max_children"]).toBe("32");
   });
 
   it("resetDomains sends just the name", async () => {

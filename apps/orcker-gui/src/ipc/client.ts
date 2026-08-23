@@ -11,14 +11,9 @@ import { invoke as tauriInvoke } from "@tauri-apps/api/core";
 import type {
   AutostartState,
   CliPathStatus,
-  AvailablePhpResponse,
-  CreateSiteSpec,
   DaemonDiagnostics,
   Diagnosis,
   DoctorFixResponse,
-  DumpCounts,
-  DumpsResponse,
-  DumpsStatusResponse,
   ElevateTarget,
   GroupsState,
   GuiLogs,
@@ -27,16 +22,10 @@ import type {
   JobProgressResponse,
   MailDetail,
   MailSummary,
-  AddableServiceType,
-  PhpExtInfo,
-  PhpVersion,
-  PhpVersionsResponse,
   ProxyEntry,
   ProxyRuleEntry,
   Response,
   RouteRuleEntry,
-  ServiceAvailability,
-  ServiceStatus,
   SetupState,
   SiteEntry,
   NamedTunnelsResponse,
@@ -47,8 +36,6 @@ import type {
   TunnelsResponse,
   UpdateChannel,
   UpdateStatusResponse,
-  WordPressAdminUser,
-  WordPressVersionInfo,
 } from "./types";
 
 /** A normalised IPC/host failure surfaced to the UI (toasts, banners). */
@@ -192,10 +179,6 @@ export async function unlink(name: string): Promise<void> {
   ensureOk(await call<Response>("unlink", { name }));
 }
 
-export async function setPhp(name: string, version: PhpVersion): Promise<void> {
-  ensureOk(await call<Response>("set_php", { name, version }));
-}
-
 export async function setSecure(name: string, secure: boolean): Promise<void> {
   ensureOk(await call<Response>("set_secure", { name, secure }));
 }
@@ -288,55 +271,6 @@ export async function removeRouteRule(site: string, prefix: string): Promise<voi
   ensureOk(await call<Response>("remove_route_rule", { site, prefix }));
 }
 
-// ── php versions ───────────────────────────────────────────────────────────
-
-export async function listPhp(): Promise<PhpVersionsResponse> {
-  return ensureOk(await call<Response>("list_php")) as PhpVersionsResponse;
-}
-
-export async function checkPhpUpdates(): Promise<PhpVersionsResponse> {
-  return ensureOk(await call<Response>("check_php_updates")) as PhpVersionsResponse;
-}
-
-/** Query the distribution for installable versions (+ what's already installed). */
-export async function availablePhp(): Promise<AvailablePhpResponse> {
-  return ensureOk(await call<Response>("available_php")) as AvailablePhpResponse;
-}
-
-/** Start a streamed PHP install as a background job; returns the job id to poll. */
-export async function installPhpStreamed(
-  version: PhpVersion,
-  confirmLegacy = false,
-): Promise<string> {
-  const r = ensureOk(await call<Response>("install_php_streamed", { version, confirmLegacy }));
-  if (r.type !== "job_started") throw new IpcError("unexpected response to install_php_streamed");
-  return r.job_id;
-}
-
-/**
- * Install a PHP version as a streamed job, delivering progress lines via
- * `onProgress`, and resolving only when it finishes. Throws (toast-worthy) on a
- * failed/cancelled job, so callers keep their existing try/catch around a
- * single awaited install. Pass `confirmLegacy` for an out-of-support legacy
- * minor (< 8.2); the daemon refuses a legacy install without it.
- */
-export async function installPhpWithProgress(
-  version: PhpVersion,
-  onProgress?: (lines: string[]) => void,
-  confirmLegacy = false,
-): Promise<void> {
-  const jobId = await installPhpStreamed(version, confirmLegacy);
-  const final = await pollJobToEnd(jobId, (lines) => onProgress?.(lines));
-  if (final.state !== "succeeded") {
-    throw new IpcError(final.error || `PHP ${version} install ${final.state}`);
-  }
-}
-
-/** `version === null` updates every installed version. */
-export async function updatePhp(version: PhpVersion | null): Promise<void> {
-  ensureOk(await call<Response>("update_php", { version }));
-}
-
 // ── self-update ────────────────────────────────────────────────────────────
 
 /**
@@ -371,142 +305,12 @@ export async function applyUpdate(channel?: UpdateChannel): Promise<void> {
   await call<void>("apply_update", { channel: channel ?? null });
 }
 
-/** Restart one version's FPM pool (stop + start). */
-export async function restartPhp(version: PhpVersion): Promise<void> {
-  ensureOk(await call<Response>("restart_php", { version }));
-}
-
-/** Restart every started (running or failed) FPM pool. */
-export async function restartAllPhp(): Promise<void> {
-  ensureOk(await call<Response>("restart_all_php"));
-}
-
 /**
  * Restart the daemon process in place. The daemon replies and then re-execs, so
  * the connection drops momentarily; the status poll reconnects on its own.
  */
 export async function restartDaemon(): Promise<void> {
   ensureOk(await call<Response>("restart_daemon"));
-}
-
-/**
- * Uninstall a PHP version. Rejects (toast-worthy) when the version is in use by
- * a site, is the last version with sites remaining, or is the current default.
- * Returns the refreshed version list.
- */
-export async function uninstallPhp(version: PhpVersion): Promise<PhpVersionsResponse> {
-  return ensureOk(
-    await call<Response>("uninstall_php", { version }),
-  ) as PhpVersionsResponse;
-}
-
-/**
- * Merge global PHP ini settings and apply them to every installed version's FPM
- * pool. An empty-string value resets a setting to PHP's default. Returns the
- * refreshed version list (which carries the applied settings).
- */
-export async function setPhpSettings(
-  settings: Record<string, string>,
-): Promise<PhpVersionsResponse> {
-  return ensureOk(
-    await call<Response>("set_php_settings", { settings }),
-  ) as PhpVersionsResponse;
-}
-
-/**
- * Merge per-version overrides of the allowlisted settings for one installed
- * version and apply them to that version's FPM pool + CLI ini. An empty-string
- * value removes the override (the global default applies again). Returns the
- * refreshed version list.
- */
-export async function setPhpVersionSettings(
-  version: PhpVersion,
-  settings: Record<string, string>,
-): Promise<PhpVersionsResponse> {
-  return ensureOk(
-    await call<Response>("set_php_version_settings", { version, settings }),
-  ) as PhpVersionsResponse;
-}
-
-/**
- * Merge free-form ini directives (e.g. `xdebug.mode`) for one installed
- * version. An empty-string value removes the directive. The daemon validates
- * names/values and rejects directives Orcker manages elsewhere. Returns the
- * refreshed version list.
- */
-export async function setPhpDirectives(
-  version: PhpVersion,
-  directives: Record<string, string>,
-): Promise<PhpVersionsResponse> {
-  return ensureOk(
-    await call<Response>("set_php_directives", { version, directives }),
-  ) as PhpVersionsResponse;
-}
-
-/**
- * Merge FPM pool settings (currently only `max_children`) for one installed
- * version. These apply to the version's FPM pool only, never its CLI ini. An
- * empty-string value resets the setting to its built-in default. Returns the
- * refreshed version list.
- */
-export async function setPhpPoolSettings(
-  version: PhpVersion,
-  settings: Record<string, string>,
-): Promise<PhpVersionsResponse> {
-  return ensureOk(
-    await call<Response>("set_php_pool_settings", { version, settings }),
-  ) as PhpVersionsResponse;
-}
-
-// ── php extensions ───────────────────────────────────────────────────────────
-
-/** Registered custom extensions, keyed by version string (e.g. `"8.5"`). */
-export type PhpExtensionsMap = Record<PhpVersion, PhpExtInfo[]>;
-
-function extensionsOf(r: Response): PhpExtensionsMap {
-  return r.type === "php_extensions" ? r.by_version : {};
-}
-
-export async function listPhpExtensions(): Promise<PhpExtensionsMap> {
-  return extensionsOf(ensureOk(await call<Response>("list_php_extensions")));
-}
-
-/**
- * Register a custom extension for a version. The daemon load-probes the `.so`
- * first; a failure surfaces as a rejected command. Returns the refreshed map.
- */
-export async function addPhpExtension(
-  version: PhpVersion,
-  path: string,
-  zend: boolean,
-  name?: string,
-): Promise<PhpExtensionsMap> {
-  return extensionsOf(
-    ensureOk(
-      await call<Response>("add_php_extension", {
-        version,
-        path,
-        name: name ?? null,
-        zend,
-      }),
-    ),
-  );
-}
-
-export async function removePhpExtension(
-  version: PhpVersion,
-  name: string,
-): Promise<PhpExtensionsMap> {
-  return extensionsOf(
-    ensureOk(await call<Response>("remove_php_extension", { version, name })),
-  );
-}
-
-// ── services (databases / caches) ────────────────────────────────────────────
-
-export async function listServices(): Promise<ServiceStatus[]> {
-  const r = ensureOk(await call<Response>("list_services"));
-  return r.type === "services" ? r.services : [];
 }
 
 // ── dev tools (composer / node / bun) ────────────────────────────────────────
@@ -626,202 +430,18 @@ export async function stopNamedTunnel(): Promise<TunnelsResponse> {
   return ensureOk(await call<Response>("stop_named_tunnel")) as TunnelsResponse;
 }
 
-// ── site creation ──────────────────────────────────────────────────────────
+// ── background jobs ────────────────────────────────────────────────────────
 
-/** Start scaffolding a new site; returns the job id to poll with {@link jobStatus}. */
-export async function createSite(spec: CreateSiteSpec): Promise<string> {
-  const r = ensureOk(await call<Response>("create_site", { spec }));
-  if (r.type !== "job_started") throw new IpcError("unexpected response to create_site");
-  return r.job_id;
-}
-
-/** Poll a job's progress. `cursor` is the number of log lines already held. */
-export async function jobStatus(jobId: string, cursor: number): Promise<JobProgressResponse> {
+/** Poll a job's progress. `cursor` is the number of log lines already held.
+ *  Private: `pollJobToEnd` is the only caller and the only thing callers need. */
+async function jobStatus(jobId: string, cursor: number): Promise<JobProgressResponse> {
   return ensureOk(await call<Response>("job_status", { jobId, cursor })) as JobProgressResponse;
-}
-
-/** Request cancellation of a running job. */
-export async function jobCancel(jobId: string): Promise<void> {
-  ensureOk(await call<Response>("job_cancel", { jobId }));
-}
-
-/** Installable vs installed versions per service. Fetches the listing on demand. */
-export async function availableServices(): Promise<ServiceAvailability[]> {
-  const r = ensureOk(await call<Response>("available_services"));
-  return r.type === "available_services" ? r.services : [];
-}
-
-/** WordPress core version branches with their PHP compatibility range, from
- *  the orcker repo's hand-maintained meta/wordpress-versions.json. Daemon-cached;
- *  see `available_services` for the equivalent for services. */
-export async function availableWordPressVersions(): Promise<WordPressVersionInfo[]> {
-  const r = ensureOk(await call<Response>("available_wordpress_versions"));
-  return r.type === "wordpress_versions" ? r.versions : [];
-}
-
-/** Mint a short-TTL, single-use token for one-click, pre-authenticated
- *  WordPress admin login (the "WP Admin" site action). Rejects if `site`
- *  doesn't exist or isn't WordPress. */
-export async function mintWordPressLoginToken(site: string): Promise<string> {
-  const r = ensureOk(await call<Response>("mint_wordpress_login_token", { site }));
-  if (r.type !== "wordpress_login_token") {
-    throw new IpcError("unexpected response to mint_wordpress_login_token");
-  }
-  return r.token;
-}
-
-/** Toggle WordPress one-click admin login for a site, and set which admin
- *  user it signs in as. Pass `user: null` to fall back to the
- *  earliest-created administrator. */
-export async function setWordpressAutoLogin(
-  name: string,
-  enabled: boolean,
-  user: string | null,
-): Promise<void> {
-  ensureOk(await call<Response>("set_wordpress_auto_login", { name, enabled, user }));
 }
 
 /** Override a site's front-controller mode: `true` funnels every request through
  *  the site-root `index.php`; `false` executes named `.php` files directly. */
 export async function setFrontController(name: string, enabled: boolean): Promise<void> {
   ensureOk(await call<Response>("set_front_controller", { name, enabled }));
-}
-
-/** List a WordPress site's administrator accounts, for the auto-login user
- *  picker. Fetched on demand via `wp user list`. */
-export async function wordpressAdminUsers(site: string): Promise<WordPressAdminUser[]> {
-  const r = ensureOk(await call<Response>("wordpress_admin_users", { site }));
-  return r.type === "wordpress_admin_users" ? r.users : [];
-}
-
-export async function installService(service: string, version: string): Promise<void> {
-  ensureOk(await call<Response>("install_service", { service, version }));
-}
-
-export async function changeServiceVersion(service: string, version: string): Promise<void> {
-  ensureOk(await call<Response>("change_service_version", { service, version }));
-}
-
-export async function uninstallService(
-  service: string,
-  version: string,
-  purge: boolean,
-): Promise<void> {
-  ensureOk(await call<Response>("uninstall_service", { service, version, purge }));
-}
-
-export async function startService(service: string): Promise<void> {
-  ensureOk(await call<Response>("start_service", { service }));
-}
-
-export async function stopService(service: string): Promise<void> {
-  ensureOk(await call<Response>("stop_service", { service }));
-}
-
-export async function restartService(service: string): Promise<void> {
-  ensureOk(await call<Response>("restart_service", { service }));
-}
-
-/** Persist a new port; takes effect on the next start/restart. */
-export async function setServicePort(service: string, port: number): Promise<void> {
-  ensureOk(await call<Response>("set_service_port", { service, port }));
-}
-
-/** A service instance's stored configuration overrides, keyed by directive name.
- *  Refused by the daemon for a service that accepts none. */
-export async function serviceOverrides(service: string): Promise<Record<string, string>> {
-  const r = ensureOk(await call<Response>("service_overrides", { service }));
-  return r.type === "service_overrides" ? r.overrides : {};
-}
-
-/** Persist one configuration override; takes effect on the next start/restart.
- *  The daemon validates the name/value shape and refuses a directive it manages
- *  itself, so its message is what the UI shows. */
-export async function setServiceOverride(
-  service: string,
-  key: string,
-  value: string,
-): Promise<void> {
-  ensureOk(
-    await call<Response>("set_service_overrides", { service, overrides: { [key]: value } }),
-  );
-}
-
-/** Drop one configuration override - an empty value is the daemon's remove
- *  signal. Takes effect on the next start/restart. */
-export async function unsetServiceOverride(service: string, key: string): Promise<void> {
-  await setServiceOverride(service, key, "");
-}
-
-/** The last `lines` lines of a service's log file. */
-export async function serviceLogs(service: string, lines: number): Promise<string[]> {
-  const r = ensureOk(await call<Response>("service_logs", { service, lines }));
-  return r.type === "service_logs" ? r.lines : [];
-}
-
-/** The installable service types for the "Add Service" dialog. */
-export async function addableServiceTypes(): Promise<AddableServiceType[]> {
-  const r = ensureOk(await call<Response>("addable_service_types"));
-  return r.type === "addable_services" ? r.types : [];
-}
-
-/** Add a new service instance. Returns its wire id. Tauri maps camelCase JS args
- *  to the command's snake_case Rust params, so `type_id` is sent as `typeId`. */
-export async function addService(args: {
-  type_id: string;
-  site: string | null;
-  port: number | null;
-  version: string | null;
-  autostart: boolean;
-}): Promise<string> {
-  const r = ensureOk(
-    await call<Response>("add_service", {
-      typeId: args.type_id,
-      site: args.site,
-      port: args.port,
-      version: args.version,
-      autostart: args.autostart,
-    }),
-  );
-  return r.type === "service_instance_id" ? r.id : "";
-}
-
-/** Remove a per-site service instance. */
-export async function removeService(service: string, purge: boolean): Promise<void> {
-  ensureOk(await call<Response>("remove_service", { service, purge }));
-}
-
-/** Set whether a service starts with Orcker. */
-export async function setServiceAutostart(service: string, enabled: boolean): Promise<void> {
-  ensureOk(await call<Response>("set_service_autostart", { service, enabled }));
-}
-
-/** Re-link a per-site instance to a different site. Returns the new wire id. */
-export async function setServiceSite(service: string, site: string): Promise<string> {
-  const r = ensureOk(await call<Response>("set_service_site", { service, site }));
-  return r.type === "service_instance_id" ? r.id : service;
-}
-
-export async function dropDatabase(service: string, name: string): Promise<void> {
-  ensureOk(await call<Response>("drop_database", { service, name }));
-}
-
-/** Dump a database to a plain-SQL file (the daemon streams the bundled dump tool). */
-export async function backupDatabase(
-  service: string,
-  name: string,
-  path: string,
-): Promise<void> {
-  ensureOk(await call<Response>("backup_database", { service, name, path }));
-}
-
-/** Restore a database from a plain-SQL file (the database must already exist). */
-export async function restoreDatabase(
-  service: string,
-  name: string,
-  path: string,
-): Promise<void> {
-  ensureOk(await call<Response>("restore_database", { service, name, path }));
 }
 
 // ── mail capture ─────────────────────────────────────────────────────────────
@@ -989,24 +609,6 @@ export async function pickSaveFile(defaultPath?: string): Promise<string | null>
 export async function pickOpenFile(): Promise<string | null> {
   const { open } = await import("@tauri-apps/plugin-dialog");
   const picked = await open({ directory: false, multiple: false });
-  return typeof picked === "string" ? picked : null;
-}
-
-/**
- * Open-file dialog for a PHP extension. Returns the chosen path, or null if
- * cancelled.
- *
- * The filter is `.so` only: the daemon rejects any other extension outright, so
- * offering `.dylib` on macOS would only produce a guaranteed failure. There is
- * no `defaultPath` because nothing reports a version's `extension_dir`.
- */
-export async function pickExtensionFile(): Promise<string | null> {
-  const { open } = await import("@tauri-apps/plugin-dialog");
-  const picked = await open({
-    directory: false,
-    multiple: false,
-    filters: [{ name: "PHP extension", extensions: ["so"] }],
-  });
   return typeof picked === "string" ? picked : null;
 }
 
@@ -1199,71 +801,6 @@ export async function openLoginItems(): Promise<void> {
  */
 export async function daemonSelfRepairBusy(): Promise<boolean> {
   return call<boolean>("daemon_self_repair_busy");
-}
-
-// ── dumps (Laravel telemetry) ────────────────────────────────────────────────
-
-/** Page buffered dump events newer than `since` (0 = all). */
-export async function listDumps(since: number): Promise<DumpsResponse> {
-  const r = ensureOk(await call<Response>("list_dumps", { since }));
-  if (r.type === "dumps") return r;
-  return {
-    type: "dumps",
-    events: [],
-    removed_ids: [],
-    counts: emptyDumpCounts(),
-    latest_id: 0,
-    min_live_id: 0,
-  };
-}
-
-/** Dump-server status (enabled, port, running, extension presence, counts). */
-export async function dumpsStatus(): Promise<DumpsStatusResponse> {
-  const r = ensureOk(await call<Response>("dumps_status"));
-  if (r.type === "dumps_status") return r;
-  return {
-    type: "dumps_status",
-    enabled: false,
-    port: 2304,
-    running: false,
-    persist: false,
-    extensions: [],
-    counts: emptyDumpCounts(),
-    features: {},
-  };
-}
-
-export async function clearDumps(): Promise<void> {
-  ensureOk(await call<Response>("clear_dumps"));
-}
-
-export async function deleteDump(id: number): Promise<void> {
-  ensureOk(await call<Response>("delete_dump", { id }));
-}
-
-export async function setDumpsEnabled(enabled: boolean): Promise<void> {
-  ensureOk(await call<Response>("set_dumps_enabled", { enabled }));
-}
-
-export async function setDumpsPersist(persist: boolean): Promise<void> {
-  ensureOk(await call<Response>("set_dumps_persist", { persist }));
-}
-
-export async function setDumpsPort(port: number): Promise<void> {
-  ensureOk(await call<Response>("set_dumps_port", { port }));
-}
-
-export async function setDumpFeature(feature: string, enabled: boolean): Promise<void> {
-  ensureOk(await call<Response>("set_dump_feature", { feature, enabled }));
-}
-
-/** Open the standalone dumps viewer window. */
-export async function showDumpsWindow(): Promise<void> {
-  await call<void>("show_dumps_window");
-}
-
-function emptyDumpCounts(): DumpCounts {
-  return { dumps: 0, queries: 0, jobs: 0, views: 0, requests: 0, logs: 0, cache: 0, http: 0 };
 }
 
 // ── GUI diagnostic logs (host-only; no daemon IPC) ──────────────────────────

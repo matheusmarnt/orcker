@@ -3,7 +3,6 @@ import {
   ArrowUpRight,
   Code2,
   Copy,
-  FileText,
   FolderOpen,
   Globe,
   Pencil,
@@ -33,8 +32,6 @@ import {
   openPath,
   pickDirectory,
   setSiteIdeOverride,
-  showDumpsWindow,
-  wordpressAdminUsers,
 } from "@/ipc/client";
 import type { SiteEntry, StatusReport } from "@/ipc/types";
 import { resolveIde, SYSTEM_LABEL } from "@/lib/ideChoice";
@@ -49,7 +46,6 @@ const props = defineProps<{
   open: boolean;
   report: StatusReport | null;
   tld: string;
-  phpVersions: string[];
   /** Group picker options (including the "No group" entry). Empty when no
    *  groups are defined, which hides the row entirely. */
   groupOptions?: { value: string; label: string }[];
@@ -62,19 +58,10 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   close: [];
-  changePhp: [site: SiteEntry, version: string];
   changeWebRoot: [site: SiteEntry, path: string];
   toggleSecure: [site: SiteEntry];
   toggleFrontController: [site: SiteEntry, enabled: boolean];
   changeGroup: [site: SiteEntry, group: string];
-  /** `options.silent` suppresses the parent's success toast, for a change the
-   *  user didn't ask for and that another toast already explains. */
-  changeWpAutoLogin: [
-    site: SiteEntry,
-    enabled: boolean,
-    user: string | null,
-    options?: { silent?: boolean },
-  ];
   share: [site: SiteEntry];
   unlink: [site: SiteEntry];
   domainsChanged: [];
@@ -88,13 +75,6 @@ const webRoot = ref("");
 const globalIde = ref<string | null>(null);
 const siteIdeOverride = ref<string | null>(null);
 let editorPreferenceRequestId = 0;
-
-const phpOptions = computed(() => {
-  const versions = props.site
-    ? Array.from(new Set([props.site.php, ...props.phpVersions]))
-    : props.phpVersions;
-  return versions.map((version) => ({ value: version, label: `PHP ${version}` }));
-});
 
 // What this site's editor button resolves to right now: its own override, else
 // the global preference, else the best-ranked detected editor, else the folder.
@@ -128,53 +108,6 @@ const selectedIde = computed(() => {
 });
 
 const hasGroups = computed(() => (props.groupOptions?.length ?? 0) > 0);
-
-const DEFAULT_ADMIN_OPTION = { value: "", label: "Earliest admin (default)" };
-type WpAdminUsersStatus = "idle" | "loading" | "ready" | "error";
-const wpAdminUsersStatus = ref<WpAdminUsersStatus>("idle");
-const wpAdminUsersOptions = ref<{ value: string; label: string }[]>([DEFAULT_ADMIN_OPTION]);
-
-/** True while a "switch auto-login on" click is waiting on the admin list, so
- *  the switch can't be clicked again mid-check. */
-const wpAutoLoginChecking = ref(false);
-
-/** Bumped on every `loadWpAdminUsers` call so a response for a site the user
- *  has since navigated away from (closed the sidebar, opened another site's)
- *  can recognize it's stale and skip applying its result. */
-let wpAdminUsersRequestId = 0;
-
-/** Fetch `name`'s admin list, reporting whether it is now loaded. A stale
- *  response (the user moved on) counts as a failure: it must not be acted on.
- *
- *  On failure a site already set to auto-login is switched back off, since
- *  auto-login can't work without an admin to mint the token for. That write is
- *  silent - the error toast is the only message worth showing for one failure -
- *  and only happens for the site still in view. */
-async function loadWpAdminUsers(name: string): Promise<boolean> {
-  const requestId = ++wpAdminUsersRequestId;
-  wpAdminUsersStatus.value = "loading";
-  try {
-    const users = await wordpressAdminUsers(name);
-    if (requestId !== wpAdminUsersRequestId) return false;
-    wpAdminUsersOptions.value = [
-      DEFAULT_ADMIN_OPTION,
-      ...users.map((u) => ({ value: u.login, label: u.display_name || u.login })),
-    ];
-    wpAdminUsersStatus.value = "ready";
-    return true;
-  } catch (e) {
-    if (requestId !== wpAdminUsersRequestId) return false;
-    wpAdminUsersStatus.value = "error";
-    toast.error(
-      "Couldn't load WordPress admin users",
-      (e as IpcError).message || "couldn't load admin users",
-    );
-    if (props.site?.name === name && props.site.wp_auto_login) {
-      emit("changeWpAutoLogin", props.site, false, null, { silent: true });
-    }
-    return false;
-  }
-}
 
 function displayHost(site: SiteEntry): string {
   return site.primary_domain ?? `${site.name}.${props.tld}`;
@@ -264,45 +197,8 @@ async function openEditor(site: SiteEntry): Promise<void> {
   }
 }
 
-async function openDumps(): Promise<void> {
-  try {
-    await showDumpsWindow();
-  } catch (error) {
-    toast.error("Couldn't open the dumps window", (error as IpcError).message);
-  }
-}
-
 function changeGroup(site: SiteEntry | null, group: string): void {
   if (site) emit("changeGroup", site, group);
-}
-
-/** Switching auto-login on is gated on the admin list, retrying a fetch that
- *  failed earlier: the daemon needs a user to mint the token for, so the write
- *  only happens once the list is in hand. A failure toasts once and leaves the
- *  switch off, rather than writing "on" and immediately writing "off" again -
- *  which is three toasts for one click. Switching off needs no such check. */
-async function toggleWpAutoLogin(site: SiteEntry, enabled: boolean): Promise<void> {
-  const user = site.wp_auto_login_user || null;
-  if (!enabled) {
-    emit("changeWpAutoLogin", site, false, user);
-    return;
-  }
-  wpAutoLoginChecking.value = true;
-  try {
-    if (wpAdminUsersStatus.value !== "ready" && !(await loadWpAdminUsers(site.name))) return;
-  } finally {
-    wpAutoLoginChecking.value = false;
-  }
-  if (props.site?.name !== site.name) return;
-  emit("changeWpAutoLogin", site, true, user);
-}
-
-function changeWpAutoLoginUser(site: SiteEntry, user: string): void {
-  emit("changeWpAutoLogin", site, true, user || null);
-}
-
-function changePhp(site: SiteEntry | null, version: string): void {
-  if (site) emit("changePhp", site, version);
 }
 
 function changeWebRoot(site: SiteEntry | null): void {
@@ -391,14 +287,9 @@ watch(
     editorPreferenceRequestId += 1;
     globalIde.value = null;
     siteIdeOverride.value = null;
-    wpAdminUsersRequestId += 1;
-    wpAdminUsersStatus.value = "idle";
-    wpAdminUsersOptions.value = [DEFAULT_ADMIN_OPTION];
     if (!props.open || !props.site) return;
     void loadIdes();
     void loadEditorPreferences(props.site.name);
-    if (!props.site.is_wordpress || !props.site.wp_auto_login) return;
-    void loadWpAdminUsers(props.site.name);
   },
   { immediate: true },
 );
@@ -537,18 +428,6 @@ onUnmounted(() => {
                 >
                   <Code2 /> <span class="truncate">{{ editorLabel }}</span>
                 </Button>
-                <!-- Dump capture is a Laravel/Symfony affair; WordPress emits
-                     nothing the viewer would ever show for this site. -->
-                <Button
-                  v-if="!site.is_wordpress"
-                  class="min-w-0 px-2"
-                  variant="outline"
-                  size="sm"
-                  title="Open the Dumps viewer (captured dump/query telemetry, all sites)"
-                  @click="openDumps"
-                >
-                  <FileText /> <span class="truncate">Dumps</span>
-                </Button>
                 <Button
                   v-if="site.is_wordpress"
                   class="min-w-0 px-2"
@@ -574,18 +453,6 @@ onUnmounted(() => {
               </div>
 
               <dl class="mt-5 divide-y rounded-lg border">
-                <div class="flex items-center justify-between gap-4 px-3 py-3">
-                  <dt class="shrink-0 text-sm font-medium">PHP version</dt>
-                  <dd class="min-w-0">
-                    <Select
-                      :model-value="site.php"
-                      :options="phpOptions"
-                      aria-label="Site PHP version"
-                      :disabled="busy || phpOptions.length === 0"
-                      @update:model-value="changePhp(site, $event)"
-                    />
-                  </dd>
-                </div>
                 <!-- Same macOS-or-Linux predicate as the PATH install: host editor
                      launching has no Windows adapter either. -->
                 <div
@@ -681,38 +548,6 @@ onUnmounted(() => {
                       aria-label="HTTPS"
                       @update:model-value="emit('toggleSecure', site)"
                     />
-                  </div>
-                </div>
-                <div v-if="site.is_wordpress" class="px-3 py-3">
-                  <div class="flex items-center justify-between gap-4">
-                    <div>
-                      <dt class="text-sm font-medium">WordPress Auto Admin Login</dt>
-                      <dd class="mt-1 text-xs text-muted-foreground">
-                        Sign in automatically when opening WP Admin.
-                      </dd>
-                    </div>
-                    <Switch
-                      :model-value="site.wp_auto_login ?? false"
-                      :disabled="busy || wpAutoLoginChecking"
-                      aria-label="WordPress Auto Admin Login"
-                      @update:model-value="toggleWpAutoLogin(site, $event)"
-                    />
-                  </div>
-                  <div v-if="site.wp_auto_login && wpAdminUsersStatus === 'ready'" class="mt-3">
-                    <label class="block text-xs text-muted-foreground" for="site-wp-admin-user">
-                      Sign in as
-                    </label>
-                    <div class="mt-1.5">
-                      <Select
-                        id="site-wp-admin-user"
-                        :model-value="site.wp_auto_login_user ?? ''"
-                        :options="wpAdminUsersOptions"
-                        :disabled="busy"
-                        class="w-full"
-                        aria-label="Sign in as"
-                        @update:model-value="changeWpAutoLoginUser(site, $event)"
-                      />
-                    </div>
                   </div>
                 </div>
                 <div v-if="hasGroups" class="px-3 py-3">
@@ -824,12 +659,6 @@ onUnmounted(() => {
                 <div v-if="site.uses_front_controller !== undefined" class="px-3 py-3">
                   <dt class="text-xs text-muted-foreground">Front controller</dt>
                   <dd class="mt-1 text-sm">{{ site.uses_front_controller ? "Enabled" : "Disabled" }}</dd>
-                </div>
-                <div v-if="site.is_wordpress" class="px-3 py-3">
-                  <dt class="text-xs text-muted-foreground">WordPress auto-login</dt>
-                  <dd class="mt-1 text-sm">
-                    {{ site.wp_auto_login ? `Enabled${site.wp_auto_login_user ? ` as ${site.wp_auto_login_user}` : ""}` : "Disabled" }}
-                  </dd>
                 </div>
               </dl>
 

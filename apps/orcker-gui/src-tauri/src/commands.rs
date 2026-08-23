@@ -520,8 +520,6 @@ pub async fn untrust_ca() -> Result<bool, GuiError> {
     }
 }
 
-// ── dumps (Laravel telemetry) ────────────────────────────────────────────────
-
 // ── dev tools (composer / node / bun) ────────────────────────────────────────
 
 #[tauri::command]

@@ -18,7 +18,7 @@ import { ref } from "vue";
 export type ThemePref = "system" | "light" | "dark";
 
 const STORAGE_KEY = "orcker.theme";
-/** Cross-window broadcast: each webview (main, mails, dumps) is a separate JS
+/** Cross-window broadcast: each webview (main, mails) is a separate JS
  *  context + DOM, so a theme change in one is published to the others. */
 const THEME_EVENT = "orcker:theme-changed";
 
@@ -62,7 +62,7 @@ function applyPref(p: ThemePref): void {
 }
 
 /** Set + persist the preference, re-render immediately, and broadcast the change
- *  to the app's other windows (mails/dumps) so they switch in lockstep. */
+ *  to the app's other windows (mails) so they switch in lockstep. */
 export function setTheme(p: ThemePref): void {
   applyPref(p);
   // Other webviews don't see this window's localStorage write, so tell them.
@@ -107,7 +107,7 @@ export function initTheme(): void {
   })();
 
   // 3) Cross-window sync: when any window changes the theme, apply it here too,
-  //    so the popup viewers (mails/dumps) switch the instant Settings does. The
+  //    so the popup viewer (mails) switches the instant Settings does. The
   //    emitter receives its own event but the guard makes that a no-op (no loop,
   //    since the listener applies without re-emitting).
   void listen<ThemePref>(THEME_EVENT, ({ payload }) => {
