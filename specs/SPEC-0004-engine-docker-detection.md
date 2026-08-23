@@ -3,7 +3,7 @@ id: SPEC-0004
 title: Create orcker-engine with Docker environment detection surfaced in `orcker status`
 phase: 0
 covers: [FR-010]
-depends_on: [SPEC-0001]
+depends_on: [SPEC-0001, SPEC-0037]
 surface:
   - Cargo.toml
   - Cargo.lock

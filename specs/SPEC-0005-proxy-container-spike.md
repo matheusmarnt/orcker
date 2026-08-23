@@ -3,7 +3,7 @@ id: SPEC-0005
 title: Phase-0 spike - serve a containerized Laravel app at https://spike.test through the inherited proxy
 phase: 0
 covers: [FR-003]
-depends_on: [SPEC-0002]
+depends_on: [SPEC-0002, SPEC-0037]
 surface:
   - docs/spike/
   - crates/orcker-core/

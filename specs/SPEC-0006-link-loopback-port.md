@@ -3,7 +3,7 @@ id: SPEC-0006
 title: Container-project sites - `orcker link` with orcker.yml v1 and persistent loopback port allocation
 phase: 0
 covers: [FR-021, FR-013]
-depends_on: [SPEC-0004, SPEC-0005]
+depends_on: [SPEC-0004, SPEC-0005, SPEC-0037]
 surface:
   - crates/orcker-core/
   - crates/orcker-config/
