@@ -3,14 +3,13 @@ import {
   IpcError,
   restartDaemon,
   setDnsPort,
-  setDumpsPort,
   setFallbackPorts,
   setMailPort,
 } from "@/ipc/client";
 
 /**
  * Shared logic for editing the daemon's ports (rootless HTTP/HTTPS fallback,
- * DNS, mail, dumps), used by BOTH the Settings "Application Ports" editor and
+ * DNS, mail), used by BOTH the Settings "Application Ports" editor and
  * the onboarding degraded-port panel so the validate → save → restart → re-check
  * flow can't diverge between them.
  *
@@ -27,7 +26,7 @@ import {
  *  80/443 would itself need elevation, which the fallback exists to avoid. */
 export const MIN_PORT = 1024;
 export const MAX_PORT = 65535;
-/** Minimum for the DNS/mail/dumps loopback ports, which may legitimately be
+/** Minimum for the DNS/mail loopback ports, which may legitimately be
  *  below 1024 (the daemon binds them directly, no elevation involved). */
 export const MIN_LOOPBACK_PORT = 1;
 
@@ -49,8 +48,6 @@ export interface PortChanges {
   dns?: number;
   /** Mail-capture SMTP port. */
   mail?: number;
-  /** Dump-server port. */
-  dumps?: number;
 }
 
 function sleep(ms: number): Promise<void> {
@@ -77,7 +74,7 @@ export function useFallbackPorts() {
     return null;
   }
 
-  /** Validate a single loopback port (DNS/mail/dumps): a whole number 1-65535. */
+  /** Validate a single loopback port (DNS/mail): a whole number 1-65535. */
   function validateLoopback(label: string, port: number): string | null {
     if (!Number.isInteger(port) || port < MIN_LOOPBACK_PORT || port > MAX_PORT) {
       return `The ${label} port must be a whole number between ${MIN_LOOPBACK_PORT} and ${MAX_PORT}.`;
@@ -106,10 +103,6 @@ export function useFallbackPorts() {
       const err = validateLoopback("mail", changes.mail);
       if (err) return { ok: false, message: err };
     }
-    if (changes.dumps != null) {
-      const err = validateLoopback("dumps", changes.dumps);
-      if (err) return { ok: false, message: err };
-    }
 
     // Snapshot the current process so we can tell the restarted daemon apart
     // from the still-running one. `boot_id` is the reliable key; fall back to
@@ -117,12 +110,10 @@ export function useFallbackPorts() {
     const baselineBootId = report.value?.boot_id ?? null;
     const baselineUptime = report.value?.uptime_secs ?? Number.MAX_SAFE_INTEGER;
 
-    // 2. Apply the setters. Order matters: `setDumpsPort` is the only setter
-    //    that test-binds at call time (can throw PortInUse), so do it FIRST -
-    //    a busy dumps port then aborts before any other config is written to
-    //    disk. The rest only clone→validate→save (fail only on a disk error).
+    // 2. Apply the setters. None of them test-binds at call time - they only
+    //    clone→validate→save - so each fails on a disk error alone and the
+    //    order between them carries no meaning.
     try {
-      if (changes.dumps != null) await setDumpsPort(changes.dumps);
       if (changes.web) await setFallbackPorts(changes.web.http, changes.web.https);
       if (changes.dns != null) await setDnsPort(changes.dns);
       if (changes.mail != null) await setMailPort(changes.mail);
@@ -158,7 +149,7 @@ export function useFallbackPorts() {
           : report.value.uptime_secs < baselineUptime;
       if (!restarted) continue;
 
-      // 4. Scope the degraded check to what actually changed: a mail/dumps-only
+      // 4. Scope the degraded check to what actually changed: a mail-only
       //    save must not fail just because an *unrelated, pre-existing*
       //    web/DNS conflict is still present.
       if (changes.web && report.value.web_unbound != null) {

@@ -1,9 +1,8 @@
 /**
  * Per-view contextual handlers for the shortcuts whose target depends on the
- * active view: Find (⌘F), New (⌘N), Refresh (⌘R), and the dumps-window tab
- * cycle. A view registers its handlers during setup and clears them via the
- * returned disposer on unmount; the dispatcher reads the live set when a chord
- * fires.
+ * active view: Find (⌘F), New (⌘N) and Refresh (⌘R). A view registers its
+ * handlers during setup and clears them via the returned disposer on unmount;
+ * the dispatcher reads the live set when a chord fires.
  *
  * `register` returns a disposer that clears state only if its registration is
  * still the active one (tracked by a per-call token), so a stale disposer from
@@ -18,10 +17,6 @@ export interface ViewActions {
   create?: () => void;
   /** Refetch this view's data (⌘R). */
   refresh?: () => void;
-  /** Dumps window: select the previous category tab. */
-  prevTab?: () => void;
-  /** Dumps window: select the next category tab. */
-  nextTab?: () => void;
 }
 
 // shallowRef: the handlers are invoked imperatively by the dispatcher, never

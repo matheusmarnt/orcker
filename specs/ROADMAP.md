@@ -12,7 +12,7 @@ them with `/spec-new` when the queue approaches them.
 | 1 | SPEC-0001-fork-bootstrap | accepted | FR-001 | — |
 | 2 | SPEC-0002-remove-native-runtime | accepted | FR-002 | SPEC-0001 |
 | 33 | SPEC-0033-remove-stale-php-instruction-file | accepted | FR-002 | SPEC-0002 |
-| 36 | SPEC-0036-remove-dead-gui-surfaces | draft | FR-002 | SPEC-0002 |
+| 36 | SPEC-0036-remove-dead-gui-surfaces | accepted | FR-002 | SPEC-0002 |
 | 37 | SPEC-0037-restore-coverage-deleted-by-spec-0002 | draft | FR-002 | SPEC-0002 |
 | 3 | SPEC-0003-stack-compose-renderer | draft | FR-022 (partial) | SPEC-0001 |
 | 38 | SPEC-0038-tauri-host-coverage | draft | FR-002 | SPEC-0002, SPEC-0036 |
@@ -65,3 +65,5 @@ Never a merge, never a bulk sync. Numbered above the reserved Phase-1 range.
 | 32 | SPEC-0032-pin-gate-sort-collation | accepted | FR-001 | SPEC-0001 |
 | 34 | SPEC-0034-ipc-version-skew-handshake | draft | FR-002 | SPEC-0002 |
 | 35 | SPEC-0035-retire-config-native-runtime-sections | draft | FR-002 | SPEC-0002 |
+| 39 | SPEC-0039-retire-unreachable-gui-host-commands | draft | FR-002 | SPEC-0036 |
+| 40 | SPEC-0040-dead-export-ratchet | draft | FR-002 | SPEC-0036 |

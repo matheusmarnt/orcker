@@ -7,8 +7,8 @@ depends_on: [SPEC-0002]
 surface:
   - apps/orcker-gui/
   - crates/orcker-ipc/
-status: draft
-attempts: 0
+status: accepted
+attempts: 3
 ---
 
 ## Context
@@ -34,6 +34,15 @@ Sites, starts a wizard and submits gets an IPC error.
 
 ## Requirements
 
+- R0b. "Everything only they reach" (R1) needs a check that can see it. The
+  scan named under Design & contracts cannot: it holds the symbols **SPEC-0002**
+  removed, so by construction it finds SPEC-0002's orphans and never one this
+  spec creates. `apps/orcker-gui/tests/dead-export-delta.mjs` is the missing
+  half - it reports `dead(working tree) \ dead(HEAD)`, the exports that lost
+  their last consumer to this diff. Every name it reports is either deleted or
+  gets a written justification in the cycle log; a silent keep is a fail.
+  Scoped to the delta on purpose: ~96 exports were already dead at `HEAD` and
+  are SPEC-0037's debt, not this spec's.
 - R0. The authoritative work list is
   `apps/orcker-gui/src/ipc/dangling-commands.json`: 49 Tauri commands the GUI
   still invokes after SPEC-0002 removed their handlers, 24 of them reached from
@@ -70,10 +79,22 @@ Sites, starts a wizard and submits gets an IPC error.
 
 ## Design & contracts
 
-The completeness check is SPEC-0002's AC3 pattern file, re-run at the end:
-`rg -f specs/logs/SPEC-0002-removed-symbols.txt crates bin apps --glob '!dist'`
-must return no matches. Build artefacts under `apps/orcker-gui/dist/` are
-excluded - they are regenerated, not source.
+Completeness is checked from **both ends**, because either alone is blind:
+
+1. Inherited rot - SPEC-0002's AC3 pattern file, re-run at the end:
+   `rg -f specs/logs/SPEC-0002-removed-symbols.txt crates bin apps --glob '!dist'`
+   must return no matches. Build artefacts under `apps/orcker-gui/dist/` are
+   excluded - they are regenerated, not source.
+2. Rot this spec creates - `node tests/dead-export-delta.mjs` from
+   `apps/orcker-gui`, per R0b. Check 1 cannot detect this class at all: its
+   pattern file lists SPEC-0002's symbols.
+
+An absolute "no dead exports anywhere" gate was tried and rejected on its own
+output: it needs a ~84-entry allowlist of inherited debt, it flags same-file
+helpers that are still called (`jobStatus`, reached by `pollJobToEnd`), and it
+demands deleting the `ipc/types.ts` wire-contract mirror - including the
+`JobState` that R3 orders kept. A standing ratchet needs that exemption designed
+deliberately and belongs to its own spec, not to this one.
 
 ## Test plan
 
@@ -93,6 +114,10 @@ excluded - they are regenerated, not source.
       that is not registered -> evidence: the invoke-name list cross-checked
       against `src-tauri/src/main.rs`'s handler list, in the cycle log
 - [ ] AC5 `scripts/gate.sh specs/SPEC-0036-*.md` passes
+- [ ] AC6 `node tests/dead-export-delta.mjs` (from `apps/orcker-gui`) reports every
+      export this diff orphaned, and each one is either deleted or carries a
+      written justification in the cycle log -> evidence: the script's output,
+      before and after, in the log
 
 ## Out of scope
 

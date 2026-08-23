@@ -15,7 +15,7 @@ import { Check, ChevronsUpDown, Search } from "lucide-vue-next";
 import { cn } from "@/lib/utils";
 
 /** One selectable row. `sublabel` renders muted to the right (e.g. a doc-root). */
-export type ComboboxOption<V extends string> = {
+type ComboboxOption<V extends string> = {
   value: V;
   label: string;
   sublabel?: string;

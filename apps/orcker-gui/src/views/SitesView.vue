@@ -11,17 +11,13 @@ import {
   Globe,
   Layers,
   Link2,
-  Package,
   Pencil,
   Plus,
-  Rocket,
   Search,
   SearchX,
   ShieldAlert,
 } from "lucide-vue-next";
 
-import CreateLaravelWizard from "@/components/site-create/CreateLaravelWizard.vue";
-import CreateWordPressWizard from "@/components/site-create/CreateWordPressWizard.vue";
 import SiteCard from "@/components/SiteCard.vue";
 import SiteDetailsSidebar from "@/components/SiteDetailsSidebar.vue";
 import PageHeader from "@/components/PageHeader.vue";
@@ -58,11 +54,9 @@ import {
   pickDirectory,
   renameGroup,
   setGroupOrder,
-  setPhp,
   setSecure,
   setSiteGroup,
   setWebRoot,
-  setWordpressAutoLogin,
   setFrontController,
   sitesAndParked,
   startQuickTunnel,
@@ -148,20 +142,6 @@ async function toggleSecure(site: Site): Promise<void> {
     await load({ force: true });
   } catch (e) {
     toast.error("Couldn't change HTTPS", (e as IpcError).message);
-  } finally {
-    rowBusy.value = null;
-  }
-}
-
-async function changeSitePhp(site: SiteEntry, version: string): Promise<void> {
-  if (version === site.php) return;
-  rowBusy.value = `edit:${site.name}`;
-  try {
-    await setPhp(site.name, version);
-    toast.success(`PHP ${version} selected for ${site.name}`);
-    await load({ force: true });
-  } catch (e) {
-    toast.error("Couldn't change PHP version", (e as IpcError).message);
   } finally {
     rowBusy.value = null;
   }
@@ -338,29 +318,6 @@ const groupSelectOptions = computed(() => [
   ...groups.value.order.map((g) => ({ value: g, label: g })),
 ]);
 
-// ── create new site ──
-const createOpen = ref(false);
-const wordpressCreateOpen = ref(false);
-const phpVersionList = computed(() => (report.value?.php ?? []).map((p) => p.version));
-const defaultPhp = computed(() => report.value?.default_php ?? "");
-
-function openCreate(): void {
-  // Defer past the dropdown's close so reka-ui's focus-restore doesn't fight the modal.
-  void nextTick(() => {
-    createOpen.value = true;
-  });
-}
-
-function openCreateWordpress(): void {
-  void nextTick(() => {
-    wordpressCreateOpen.value = true;
-  });
-}
-
-async function onCreated(): Promise<void> {
-  await load({ force: true });
-}
-
 /** The parent directory of a path (slice before the last `/` or `\`). */
 function parentDir(p: string): string {
   const i = Math.max(p.lastIndexOf("/"), p.lastIndexOf("\\"));
@@ -448,33 +405,6 @@ async function changeSiteGroup(site: SiteEntry, group: string): Promise<void> {
     await load({ force: true });
   } catch (e) {
     toast.error("Couldn't change group", (e as IpcError).message);
-  } finally {
-    rowBusy.value = null;
-  }
-}
-
-async function changeWpAutoLogin(
-  site: SiteEntry,
-  enabled: boolean,
-  user: string | null,
-  options?: { silent?: boolean },
-): Promise<void> {
-  if (enabled === (site.wp_auto_login ?? false) && (user ?? "") === (site.wp_auto_login_user ?? "")) {
-    return;
-  }
-  rowBusy.value = `edit:${site.name}`;
-  try {
-    await setWordpressAutoLogin(site.name, enabled, user);
-    if (!options?.silent) {
-      toast.success(
-        enabled
-          ? `Auto-login enabled for ${site.name}`
-          : `Auto-login disabled for ${site.name}`,
-      );
-    }
-    await load({ force: true });
-  } catch (e) {
-    toast.error("Couldn't change auto-login", (e as IpcError).message);
   } finally {
     rowBusy.value = null;
   }
@@ -605,7 +535,6 @@ async function confirmUnlink(close: () => void): Promise<void> {
 
 onUnmounted(
   registerViewActions({
-    create: openCreate,
     find: () => filterInput.value?.focus(),
     refresh: () => void load(),
   }),
@@ -616,7 +545,6 @@ function consumeIntent(): void {
   if (!intent) return;
   sitesIntent.value = null;
   if (intent === "link") linkOpen.value = true;
-  else if (intent === "create") openCreate();
   else if (intent === "park") void onPark();
 }
 
@@ -666,13 +594,6 @@ async function shareSitePublicly(s: Site): Promise<void> {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" class="w-56">
-            <DropdownMenuItem @select="openCreate">
-              <Rocket class="size-4" /> New Laravel site…
-            </DropdownMenuItem>
-            <DropdownMenuItem @select="openCreateWordpress">
-              <Package class="size-4" /> New WordPress site…
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
             <DropdownMenuItem @select="linkOpen = true">
               <Link2 class="size-4" /> Link existing site
             </DropdownMenuItem>
@@ -716,8 +637,7 @@ async function shareSitePublicly(s: Site): Promise<void> {
             description="Park a folder of projects to serve every child directory, or link a single project directory."
           >
             <div class="flex gap-2">
-              <Button @click="openCreate"><Rocket class="size-4" /> New Laravel site</Button>
-              <Button variant="outline" :disabled="rowBusy === 'park'" @click="onPark">
+              <Button :disabled="rowBusy === 'park'" @click="onPark">
                 <FolderPlus class="size-4" /> Park folder
               </Button>
               <Button variant="outline" @click="linkOpen = true"><Link2 class="size-4" /> Link site</Button>
@@ -923,43 +843,18 @@ async function shareSitePublicly(s: Site): Promise<void> {
       :open="sidebarSite !== null"
       :report="report ?? null"
       :tld="tld"
-      :php-versions="phpVersionList"
       :group-options="hasGroups ? groupSelectOptions : []"
       :current-group="sidebarSite ? currentGroupOf(sidebarSite.name) : ''"
       :busy="sidebarSite ? siteBusy(sidebarSite.name) : false"
       :sharing="sidebarSite ? sharing === sidebarSite.name : false"
       @close="closeSidebar"
-      @change-php="changeSitePhp"
       @change-web-root="changeSiteWebRoot"
       @toggle-secure="toggleSecure"
       @toggle-front-controller="toggleFrontController"
       @change-group="changeSiteGroup"
-      @change-wp-auto-login="changeWpAutoLogin"
       @share="shareSitePublicly"
       @unlink="openUnlink"
       @domains-changed="load({ force: true })"
-    />
-
-    <!-- create new Laravel site wizard -->
-    <CreateLaravelWizard
-      v-model:open="createOpen"
-      :parked-folders="parked"
-      :php-versions="phpVersionList"
-      :default-php="defaultPhp"
-      :tld="tld"
-      :report="report ?? null"
-      @created="onCreated"
-    />
-
-    <!-- create new WordPress site wizard -->
-    <CreateWordPressWizard
-      v-model:open="wordpressCreateOpen"
-      :parked-folders="parked"
-      :php-versions="phpVersionList"
-      :default-php="defaultPhp"
-      :tld="tld"
-      :report="report ?? null"
-      @created="onCreated"
     />
 
     <!-- link modal -->

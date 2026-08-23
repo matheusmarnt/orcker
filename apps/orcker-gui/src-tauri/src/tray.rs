@@ -55,7 +55,6 @@ const SETTLE_PROBE_TIMEOUT: Duration = Duration::from_millis(400);
 mod icons {
     pub const OPEN: &[u8] = include_bytes!("../icons/menu/app-window.png");
     pub const UPDATE: &[u8] = include_bytes!("../icons/menu/download.png");
-    pub const NEW_SITE: &[u8] = include_bytes!("../icons/menu/rocket.png");
     pub const LINK: &[u8] = include_bytes!("../icons/menu/link.png");
     pub const PARK: &[u8] = include_bytes!("../icons/menu/folder-plus.png");
     pub const RESTART: &[u8] = include_bytes!("../icons/menu/rotate-cw.png");
@@ -63,14 +62,13 @@ mod icons {
     pub const START: &[u8] = include_bytes!("../icons/menu/play.png");
     pub const CHECK_UPDATES: &[u8] = include_bytes!("../icons/menu/refresh-cw.png");
     pub const MAIL: &[u8] = include_bytes!("../icons/menu/mail.png");
-    pub const DUMPS: &[u8] = include_bytes!("../icons/menu/clipboard-list.png");
     pub const SITES: &[u8] = include_bytes!("../icons/menu/layout-grid.png");
     pub const ABOUT: &[u8] = include_bytes!("../icons/menu/info.png");
     pub const QUIT: &[u8] = include_bytes!("../icons/menu/power.png");
 }
 
 /// The navigable pages the tray links to (demoted below the direct actions).
-/// Mail and Dumps have their own openers, so they aren't here. Every path must
+/// Mail has its own opener, so it isn't here. Every path must
 /// resolve in `router.ts`; `tests/routeTargets.test.ts` enforces that.
 const NAV_ITEMS: &[(&str, &str, &[u8])] = &[
     ("nav:/sites", "Sites", icons::SITES),
@@ -574,15 +572,8 @@ fn on_menu_event(app: &AppHandle, event: MenuEvent) {
     match id {
         "open" => crate::show_main(app),
         "quit" => app.exit(0),
-        "dumps" => {
-            let _ = crate::show_dumps(app);
-        }
         "mail" => {
             let _ = crate::mail_window::show_mails(app);
-        }
-        "new-site" => {
-            crate::show_main(app);
-            let _ = app.emit("sites-intent", "create");
         }
         "sites:link" => {
             crate::show_main(app);
@@ -831,10 +822,6 @@ fn build_menu(app: &AppHandle, state: &TrayState, dark: bool) -> tauri::Result<M
 
         push(
             &mut items,
-            action(app, "new-site", "New Laravel site…", icons::NEW_SITE, dark)?,
-        );
-        push(
-            &mut items,
             action(app, "sites:link", "Link Site", icons::LINK, dark)?,
         );
         push(
@@ -845,10 +832,6 @@ fn build_menu(app: &AppHandle, state: &TrayState, dark: bool) -> tauri::Result<M
         push(
             &mut items,
             action(app, "mail", mail_label(state.unread), icons::MAIL, dark)?,
-        );
-        push(
-            &mut items,
-            action(app, "dumps", "Dumps", icons::DUMPS, dark)?,
         );
         push(&mut items, PredefinedMenuItem::separator(app)?);
         for (id, label, icon) in NAV_ITEMS {
@@ -868,10 +851,6 @@ fn build_menu(app: &AppHandle, state: &TrayState, dark: bool) -> tauri::Result<M
         push(
             &mut items,
             action(app, "mail", mail_label(state.unread), icons::MAIL, dark)?,
-        );
-        push(
-            &mut items,
-            action(app, "dumps", "Dumps", icons::DUMPS, dark)?,
         );
         push(&mut items, PredefinedMenuItem::separator(app)?);
     }
@@ -895,10 +874,6 @@ fn build_transient_menu(app: &AppHandle, label: &str) -> tauri::Result<Menu<Wry>
         action(app, "open", "Open Orcker", icons::OPEN, dark)?,
     );
     push(&mut items, action(app, "mail", "Mail", icons::MAIL, dark)?);
-    push(
-        &mut items,
-        action(app, "dumps", "Dumps", icons::DUMPS, dark)?,
-    );
     push(&mut items, PredefinedMenuItem::separator(app)?);
     push(
         &mut items,

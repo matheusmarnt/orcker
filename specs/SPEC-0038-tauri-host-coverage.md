@@ -42,8 +42,16 @@ A text scan breaks the moment an id stops being a literal.
   `routeTargets.test.ts`'s tray half. Two guards for one property, one of which
   can silently stop matching, is worse than one that runs.
 - R4. Widen the route guard to the references it does not see today:
-  `src-tauri/tauri.conf.json` (`index.html#/dumps-window`, `index.html#/mails-viewer`)
-  and `main.rs`'s `WebviewUrl::App`. Both resolve now; nothing would catch a break.
+  `src-tauri/tauri.conf.json` (`index.html#/mails-viewer`) and `main.rs`'s
+  `WebviewUrl::App`. Both resolve now; nothing would catch a break.
+- R5. Guard the **event-payload** contract, not just route ids. `tray.rs` emits
+  `sites-intent` payloads that `App.vue` whitelists and `SitesView.consumeIntent`
+  branches on; nothing checks the three agree. SPEC-0036 shipped a REWORK because
+  of exactly this: it deleted the site-creation wizards, so `consumeIntent`
+  stopped handling `"create"`, but the tray kept a "New Laravel site…" item
+  emitting it - a menu entry that showed the window and then did nothing, with
+  `[gate] OK` throughout. The emitted set, the whitelist and the handled set must
+  be pinned to `SitesIntent`.
 
 ## Design & contracts
 
@@ -63,7 +71,10 @@ them rather than reaching for a Tauri test harness.
       tray and command modules -> evidence: the count, before and after
 - [ ] AC3 The route guard covers `tauri.conf.json` and `main.rs`; RED recorded by
       pointing one of them at a route that does not exist
-- [ ] AC4 `scripts/gate.sh specs/SPEC-0038-*.md` passes
+- [ ] AC4 Every `sites-intent` payload the tray emits is a member of `SitesIntent`
+      and is handled by `SitesView.consumeIntent`; RED recorded by emitting a
+      payload nothing consumes (the SPEC-0036 failure, reproduced)
+- [ ] AC5 `scripts/gate.sh specs/SPEC-0038-*.md` passes
 
 ## Out of scope
 

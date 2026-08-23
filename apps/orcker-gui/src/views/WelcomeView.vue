@@ -16,7 +16,6 @@ import EnvironmentCard from "@/components/EnvironmentCard.vue";
 import TitleBar from "@/components/TitleBar.vue";
 import Button from "@/components/ui/Button.vue";
 import Input from "@/components/ui/Input.vue";
-import Select from "@/components/ui/Select.vue";
 import Spinner from "@/components/ui/Spinner.vue";
 import logoUrl from "@/assets/logo.svg";
 import { useDaemon } from "@/composables/useDaemon";
@@ -26,11 +25,9 @@ import { useOnboarding } from "@/composables/useOnboarding";
 import { loadPlatform, usePlatform } from "@/composables/usePlatform";
 import { useToast } from "@/composables/useToast";
 import {
-  availablePhp,
   cliPathStatus,
   getAutostart,
   installCliToPath,
-  installPhpWithProgress,
   IpcError,
   openLoginItems,
   park,
@@ -39,11 +36,12 @@ import {
   setAutostartGui,
   setAutostartGuiMinimized,
 } from "@/ipc/client";
-import type { AutostartState, CliPathStatus, PhpVersion } from "@/ipc/types";
+import type { AutostartState, CliPathStatus } from "@/ipc/types";
 
 // A first-run guided setup, shown only on a never-set-up machine (see
-// useOnboarding). Step 1 (start the daemon) is required; PHP, parking a folder,
-// and elevation are each skippable. Finishing lands on the Overview.
+// useOnboarding). Step 1 (start the daemon) is required; the PATH install,
+// parking a folder and elevation are each skippable. Finishing lands on the
+// Overview.
 const router = useRouter();
 const toast = useToast();
 const { connected, report, refresh } = useDaemon();
@@ -51,7 +49,7 @@ const { finish } = useOnboarding();
 
 const STEPS = [
   { n: 1, label: "Daemon" },
-  { n: 2, label: "PHP" },
+  { n: 2, label: "PATH" },
   { n: 3, label: "Sites" },
   { n: 4, label: "Trust" },
   { n: 5, label: "Done" },
@@ -219,57 +217,6 @@ function onOpenLoginItems(): void {
 // (Spinner/diagnostics auto-clear on connect is handled inside useDaemonStart.)
 // No auto-advance - the user clicks Continue (enabled once `daemonUp`).
 
-// ── step 2: PHP ──
-const phpLoading = ref(false);
-const phpInstalling = ref(false);
-const phpProgress = ref(""); // latest streamed install line, shown beside the spinner
-const phpOptions = ref<{ value: PhpVersion; label: string }[]>([]);
-const selectedPhp = ref<PhpVersion>("");
-const installedPhp = ref<PhpVersion | null>(null);
-
-async function loadAvailablePhp(): Promise<void> {
-  if (phpOptions.value.length || installedPhp.value) return;
-  phpLoading.value = true;
-  try {
-    const r = await availablePhp();
-    const have = new Set(r.installed);
-    phpOptions.value = r.available
-      .filter((v) => !have.has(v))
-      .map((v) => ({ value: v, label: `PHP ${v}` }));
-    // Preselect the latest (daemon returns ascending → last is newest).
-    const opts = phpOptions.value;
-    selectedPhp.value = opts[opts.length - 1]?.value ?? "";
-    // Something already installed (e.g. revisiting) - reflect it.
-    if (r.installed.length) {
-      installedPhp.value = r.installed[r.installed.length - 1] ?? null;
-    }
-  } catch (e) {
-    toast.error("Couldn't load PHP versions", (e as IpcError).message);
-  } finally {
-    phpLoading.value = false;
-  }
-}
-
-async function doInstallPhp(): Promise<void> {
-  const v = selectedPhp.value;
-  if (!v) return;
-  phpInstalling.value = true;
-  phpProgress.value = "";
-  try {
-    await installPhpWithProgress(v, (lines) => {
-      phpProgress.value = lines[lines.length - 1] ?? phpProgress.value;
-    });
-    installedPhp.value = v;
-    await refresh();
-    toast.success(`Installed PHP ${v}`, "It's set as your default.");
-  } catch (e) {
-    toast.error(`Install of PHP ${v} failed`, (e as IpcError).message);
-  } finally {
-    phpInstalling.value = false;
-    phpProgress.value = "";
-  }
-}
-
 // ── step 2: install orcker on PATH. macOS and Linux (not yet wired up on
 // Windows - see `supportsPathInstall`). `orcker` itself is already on PATH on a
 // packaged Linux install, but the PHP/tool shims it manages live in the same
@@ -326,14 +273,10 @@ async function doPark(): Promise<void> {
 }
 
 // ── navigation ──
-watch(step, (s) => {
-  if (s === 2) void loadAvailablePhp();
-});
-
 const forwardLabel = computed(() => {
   if (step.value === 1) return "Continue";
   if (step.value === 5) return "Get started";
-  if (step.value === 2) return installedPhp.value ? "Continue" : "Skip for now";
+  if (step.value === 2) return cli.value?.installed ? "Continue" : "Skip for now";
   if (step.value === 3) return parkedDir.value ? "Continue" : "Skip for now";
   return "Continue";
 });
@@ -541,51 +484,9 @@ function onBack(): void {
             </div>
           </section>
 
-          <!-- 2. PHP -->
+          <!-- 2. orcker on PATH -->
           <section v-else-if="step === 2" class="space-y-4">
-            <h2 class="font-display text-base font-normal tracking-wide">Install a PHP version</h2>
-            <p class="text-sm text-muted-foreground">
-              Pick a version to install - the latest is selected for you. The
-              first version becomes your default. You can add more later.
-              Downloads a prebuilt build; this can take a few minutes.
-            </p>
-
-            <div v-if="phpLoading" class="flex justify-center py-6">
-              <Spinner class="size-5" />
-            </div>
-            <div
-              v-else-if="installedPhp"
-              class="flex items-center gap-2 rounded-md bg-success/10 px-3 py-2 text-sm text-success"
-            >
-              <Check class="size-4" /> PHP {{ installedPhp }} installed.
-            </div>
-            <template v-else-if="phpOptions.length">
-              <Select
-                class="w-full"
-                :model-value="selectedPhp"
-                :options="phpOptions"
-                aria-label="PHP version to install"
-                @update:model-value="(v: PhpVersion) => (selectedPhp = v)"
-              />
-              <div class="flex min-w-0 items-center justify-end gap-3">
-                <span
-                  v-if="phpInstalling && phpProgress"
-                  class="min-w-0 truncate text-xs text-muted-foreground"
-                >
-                  {{ phpProgress }}
-                </span>
-                <Button :disabled="phpInstalling || !selectedPhp" @click="doInstallPhp">
-                  <Spinner v-if="phpInstalling" class="size-4" />
-                  <Download v-else class="size-4" />
-                  Install PHP {{ selectedPhp }}
-                </Button>
-              </div>
-            </template>
-            <p v-else class="text-sm text-muted-foreground">
-              No installable versions were found. You can add one later from the
-              PHP page.
-            </p>
-
+            <h2 class="font-display text-base font-normal tracking-wide">Put orcker on your PATH</h2>
             <!-- Optional (recommended): put `orcker` and its managed tool shims (php,
                  composer, ...) on PATH. Never blocks Continue. -->
             <div

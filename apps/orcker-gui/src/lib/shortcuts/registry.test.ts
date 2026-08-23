@@ -18,7 +18,6 @@ function fakeCtx(view: ViewActions = {}): ShortcutCtx {
     restartDaemon: vi.fn(),
     closeWindow: vi.fn(),
     openMailWindow: vi.fn(),
-    openDumpsWindow: vi.fn(),
     openLinkSite: vi.fn(),
     parkFolder: vi.fn(),
     view: () => view,
@@ -27,7 +26,7 @@ function fakeCtx(view: ViewActions = {}): ShortcutCtx {
 
 describe("VIEW_TARGETS", () => {
   it("covers the main views in sidebar order, About excluded", () => {
-    expect(VIEW_TARGETS).toHaveLength(9);
+    expect(VIEW_TARGETS).toHaveLength(8);
     expect(VIEW_TARGETS[0]?.path).toBe("/overview");
     expect(VIEW_TARGETS[VIEW_TARGETS.length - 1]?.path).toBe("/doctor");
     expect(VIEW_TARGETS.map((v) => v.path)).not.toContain("/about");
@@ -86,18 +85,9 @@ describe("commandsForScope", () => {
     expect(proxies).toBeDefined();
     expect(integrations?.chord).toBeUndefined();
     expect(proxies?.chord).toBeUndefined();
-    expect(commandsForScope(all, "dumps", false).some((c) => c.id.startsWith("nav:"))).toBe(
+    expect(commandsForScope(all, "mails", false).some((c) => c.id.startsWith("nav:"))).toBe(
       false,
     );
-  });
-
-  it("gives the dumps window its tab-cycle and find/refresh, not navigation", () => {
-    const dumps = commandsForScope(all, "dumps", false).map((c) => c.id);
-    expect(dumps).toContain("dumps-next-tab");
-    expect(dumps).toContain("dumps-prev-tab");
-    expect(dumps).toContain("find");
-    expect(dumps).toContain("refresh");
-    expect(dumps).not.toContain("new");
   });
 
   it("drops the Linux-only Close on macOS (the native menu owns Cmd+W)", () => {
@@ -154,16 +144,12 @@ describe("command run wiring", () => {
     expect(ctx.parkFolder).toHaveBeenCalledOnce();
   });
 
-  it("opens the viewer windows via their chords", () => {
+  it("opens the viewer window via its chord", () => {
     const mail = all.find((c) => c.id === "open-mail");
-    const dumps = all.find((c) => c.id === "open-dumps");
     expect(mail?.chord).toEqual({ mod: true, shift: true, key: "m" });
-    expect(dumps?.chord).toEqual({ mod: true, shift: true, key: "d" });
 
     const ctx = fakeCtx();
     mail?.run(ctx);
-    dumps?.run(ctx);
     expect(ctx.openMailWindow).toHaveBeenCalledOnce();
-    expect(ctx.openDumpsWindow).toHaveBeenCalledOnce();
   });
 });

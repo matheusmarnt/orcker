@@ -16,7 +16,7 @@ import { useDaemon } from "@/composables/useDaemon";
 import { useToast } from "@/composables/useToast";
 import { isEditable } from "@/lib/desktop";
 import { setTheme } from "@/lib/theme";
-import { IpcError, restartDaemon, showDumpsWindow, showMailsWindow } from "@/ipc/client";
+import { IpcError, restartDaemon, showMailsWindow } from "@/ipc/client";
 
 import { matchChord } from "./chord";
 import { isMac } from "./platform";
@@ -82,13 +82,6 @@ export function useShortcuts(scope: WindowScope): UseShortcuts {
         await showMailsWindow();
       } catch (e) {
         toast.error("Couldn't open the Mail viewer", (e as IpcError).message);
-      }
-    },
-    openDumpsWindow: async () => {
-      try {
-        await showDumpsWindow();
-      } catch (e) {
-        toast.error("Couldn't open the Dumps viewer", (e as IpcError).message);
       }
     },
     view: getViewActions,

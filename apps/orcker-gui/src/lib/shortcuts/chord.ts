@@ -4,9 +4,9 @@
  * A `Chord` is the platform-independent description of a shortcut. `mod` is the
  * primary accelerator: Command on macOS, Control on Linux (same letter, swapped
  * modifier - the convention this app follows). `ctrl` is the *literal* Control
- * key, used for the few chords that are Control on both platforms (e.g. the
- * dumps-window tab cycle, since Cmd+Tab is the macOS app switcher and can't be
- * repurposed). `shift`/`alt` are literal.
+ * key, for chords that must be Control on both platforms - a tab cycle, say,
+ * since Cmd+Tab is the macOS app switcher and can't be repurposed. No chord
+ * currently sets it; the matcher keeps handling it so the next one can.
  *
  * Match on `code` for layout-stable physical keys (digits, Tab) and on `key`
  * for character keys (k, comma, slash) so the binding follows the printed glyph.

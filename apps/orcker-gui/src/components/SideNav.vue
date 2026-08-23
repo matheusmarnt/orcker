@@ -2,7 +2,6 @@
 import type { Component } from "vue";
 import { computed, onMounted, ref } from "vue";
 import {
-  ClipboardList,
   Info,
   LayoutDashboard,
   LayoutGrid,
@@ -90,7 +89,6 @@ const sections = computed<{ title: string; items: Item[] }[]>(() => [
         onBadgeClick: () => void showMailsWindow(),
         badgeTitle: "Open mail viewer",
       },
-      { to: "/dumps", label: "Dumps", icon: ClipboardList },
     ],
   },
   {

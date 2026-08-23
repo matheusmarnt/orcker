@@ -5,7 +5,7 @@
  * Tauri/IPC imports and is unit-testable with a fake context.
  *
  * `scopes` lists the windows a command is active in ("main" is the app shell;
- * "dumps"/"mails" are the standalone viewer windows). `linuxOnly` commands are
+ * "mails" is the standalone viewer window). `linuxOnly` commands are
  * skipped on macOS, where the native app menu already owns them (e.g. Close).
  *
  * There is intentionally no Quit chord: closing the window hides it to the tray
@@ -15,9 +15,9 @@
 import type { Chord } from "./chord";
 import type { ViewActions } from "./useViewActions";
 
-export type WindowScope = "main" | "dumps" | "mails";
+export type WindowScope = "main" | "mails";
 
-const ALL: WindowScope[] = ["main", "dumps", "mails"];
+const ALL: WindowScope[] = ["main", "mails"];
 
 /** Everything a command needs to act, injected by the dispatcher. */
 export interface ShortcutCtx {
@@ -30,8 +30,6 @@ export interface ShortcutCtx {
   closeWindow: () => void;
   /** Open the standalone Mail viewer window. */
   openMailWindow: () => void;
-  /** Open the standalone Dumps viewer window. */
-  openDumpsWindow: () => void;
   /** Go to the Sites page and open the Link-site dialog. */
   openLinkSite: () => void;
   /** Go to the Sites page and open the Park-folder picker. */
@@ -64,10 +62,9 @@ export const VIEW_TARGETS: { path: string; title: string; digit?: number }[] = [
   { path: "/tooling", title: "Tooling", digit: 3 },
   { path: "/proxies", title: "Proxies" },
   { path: "/mail", title: "Mail", digit: 4 },
-  { path: "/dumps", title: "Dumps", digit: 5 },
   { path: "/integrations", title: "Share" },
-  { path: "/general", title: "Settings", digit: 6 },
-  { path: "/doctor", title: "Doctor", digit: 7 },
+  { path: "/general", title: "Settings", digit: 5 },
+  { path: "/doctor", title: "Doctor", digit: 6 },
 ];
 
 /** Build the full command catalog. Pure: no side effects until a `run` fires. */
@@ -137,15 +134,6 @@ export function buildCommands(): Command[] {
       run: (ctx) => ctx.openMailWindow(),
     },
     {
-      id: "open-dumps",
-      title: "Open Dumps viewer",
-      group: "Actions",
-      chord: { mod: true, shift: true, key: "d" },
-      scopes: ["main"],
-      inPalette: true,
-      run: (ctx) => ctx.openDumpsWindow(),
-    },
-    {
       id: "link-site",
       title: "Link Site",
       group: "Sites",
@@ -168,7 +156,7 @@ export function buildCommands(): Command[] {
       title: "Find in view",
       group: "Actions",
       chord: { mod: true, key: "f" },
-      scopes: ["main", "dumps"],
+      scopes: ["main"],
       run: (ctx) => ctx.view().find?.(),
     },
     {
@@ -186,22 +174,6 @@ export function buildCommands(): Command[] {
       chord: { mod: true, key: "r" },
       scopes: ALL,
       run: (ctx) => ctx.view().refresh?.(),
-    },
-    {
-      id: "dumps-prev-tab",
-      title: "Previous tab",
-      group: "View",
-      chord: { ctrl: true, shift: true, code: "Tab" },
-      scopes: ["dumps"],
-      run: (ctx) => ctx.view().prevTab?.(),
-    },
-    {
-      id: "dumps-next-tab",
-      title: "Next tab",
-      group: "View",
-      chord: { ctrl: true, code: "Tab" },
-      scopes: ["dumps"],
-      run: (ctx) => ctx.view().nextTab?.(),
     },
     {
       id: "close-window",

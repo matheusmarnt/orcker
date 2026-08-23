@@ -1,11 +1,9 @@
 import { mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mintWordPressLoginToken = vi.fn();
 const openInBrowser = vi.fn();
 const openPath = vi.fn();
 vi.mock("@/ipc/client", () => ({
-  mintWordPressLoginToken: (...args: unknown[]) => mintWordPressLoginToken(...args),
   openInBrowser: (...args: unknown[]) => openInBrowser(...args),
   openPath: (...args: unknown[]) => openPath(...args),
 }));
@@ -49,44 +47,27 @@ async function clickWpaChip(wrapper: ReturnType<typeof mountCard>) {
   await chip.trigger("click");
 }
 
-describe("SiteCard openWpAdmin gating", () => {
+describe("SiteCard WP Admin chip", () => {
   beforeEach(() => {
-    mintWordPressLoginToken.mockReset();
     openInBrowser.mockReset();
     openPath.mockReset();
   });
 
-  it("skips minting and opens the plain link in unbound mode, even with auto-login on", async () => {
+  it("opens the plain wp-admin link in unbound mode", async () => {
     const site = wpSite({ wp_auto_login: true });
-    const wrapper = mountCard(site, null); // no report => isUnbound() is true
+    const wrapper = mountCard(site, null); // no report => the localhost `/~` form
 
     await clickWpaChip(wrapper);
 
-    expect(mintWordPressLoginToken).not.toHaveBeenCalled();
     expect(openInBrowser).toHaveBeenCalledWith("http://localhost:8080/~blog.test/wp-admin/");
   });
 
-  it("mints a token and opens the pre-authenticated link when bound and auto-login is on", async () => {
+  it("opens the plain wp-admin link when bound", async () => {
     const site = wpSite({ wp_auto_login: true });
-    mintWordPressLoginToken.mockResolvedValue("sekrit-token");
     const wrapper = mountCard(site, boundReport());
 
     await clickWpaChip(wrapper);
 
-    expect(mintWordPressLoginToken).toHaveBeenCalledWith("blog");
-    expect(openInBrowser).toHaveBeenCalledWith(
-      "http://blog.test/wp-admin/?orcker_login_token=sekrit-token",
-    );
-  });
-
-  it("falls back to the plain link when minting fails", async () => {
-    const site = wpSite({ wp_auto_login: true });
-    mintWordPressLoginToken.mockRejectedValue(new Error("daemon unreachable"));
-    const wrapper = mountCard(site, boundReport());
-
-    await clickWpaChip(wrapper);
-
-    expect(mintWordPressLoginToken).toHaveBeenCalledWith("blog");
     expect(openInBrowser).toHaveBeenCalledWith("http://blog.test/wp-admin/");
   });
 
@@ -99,7 +80,6 @@ describe("SiteCard openWpAdmin gating", () => {
 
 describe("SiteCard actions", () => {
   beforeEach(() => {
-    mintWordPressLoginToken.mockReset();
     openInBrowser.mockReset();
     openPath.mockReset();
   });

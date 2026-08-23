@@ -136,7 +136,7 @@ function extraDomainCount(s: SiteEntry): number {
         v-if="site.wp_auto_login"
         type="button"
         class="inline-flex items-center rounded-md bg-warning/10 px-1.5 py-0.5 text-[11px] font-medium text-warning transition-opacity hover:opacity-70"
-        :title="`One-click login enabled - signs in as ${site.wp_auto_login_user || 'the site admin'}`"
+        title="Open WP Admin - the ordinary WordPress login screen, not signed in"
         @click="openWpAdmin(site, report)"
       >
         WPA

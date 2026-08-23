@@ -21,17 +21,8 @@ export interface PollHandle<T> {
  *
  * Default cadence is 4s; callers should not go below ~3s for `status`.
  *
- * `pollWhileHidden` keeps polling when the document is hidden - needed for the
- * standalone dumps window, which is usually unfocused (and reports `hidden` when
- * minimised/occluded) yet must keep streaming. Default `false` so the shared
- * status poller is unaffected.
  */
-export function usePoll<T>(
-  fn: () => Promise<T>,
-  intervalMs = 4000,
-  options: { pollWhileHidden?: boolean } = {},
-): PollHandle<T> {
-  const { pollWhileHidden = false } = options;
+export function usePoll<T>(fn: () => Promise<T>, intervalMs = 4000): PollHandle<T> {
   const data = shallowRef<T | null>(null);
   const error = ref<IpcError | null>(null);
   const loading = ref(false);
@@ -42,7 +33,7 @@ export function usePoll<T>(
 
   async function tick(): Promise<void> {
     if (inFlight || disposed) return;
-    if (!pollWhileHidden && document.visibilityState === "hidden") {
+    if (document.visibilityState === "hidden") {
       schedule();
       return;
     }

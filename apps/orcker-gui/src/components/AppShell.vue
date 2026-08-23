@@ -20,8 +20,8 @@ const paletteCommands = computed(() => [...commands, ...siteCommands.value]);
 
 // Only three views work without a live daemon: Overview (owns its own
 // daemon-down hero + start affordance), Settings/General (can start/install it),
-// and About (pure build info). Every data-backed view - PHP, Sites, Tooling,
-// Services, Dumps, Mail, Doctor - is blocked by the daemon-down screen so none of
+// and About (pure build info). Every data-backed view - Sites, Tooling, Proxies,
+// Mail, Share, Doctor - is blocked by the daemon-down screen so none of
 // them mount, fire a doomed request, and strand the user on a blank table.
 const DAEMON_FREE = new Set(["overview", "general", "about"]);
 const showPanel = computed(

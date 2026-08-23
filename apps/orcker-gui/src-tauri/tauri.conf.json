@@ -27,20 +27,6 @@
         "visible": false
       },
       {
-        "label": "dumps",
-        "title": "Orcker Dumps",
-        "url": "index.html#/dumps-window",
-        "width": 900,
-        "height": 640,
-        "minWidth": 640,
-        "minHeight": 420,
-        "resizable": true,
-        "fullscreen": false,
-        "decorations": false,
-        "transparent": true,
-        "visible": false
-      },
-      {
         "label": "mails",
         "title": "Mails",
         "url": "index.html#/mails-viewer",
