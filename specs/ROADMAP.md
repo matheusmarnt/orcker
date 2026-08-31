@@ -1,9 +1,10 @@
 # Spec queue — Orcker
 
-Ordered queue. `/spec-next` picks the first `approved` spec whose `depends_on`
-are all `accepted`. Statuses live in each spec's front matter; this table is the
-index (keep both in sync at S8). `planned` rows have no spec file yet — draft
-them with `/spec-new` when the queue approaches them.
+Ordered queue. `/spec-next` picks the first spec whose **committed** status is
+`approved` and whose `depends_on` are all `accepted`. Statuses live in each
+spec's front matter; this table is the index (keep both in sync at S8).
+`planned` rows have no spec file yet — draft them with `/spec-new` when the
+queue approaches them.
 
 ## Phase 0 — validation (drafted, awaiting human approval)
 
@@ -71,4 +72,4 @@ Never a merge, never a bulk sync. Numbered above the reserved Phase-1 range.
 | 42 | SPEC-0042-restore-missing-reference-doc | accepted | FR-022 | SPEC-0001 |
 | 43 | SPEC-0043-orcker-stack-instruction-file | draft | FR-022 | SPEC-0003 |
 | 44 | SPEC-0044-fix-dangling-prd-related-documents | draft | FR-001 | SPEC-0042 |
-| 45 | SPEC-0045-verifiable-human-approval | draft | FR-001 | SPEC-0042 |
+| 45 | SPEC-0045-verifiable-human-approval | accepted | FR-001 | SPEC-0042 |

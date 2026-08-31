@@ -8,8 +8,8 @@ surface:
   - docs/
   - specs/
   - .claude/
-status: draft
-attempts: 0
+status: accepted
+attempts: 1
 ---
 
 ## Context
@@ -79,25 +79,25 @@ and after (GREEN).
 
 ## Acceptance checklist
 
-- [ ] AC1 (R1) SDD section 5 requires a committed approval → evidence:
+- [x] AC1 (R1) SDD section 5 requires a committed approval → evidence:
       `grep -n 'draft -> approved' docs/SDD.md` shows the new sentence naming
       the standalone commit
-- [ ] AC2 (R2) the command selects on `HEAD` → evidence:
+- [x] AC2 (R2) the command selects on `HEAD` → evidence:
       `grep -n 'git show' .claude/commands/spec-next.md` returns step 2's rule
       (RED: no `git show` in the file)
-- [ ] AC3 (R2) negative reproduction → evidence: on a throwaway spec whose
+- [x] AC3 (R2) negative reproduction → evidence: on a throwaway spec whose
       `approved` is written but uncommitted, the R2 rule prints `draft` while
       the working-tree read prints `approved`; both outputs quoted in the log
-- [ ] AC4 (R3) DT9 exists and routes to ESCALATE → evidence:
+- [x] AC4 (R3) DT9 exists and routes to ESCALATE → evidence:
       `grep -n 'DT9' docs/SDD.md` returns a row in the 8.1 table and a line in
       the 8.3 decision block
-- [ ] AC5 (R4) the `attempts` semantics are stated → evidence:
+- [x] AC5 (R4) the `attempts` semantics are stated → evidence:
       `grep -n 'attempts' docs/SDD.md` shows REWORK-only wording and the
       dependency on R1-R3
-- [ ] AC6 (R5) no accepted spec was touched → evidence:
+- [x] AC6 (R5) no accepted spec was touched → evidence:
       `git diff --name-only HEAD` lists no `specs/SPEC-00*.md` other than this
       one, and no change to `specs/TRACEABILITY.md`
-- [ ] AC7 `scripts/gate.sh specs/SPEC-0045-verifiable-human-approval.md` passes
+- [x] AC7 `scripts/gate.sh specs/SPEC-0045-verifiable-human-approval.md` passes
 
 ## Out of scope
 

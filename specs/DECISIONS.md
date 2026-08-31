@@ -346,3 +346,24 @@ Deviations, clarifications and trade-offs recorded by implementation cycles
   `orcker-stack` is a workspace member only and is in no binary's runtime graph,
   so `no_runtime_deps` guards elsewhere are untouched.
 
+
+## 2026-08-31 · SPEC-0045 — five files changed where *Design & contracts* named three
+
+- Decision: beyond `docs/SDD.md` (sections 5, 8.1, 8.3), `.claude/commands/spec-next.md`
+  and the spec itself, the cycle also edited `docs/SDD.md` sections 8.4, 9.2 and 9.3,
+  `.claude/agents/supervisor.md` and `specs/ROADMAP.md`'s header sentence.
+- Why: R2 and R3 are rules about *where the loop reads a status* and *what the
+  supervisor checks*, and each of those places holds a second copy of the text the
+  spec names. `.claude/agents/supervisor.md` is the file that executes the 8.1 layer,
+  so a `DT9` living only in `docs/SDD.md` would never run and R3 would be inert; the
+  spec's *Out of scope* anticipates exactly this by permitting the supervisor
+  definition to change "beyond the DT9 row". Sections 9.2 and 9.3 embed copies of the
+  command and the agent, and a copy left unedited would have contradicted section 8.1
+  two screens above it — the stale-citation defect SPEC-0042 existed to remove. The
+  `ROADMAP.md` header sentence restates the selection rule R2 replaces.
+- Impact: the diff is larger than the spec's file list, and every added file is inside
+  the declared `surface` (`docs/`, `specs/`, `.claude/`), so DT2 holds. The supervisor
+  upheld the reasoning in round 1 and rejected the round-1 diff for applying it to
+  section 9.2 and not to 9.3; the fix carried it to every copy. Ongoing rule for this
+  repository: an embedded copy in section 9 is part of the change to the section it
+  copies, not a separate spec.
