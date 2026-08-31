@@ -74,4 +74,4 @@ Never a merge, never a bulk sync. Numbered above the reserved Phase-1 range.
 | 44 | SPEC-0044-fix-dangling-prd-related-documents | draft | FR-001 | SPEC-0042 |
 | 45 | SPEC-0045-verifiable-human-approval | accepted | FR-001 | SPEC-0042 |
 | 46 | SPEC-0046-elevate-dev-instance-socket | draft | FR-001 | SPEC-0001 |
-| 47 | SPEC-0047-traceability-record-repair | draft | FR-001 | SPEC-0045 |
+| 47 | SPEC-0047-traceability-record-repair | approved | FR-001 | SPEC-0045 |
