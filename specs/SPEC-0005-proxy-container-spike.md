@@ -18,8 +18,9 @@ attempts: 0
 
 The product thesis in one experiment: the inherited rustls proxy + local CA +
 embedded DNS can front a project running in containers. The reference stack
-(app + nginx + postgres from `referenciadockerlaravel.md`) is hand-written for
-this spike — generation comes later. Yerd already ships an HTTP forward path
+(app + nginx + postgres from `docs/referencia-docker-laravel.md`) is
+hand-written for this spike — generation comes later. Yerd already ships an
+HTTP forward path
 (`forward/http.rs`, used by its custom-proxies feature) and WebSocket upgrades
 (`forward/upgrade.rs`); the spike leans on them with the smallest possible code
 delta. Findings feed SPEC-0006 and the Phase-1 routing specs.

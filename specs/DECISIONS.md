@@ -10,6 +10,37 @@ Deviations, clarifications and trade-offs recorded by implementation cycles
 - Impact: <files/specs/requirements affected; follow-up spec id if any>
 ```
 
+## 2026-08-30 · SPEC-0042 — historical records are never rewritten
+
+- Decision: `specs/TRACEABILITY.md` and `specs/logs/*.md` keep the wrong
+  filename `referenciadockerlaravel.md` where they already carry it; only live
+  citations (`docs/PRD.md` via RFC, SPEC-0003, SPEC-0005) are repointed.
+- Why: those two files state what was true when SPEC-0003 closed, and at that
+  moment the reference document genuinely was not in the repository. Editing
+  them would falsify a closed record rather than fix a citation.
+- Impact: repo-wide policy, not a SPEC-0042 detail. Known cost, named by the
+  supervisor: `specs/TRACEABILITY.md:16` asserts the document is "absent from
+  the repo", which is false as a present-tense reading from this cycle onward.
+  It is left standing as a statement about SPEC-0003's cycle, not about today.
+  Nothing in `scripts/gate.sh` enforces this policy; a future cycle can
+  reintroduce the wrong name in a new file unnoticed. SPEC-0040
+  (`dead-export-ratchet`) is the precedent if a guard is wanted.
+
+## 2026-08-30 · SPEC-0042 — the reference document stays at `docs/`, not `docs/reference/`
+
+- Decision: `docs/referencia-docker-laravel.md` is committed where it already
+  lives, and is not moved under `docs/reference/`.
+- Why: SPEC-0042's `HEAD` Context left this open ("either import the document
+  under `docs/reference/` or replace every citation with the real source"). The
+  uncommitted Context this cycle inherited had already chosen the second branch.
+  A move would invalidate the very citations this spec repoints, and `docs/`
+  already holds `PRD.md`, `SDD.md` and `UPSTREAM.md` as peers.
+- Impact: settles an either/or that the human wrote into the spec. This entry is
+  the record of that choice, and the supervisor's ESCALATE (SDD section 8.3)
+  turns on whether the cycle had the authority to make it. If the human prefers
+  `docs/reference/`, this entry and SPEC-0042's R1/R2 are what change.
+
+
 ## 2026-08-20 · bootstrap (pre-cycle, no spec)
 
 - Decision: the project version becomes `0.0.0` and stays there until the MVP gate.

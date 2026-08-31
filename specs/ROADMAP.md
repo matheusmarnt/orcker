@@ -68,5 +68,7 @@ Never a merge, never a bulk sync. Numbered above the reserved Phase-1 range.
 | 39 | SPEC-0039-retire-unreachable-gui-host-commands | draft | FR-002 | SPEC-0036 |
 | 40 | SPEC-0040-dead-export-ratchet | draft | FR-002 | SPEC-0036 |
 | 41 | SPEC-0041-retire-orphaned-exec-help-text | draft | FR-002 | SPEC-0002 |
-| 42 | SPEC-0042-restore-missing-reference-doc | draft | FR-022 | SPEC-0001 |
+| 42 | SPEC-0042-restore-missing-reference-doc | accepted | FR-022 | SPEC-0001 |
 | 43 | SPEC-0043-orcker-stack-instruction-file | draft | FR-022 | SPEC-0003 |
+| 44 | SPEC-0044-fix-dangling-prd-related-documents | draft | FR-001 | SPEC-0042 |
+| 45 | SPEC-0045-verifiable-human-approval | draft | FR-001 | SPEC-0042 |
