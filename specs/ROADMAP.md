@@ -71,3 +71,4 @@ Never a merge, never a bulk sync. Numbered above the reserved Phase-1 range.
 | 42 | SPEC-0042-restore-missing-reference-doc | accepted | FR-022 | SPEC-0001 |
 | 43 | SPEC-0043-orcker-stack-instruction-file | draft | FR-022 | SPEC-0003 |
 | 44 | SPEC-0044-fix-dangling-prd-related-documents | draft | FR-001 | SPEC-0042 |
+| 45 | SPEC-0045-verifiable-human-approval | draft | FR-001 | SPEC-0042 |
