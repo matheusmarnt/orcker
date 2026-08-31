@@ -8,7 +8,7 @@ surface:
   - Cargo.toml
   - Cargo.lock
   - crates/orcker-stack/
-status: draft
+status: accepted
 attempts: 0
 ---
 
@@ -69,16 +69,16 @@ rather than adding a dependency. Errors:
 
 ## Acceptance checklist
 
-- [ ] AC1 Reference render matches the committed snapshot ->
+- [x] AC1 Reference render matches the committed snapshot ->
       test: `orcker_stack::compose::reference_postgres_snapshot`
-- [ ] AC2 Renders are deterministic -> test: `orcker_stack::compose::deterministic_output`
-- [ ] AC3 No project port on 0.0.0.0; nginx/vite published on 127.0.0.1 only ->
+- [x] AC2 Renders are deterministic -> test: `orcker_stack::compose::deterministic_output`
+- [x] AC3 No project port on 0.0.0.0; nginx/vite published on 127.0.0.1 only ->
       test: `orcker_stack::compose::loopback_only_ports`
-- [ ] AC4 Invalid site names and ports return typed errors ->
+- [x] AC4 Invalid site names and ports return typed errors ->
       test: `orcker_stack::validate::rejects_invalid_inputs`
-- [ ] AC5 `docker compose config` accepts the rendered file ->
+- [x] AC5 `docker compose config` accepts the rendered file ->
       evidence: command output in the cycle log
-- [ ] AC6 `scripts/gate.sh specs/SPEC-0003-*.md` passes
+- [x] AC6 `scripts/gate.sh specs/SPEC-0003-*.md` passes
 
 ## Out of scope
 

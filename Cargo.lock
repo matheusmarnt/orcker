@@ -3266,6 +3266,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "orcker-stack"
+version = "0.0.0"
+dependencies = [
+ "thiserror 1.0.69",
+]
+
+[[package]]
 name = "orcker-tls"
 version = "0.0.0"
 dependencies = [

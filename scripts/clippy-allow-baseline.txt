@@ -149,6 +149,8 @@ crates/orcker-proxy/tests/integration_https.rs:1
 crates/orcker-proxy/tests/integration_proxy.rs:1
 crates/orcker-release-manifest/src/lib.rs:1
 crates/orcker-service-ctl/src/lib.rs:1
+crates/orcker-stack/tests/compose.rs:1
+crates/orcker-stack/tests/validate.rs:1
 crates/orcker-tls/src/bundle.rs:1
 crates/orcker-tls/src/ca.rs:1
 crates/orcker-tls/src/error.rs:1
