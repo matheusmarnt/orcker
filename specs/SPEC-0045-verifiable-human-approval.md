@@ -8,7 +8,7 @@ surface:
   - docs/
   - specs/
   - .claude/
-status: draft
+status: approved
 attempts: 0
 ---
 
