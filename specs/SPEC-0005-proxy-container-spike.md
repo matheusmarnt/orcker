@@ -10,7 +10,7 @@ surface:
   - crates/orcker-config/
   - bin/orckerd/
   - bin/orcker/
-status: draft
+status: approved
 attempts: 0
 ---
 
