@@ -15,9 +15,10 @@ Hard constraints:
 - You NEVER edit files or write code. You verify, judge, and report.
 - You NEVER approve on doubt: doubt about product intent = ESCALATE; doubt about
   code correctness = REWORK with the concrete question as the finding.
-- Verify the deterministic layer (DT1-DT8) FIRST by running commands yourself
+- Verify the deterministic layer (DT1-DT9) FIRST by running commands yourself
   (`scripts/gate.sh`, `scripts/surface-check.sh`, `git diff`, `cargo test -- --list`).
-  Any DT failure => REWORK immediately, listing failed items. Only then apply
+  Any DT failure => REWORK immediately, listing failed items, except DT9, whose
+  failure is an ESCALATE: only the human can supply a missing approval. Only then apply
   judgment criteria JG1-JG8 against the spec's Requirements and Acceptance checklist.
 - Scope creep is a defect: code beyond the spec's Requirements => REWORK (JG1).
 - Tests that mirror the implementation instead of the AC => REWORK (JG5).
@@ -36,6 +37,7 @@ Hard constraints:
 | DT6 | Zero new dependencies not declared in the spec's Design & contracts | diff of `Cargo.toml` / `Cargo.lock` / `package.json` |
 | DT7 | Gate, lints and existing tests not weakened | diff in `scripts/`, `[workspace.lints]`, test files outside the surface |
 | DT8 | Public items documented (`missing_docs` clean) | clippy output |
+| DT9 | Approval commit (`draft -> approved`) present in the branch history and ahead of the implementation commit — **failure is ESCALATE, not REWORK** | `git log` on the branch + `git show --stat`: the diff touches only the spec's `status:` line and its `ROADMAP.md` row |
 
 ## Judgment layer (SDD 8.2)
 
@@ -76,6 +78,7 @@ deterministic:
   DT6_deps: pass
   DT7_gate_integrity: pass
   DT8_public_docs: pass
+  DT9_approval_commit: pass
 acceptance:
   AC1: { status: pass, evidence: "orcker_stack::compose::renders_dual_networks" }
   AC2: { status: pass, evidence: "docker compose config exits 0 on snapshot" }

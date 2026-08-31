@@ -116,6 +116,10 @@ draft ──(supervisor humano aprova)──▶ approved ──(/spec-next)─�
 
 Transições e responsáveis: **humano** aprova `draft → approved` (única transição exclusivamente humana no MVP); **/spec-next** move para `in_progress`; **veredito APPROVE do supervisor** move para `implemented`; **commit + atualização de `TRACEABILITY.md`** conclui `accepted`. `REWORK` mantém `in_progress` e incrementa `attempts`; `attempts = 3` força `ESCALATE` (humano decide: re-especificar, dividir ou abortar).
 
+O commit da aprovação é obrigatório: a transição `draft -> approved` só vale quando existe no **registro versionado**, como um commit próprio, anterior ao commit de implementação, cujo diff toca apenas a linha `status:` da spec e a linha correspondente em `specs/ROADMAP.md`. `/spec-next` só pode selecionar uma spec cujo `approved` já esteja em `HEAD` (§9.2); um `approved` presente somente na árvore de trabalho não é aprovação — o supervisor roda como subagente, enxerga o repositório e nunca a sessão, então uma aprovação que não está commitada é indistinguível de uma que o ciclo inventou.
+
+`attempts` conta **apenas rodadas de `REWORK`**. Rodadas de `ESCALATE` são deliberadamente não contadas: cada uma é um handoff ao humano, e o que limita o loop é o handoff, não o contador. Esse argumento só se sustenta por causa do parágrafo anterior — o handoff é real apenas quando a decisão humana fica verificável no registro versionado (a regra acima e `DT9` no §8.1).
+
 ## 6. O loop de implementação
 
 Executado pelo agente principal (Claude Code) em sessão dedicada — **uma spec por sessão, uma sessão por spec** (`/clear` entre specs; contexto é recurso finito e spec velha é contaminação).
@@ -219,8 +223,11 @@ O coração do processo. O supervisor (subagente definido em §9.3) só pode **l
 | DT6 | Zero dependências novas não declaradas na spec | diff de `Cargo.toml`/`Cargo.lock`/`package.json` |
 | DT7 | Gate/lints/testes existentes não enfraquecidos (regra 3 do §6) | diff em `scripts/`, `[workspace.lints]`, arquivos de teste fora da surface |
 | DT8 | Documentação de itens públicos presente (`missing_docs` limpo — já coberto por DT1, listado como item auditável) | saída do clippy |
+| DT9 | Commit de aprovação (`draft -> approved`) presente no histórico da branch e anterior ao commit de implementação | `git log` na branch + `git show --stat` do commit: diff só na linha `status:` da spec e na linha dela no `ROADMAP.md` |
 
 **Qualquer DT reprovado ⇒ `REWORK` imediato citando o item — o supervisor não gasta julgamento em código que falha na camada determinística.**
+
+Única exceção: `DT9` reprovado ⇒ `ESCALATE`, nunca `REWORK` — o agente não pode produzir a própria aprovação, só o humano pode (§8.3).
 
 ### 8.2 Camada de julgamento (raciocínio do supervisor)
 
@@ -239,8 +246,9 @@ O coração do processo. O supervisor (subagente definido em §9.3) só pode **l
 
 ```
 todos DT pass ∧ todos JG pass                     → APPROVE  (libera S8: commit + accepted)
-qualquer DT fail                                  → REWORK   (lista objetiva, itens DT#)
+qualquer DT fail exceto DT9                       → REWORK   (lista objetiva, itens DT#)
 qualquer JG fail                                  → REWORK   (lista acionável, itens JG# + R#/AC# afetados)
+DT9 fail (aprovação humana ausente do registro) OU
 ambiguidade de produto OU spec inconsistente OU
 3ª tentativa (attempts = 3)                       → ESCALATE (humano; nunca aprovar na dúvida)
 ```
@@ -261,6 +269,7 @@ deterministic:
   DT6_deps: pass
   DT7_gate_integrity: pass
   DT8_public_docs: pass
+  DT9_approval_commit: pass
 acceptance:
   AC1: { status: pass, evidence: "orcker_stack::compose::renders_dual_networks" }
   AC2: { status: pass, evidence: "docker compose config exits 0 on snapshot" }
@@ -323,8 +332,9 @@ Instruções por crate: manter o padrão herdado do Yerd (`.github/instructions/
 description: Select and start the next spec from the queue
 ---
 1. Read specs/ROADMAP.md and the front matter of every spec listed there.
-2. Pick the first spec with status `approved` whose `depends_on` are all `accepted`.
-   If none: report the blocking chain and stop.
+2. Pick the first spec whose committed status is `approved` (read it from `HEAD`,
+   never from the working tree) and whose `depends_on` are all `accepted`.
+   If none is selectable: report the blocking chain and stop.
 3. Set its status to `in_progress`, create branch `feat/<spec-id>-<slug>`.
 4. Enter plan mode; read ONLY the spec, CLAUDE.md, the crate instruction files and
    the files in `surface`. Produce the S2 plan and start the loop at S3 (test-first).
@@ -365,9 +375,10 @@ Hard constraints:
 - You NEVER edit files or write code. You verify, judge, and report.
 - You NEVER approve on doubt: doubt about product intent = ESCALATE; doubt about
   code correctness = REWORK with the concrete question as the finding.
-- Verify the deterministic layer (DT1–DT8) FIRST by running commands yourself
+- Verify the deterministic layer (DT1–DT9) FIRST by running commands yourself
   (`scripts/gate.sh`, `scripts/surface-check.sh`, `git diff`, `cargo test -- --list`).
-  Any DT failure ⇒ REWORK immediately, listing failed items. Only then apply
+  Any DT failure ⇒ REWORK immediately, listing failed items, except DT9, whose
+  failure is an ESCALATE: only the human can supply a missing approval. Only then apply
   judgment criteria JG1–JG8 against the spec's Requirements and Acceptance checklist.
 - Scope creep is a defect: code beyond the spec's Requirements ⇒ REWORK (JG1).
 - Tests that mirror the implementation instead of the AC ⇒ REWORK (JG5).
