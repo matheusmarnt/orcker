@@ -17,9 +17,9 @@ attempts: 0
 First new crate of the fork and the calibration exercise for the process:
 a 100% pure library that turns a typed stack model into a rendered
 `docker-compose.yml` string following the reference architecture (PRD D02,
-`referenciadockerlaravel.md`). This spec covers the minimal renderer for the
-PostgreSQL reference topology; the full template set (Dockerfile, nginx, php,
-supervisord, MySQL variant) is Phase 1 (SPEC-0007/0008).
+`docs/referencia-docker-laravel.md`). This spec covers the minimal renderer
+for the PostgreSQL reference topology; the full template set (Dockerfile,
+nginx, php, supervisord, MySQL variant) is Phase 1 (SPEC-0007/0008).
 
 ## Requirements
 
