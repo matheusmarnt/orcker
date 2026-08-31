@@ -8,7 +8,7 @@ surface:
   - crates/
   - bin/
   - apps/orcker-gui/
-status: draft
+status: accepted
 attempts: 0
 ---
 

@@ -1163,7 +1163,9 @@ fn format_update_status(
 )]
 mod tests {
     use super::*;
+
     use orcker_ipc::ErrorCode;
+    use std::path::PathBuf;
 
     #[test]
     fn maps_lan_and_remote_setup_commands() {
@@ -1817,6 +1819,284 @@ mod tests {
             name: "bad name".into(),
             path: None,
             auto: true,
+        }) {
+            Err(ClientError::Usage(_)) => {}
+            other => panic!("expected Usage error, got {other:?}"),
+        }
+    }
+
+    /// Human rendering of the responses a client sees most: `Pong`, `Ok`, an
+    /// empty and a populated `Sites` listing, `Tools`, and an `Error` (which
+    /// goes to stderr with exit code 1). Restored verbatim - every type it
+    /// touches survives unchanged, including `SiteEntry`'s
+    /// `uses_front_controller`, rendered as the FRONT-CTRL column.
+    #[test]
+    fn renders_human_responses_and_exit_codes() {
+        assert_eq!(render(&Response::Pong, false).stdout, "pong");
+        assert_eq!(render(&Response::Pong, false).code, 0);
+        assert_eq!(render(&Response::Ok, false).code, 0);
+
+        let empty = render(&Response::Sites { sites: vec![] }, false);
+        assert_eq!(empty.stdout, "no sites");
+        assert_eq!(empty.code, 0);
+
+        let tools = render(
+            &Response::Tools {
+                tools: vec![
+                    ToolStatus {
+                        id: "node".into(),
+                        display_name: "Node.js".into(),
+                        installed: true,
+                        version: Some("v24.17.0".into()),
+                        binaries: vec!["node".into(), "npm".into(), "npx".into()],
+                        external: false,
+                        external_path: None,
+                    },
+                    ToolStatus {
+                        id: "bun".into(),
+                        display_name: "Bun".into(),
+                        installed: false,
+                        version: None,
+                        binaries: vec!["bun".into(), "bunx".into()],
+                        external: true,
+                        external_path: Some("/opt/homebrew/bin/bun".into()),
+                    },
+                ],
+            },
+            false,
+        );
+        assert!(tools.stdout.contains("node"));
+        assert!(tools.stdout.contains("v24.17.0"));
+        assert!(tools.stdout.contains("npm"));
+        assert!(tools.stdout.contains("external"));
+        assert!(tools.stdout.contains("/opt/homebrew/bin/bun"));
+        assert_eq!(tools.code, 0);
+
+        let site = Site::linked("foo", "/srv/foo", PhpVersion::new(8, 3)).unwrap();
+        let listed = render(
+            &Response::Sites {
+                sites: vec![SiteEntry {
+                    site,
+                    is_wordpress: false,
+                    primary_domain: None,
+                    domains: vec![],
+                    apex_shadowed_by: None,
+                    uses_front_controller: true,
+                    is_laravel: false,
+                }],
+            },
+            false,
+        );
+        assert!(listed.stdout.contains("foo"));
+        assert!(listed.stdout.contains("linked"));
+        assert!(listed.stdout.contains("8.3"));
+        assert!(
+            !listed.stdout.contains("WORDPRESS"),
+            "no WORDPRESS column when nothing listed is WordPress"
+        );
+        assert!(
+            listed.stdout.contains("FRONT-CTRL"),
+            "front-controller column header"
+        );
+        assert!(
+            listed.stdout.contains("index.php"),
+            "uses_front_controller=true renders as index.php"
+        );
+        assert_eq!(listed.code, 0);
+
+        let blog = Site::parked("blog", "/srv/blog", PhpVersion::new(8, 3)).unwrap();
+        let with_wp = render(
+            &Response::Sites {
+                sites: vec![SiteEntry {
+                    site: blog,
+                    is_wordpress: true,
+                    primary_domain: None,
+                    domains: vec![],
+                    apex_shadowed_by: None,
+                    uses_front_controller: false,
+                    is_laravel: false,
+                }],
+            },
+            false,
+        );
+        assert!(with_wp.stdout.contains("WORDPRESS"));
+        assert!(with_wp.stdout.contains("yes"));
+        assert!(
+            with_wp.stdout.contains("direct"),
+            "uses_front_controller=false renders as direct"
+        );
+
+        let err = render(
+            &Response::Error {
+                code: ErrorCode::NotFound,
+                message: "nope".into(),
+            },
+            false,
+        );
+        assert!(err.stdout.is_empty());
+        assert!(err.stderr.contains("nope"));
+        assert_eq!(err.code, 1);
+    }
+
+    /// The core command -> `Request` mapping. Every arm kept here had **no**
+    /// `to_request` coverage at HEAD: `to_request(&Command::` appears zero times
+    /// for Ping, Sites, Park, Unlink, Unpark, Tools, Secure, Unsecure,
+    /// `FrontController`, Install, Uninstall, Restart and List.
+    ///
+    /// Scrubbed from the deleted original: its PHP arms (`Use`, `Set`/`Unset`
+    /// php, `Install`/`Restart`/`Uninstall`/`List` php, `Update` php) went with
+    /// the native runtime, and its two `Update` -> `CheckUpdate` arms are
+    /// already pinned by `bare_update_stable_flag_overrides_channel` and
+    /// `channel_from_flags_table`.
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn maps_each_command_to_its_request() {
+        assert_eq!(to_request(&Command::Ping).unwrap(), Request::Ping);
+        assert_eq!(to_request(&Command::Sites).unwrap(), Request::ListSites);
+        assert_eq!(
+            to_request(&Command::Park {
+                path: PathBuf::from("/srv/sites")
+            })
+            .unwrap(),
+            Request::Park {
+                path: PathBuf::from("/srv/sites")
+            }
+        );
+        assert_eq!(
+            to_request(&Command::Unlink { name: "foo".into() }).unwrap(),
+            Request::Unlink { name: "foo".into() }
+        );
+        assert_eq!(
+            to_request(&Command::Unpark {
+                path: PathBuf::from("/srv/sites")
+            })
+            .unwrap(),
+            Request::Unpark {
+                path: "/srv/sites".into()
+            }
+        );
+        assert_eq!(
+            to_request(&Command::List {
+                target: crate::cli::ListTarget::Parked
+            })
+            .unwrap(),
+            Request::ListParked
+        );
+        assert_eq!(to_request(&Command::Tools).unwrap(), Request::ListTools);
+        assert_eq!(
+            to_request(&Command::Install {
+                target: crate::cli::InstallTarget::Tool { id: "node".into() }
+            })
+            .unwrap(),
+            Request::InstallTool {
+                tool: "node".into()
+            }
+        );
+        assert_eq!(
+            to_request(&Command::Uninstall {
+                target: Some(crate::cli::UninstallTarget::Tool { id: "bun".into() }),
+                yes: false
+            })
+            .unwrap(),
+            Request::UninstallTool { tool: "bun".into() }
+        );
+        assert_eq!(
+            to_request(&Command::Restart {
+                target: crate::cli::RestartTarget::Daemon
+            })
+            .unwrap(),
+            Request::RestartDaemon
+        );
+        assert_eq!(
+            to_request(&Command::Secure { name: "foo".into() }).unwrap(),
+            Request::SetSecure {
+                name: "foo".into(),
+                secure: true
+            }
+        );
+        assert_eq!(
+            to_request(&Command::Unsecure { name: "foo".into() }).unwrap(),
+            Request::SetSecure {
+                name: "foo".into(),
+                secure: false
+            }
+        );
+        assert_eq!(
+            to_request(&Command::FrontController {
+                name: "foo".into(),
+                state: crate::cli::OnOff::On,
+            })
+            .unwrap(),
+            Request::SetFrontController {
+                name: "foo".into(),
+                enabled: true
+            }
+        );
+        assert_eq!(
+            to_request(&Command::FrontController {
+                name: "foo".into(),
+                state: crate::cli::OnOff::Off,
+            })
+            .unwrap(),
+            Request::SetFrontController {
+                name: "foo".into(),
+                enabled: false
+            }
+        );
+        assert_eq!(
+            to_request(&Command::Root {
+                name: "foo".into(),
+                path: Some("public".into()),
+                auto: false,
+            })
+            .unwrap(),
+            Request::SetWebRoot {
+                name: "foo".into(),
+                path: Some("public".into()),
+            }
+        );
+        assert_eq!(
+            to_request(&Command::Root {
+                name: "foo".into(),
+                path: Some("public".into()),
+                auto: true,
+            })
+            .unwrap(),
+            Request::SetWebRoot {
+                name: "foo".into(),
+                path: None,
+            }
+        );
+        assert_eq!(
+            to_request(&Command::Root {
+                name: "foo".into(),
+                path: None,
+                auto: false,
+            })
+            .unwrap(),
+            Request::SetWebRoot {
+                name: "foo".into(),
+                path: None,
+            }
+        );
+    }
+
+    /// Name validation happens client-side, before a socket is opened.
+    /// Scrubbed from `rejects_bad_version_and_name_before_connect`: its version
+    /// and php-setting arms drove `Command::Use` and `SetTarget::Php`, both
+    /// deleted. `Root` is covered by `root_rejects_bad_name` and proxy names by
+    /// `malformed_names_and_dotted_rule_targets_are_usage_errors`; `Unlink` and
+    /// `Secure` had nothing.
+    #[test]
+    fn rejects_a_bad_site_name_before_connect() {
+        match to_request(&Command::Unlink {
+            name: "bad/name".into(),
+        }) {
+            Err(ClientError::Usage(_)) => {}
+            other => panic!("expected Usage error, got {other:?}"),
+        }
+        match to_request(&Command::Secure {
+            name: "bad name".into(),
         }) {
             Err(ClientError::Usage(_)) => {}
             other => panic!("expected Usage error, got {other:?}"),

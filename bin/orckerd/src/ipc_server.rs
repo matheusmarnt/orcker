@@ -1726,6 +1726,68 @@ Subject: Captured\r\n\r\nhi\r\n";
         }
     }
 
+    /// The `Sites` listing is the only place the effective front-controller mode
+    /// is derived now: the daemon reads the runtime `is_wordpress` fact out of
+    /// `state.wordpress_sites` and resolves it against the site's stored
+    /// override via [`orcker_core::Site::uses_front_controller`].
+    ///
+    /// Columns: `(name, web_subpath, stored_override, expected)`. Rows 1-3 are
+    /// the derived default (a framework served from a subdir funnels; plain
+    /// root-served PHP and `WordPress` in any layout execute directly), rows 4-5
+    /// the override winning over it.
+    #[tokio::test]
+    async fn list_sites_derives_front_controller_from_the_wordpress_registry() {
+        let tmp = tempfile::tempdir().unwrap();
+        let state = state_in(tmp.path());
+        let cases: &[(&str, &str, Option<bool>, bool)] = &[
+            ("app", "public", None, true),
+            ("plain", "", None, false),
+            ("blog", "web", None, false),
+            ("forced", "", Some(true), true),
+            ("off", "public", Some(false), false),
+        ];
+        {
+            let mut router = state.router.write().await;
+            for (name, subpath, stored, _) in cases {
+                let mut site = orcker_core::Site::parked(
+                    name,
+                    format!("/srv/{name}"),
+                    orcker_core::PhpVersion::new(8, 3),
+                )
+                .unwrap();
+                site.set_web_subpath(*subpath);
+                site.set_front_controller(*stored);
+                router.insert(site).unwrap();
+            }
+        }
+        state
+            .wordpress_sites
+            .write()
+            .await
+            .insert("blog".to_owned(), true);
+
+        match dispatch(Request::ListSites, &state).await {
+            Response::Sites { sites } => {
+                for (name, subpath, stored, expected) in cases {
+                    let entry = sites
+                        .iter()
+                        .find(|s| s.site.name() == *name)
+                        .unwrap_or_else(|| panic!("site {name} not listed"));
+                    assert_eq!(
+                        entry.uses_front_controller, *expected,
+                        "{name}: subpath={subpath:?} override={stored:?}"
+                    );
+                }
+                let blog = sites
+                    .iter()
+                    .find(|s| s.site.name() == "blog")
+                    .unwrap_or_else(|| panic!("site blog not listed"));
+                assert!(blog.is_wordpress, "the registry fact must reach the entry");
+            }
+            other => panic!("expected Sites, got {other:?}"),
+        }
+    }
+
     #[tokio::test]
     async fn park_lists_child_and_persists() {
         let tmp = tempfile::tempdir().unwrap();
@@ -2269,6 +2331,89 @@ Subject: Captured\r\n\r\nhi\r\n";
             } else {
                 Ok(self.0.manifest.clone().into_bytes())
             }
+        }
+    }
+
+    /// A downloader that fails every request, modelling being offline.
+    /// Restored with the move SPEC-0002 made: `orcker_php::Downloader` ->
+    /// `crate::download::Downloader`.
+    struct FailingDl;
+    #[async_trait::async_trait]
+    impl crate::download::Downloader for FailingDl {
+        async fn download(&self, url: &str) -> Result<Vec<u8>, crate::download::DownloadError> {
+            Err(crate::download::DownloadError::Transport {
+                url: url.to_owned(),
+                reason: "boom".into(),
+            })
+        }
+    }
+
+    /// A *populated* cache must survive going offline: the two surviving
+    /// `Cached` assertions both run against an empty cache
+    /// (`check_update_rejects_tampered_manifest_signature` asserts
+    /// `latest_stable == None`), so the fallback that actually serves a value
+    /// had no test.
+    #[tokio::test]
+    async fn check_update_falls_back_to_cache_when_offline() {
+        let tmp = tempfile::tempdir().unwrap();
+        let state = state_in(tmp.path());
+        let dl = ManifestDl::new(LATEST_MANIFEST);
+        crate::self_update::poll_and_refresh(&state, &dl, dl.key()).await;
+        let resp = crate::self_update::check_update(None, &state, &FailingDl, dl.key()).await;
+        match resp {
+            Response::UpdateStatus {
+                latest_stable,
+                source,
+                ..
+            } => {
+                assert_eq!(source, orcker_ipc::UpdateSource::Cached);
+                assert_eq!(latest_stable.as_deref(), Some("99.0.1"));
+            }
+            other => panic!("expected UpdateStatus, got {other:?}"),
+        }
+    }
+
+    /// `poll_and_refresh` is documented failure-tolerant: "a fetch error logs
+    /// at `debug` and leaves the cache untouched". Only the happy path was
+    /// exercised, by the test above. Retargeted from
+    /// `poll_and_refresh_is_failure_tolerant`, which pinned the same guarantee
+    /// on the deleted `php_updates::poll_and_refresh`.
+    #[tokio::test]
+    async fn poll_and_refresh_leaves_the_cache_untouched_on_a_fetch_failure() {
+        let tmp = tempfile::tempdir().unwrap();
+        let state = state_in(tmp.path());
+        let dl = ManifestDl::new(LATEST_MANIFEST);
+        crate::self_update::poll_and_refresh(&state, &dl, dl.key()).await;
+        let before = state.orcker_update.read().await.len();
+        assert!(before > 0, "the cache must be populated before the failure");
+
+        crate::self_update::poll_and_refresh(&state, &FailingDl, dl.key()).await;
+        assert_eq!(
+            state.orcker_update.read().await.len(),
+            before,
+            "a failed fetch must not clear the cache"
+        );
+    }
+
+    /// The `DoctorFix` dispatch path: nothing is auto-fixed - phase 0 has no
+    /// auto-fixable finding left, so `plan_auto_fixes` is a stub - and every
+    /// finding still reaches the user through `manual`. `Request::DoctorFix` is
+    /// dispatched at `ipc_server.rs:201` and no test reached it.
+    ///
+    /// Scrubbed: the original also asserted a `Severity::Fail` in `manual`, which
+    /// relied on `NoPhpInstalled`. A fresh daemon's findings are now
+    /// `PortFallback`, `CaNotTrusted`, `CaNotTrustedByBrowsers` and
+    /// `ResolverNotInstalled`, all `Warn`.
+    #[tokio::test]
+    async fn dispatch_doctor_fix_performs_nothing_and_reports_manual() {
+        let tmp = tempfile::tempdir().unwrap();
+        let state = state_in(tmp.path());
+        match dispatch(Request::DoctorFix, &state).await {
+            Response::DoctorFix { report } => {
+                assert!(report.performed.is_empty(), "{:?}", report.performed);
+                assert!(!report.manual.is_empty(), "{:?}", report.manual);
+            }
+            other => panic!("expected DoctorFix, got {other:?}"),
         }
     }
     #[tokio::test]
