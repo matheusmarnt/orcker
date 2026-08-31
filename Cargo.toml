@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members  = ["crates/orcker-core", "crates/orcker-ipc", "crates/orcker-config", "crates/orcker-tls", "crates/orcker-platform", "crates/orcker-dns", "crates/orcker-tunnel", "crates/orcker-proxy", "crates/orcker-doctor", "crates/orcker-mail", "crates/orcker-mcp", "crates/orcker-update", "crates/orcker-release-manifest", "crates/orcker-service-ctl", "crates/orcker-depcheck", "bin/orcker-helper", "bin/orckerd", "bin/orcker", "apps/orcker-gui/src-tauri", "xtask"]
+members  = ["crates/orcker-core", "crates/orcker-stack", "crates/orcker-ipc", "crates/orcker-config", "crates/orcker-tls", "crates/orcker-platform", "crates/orcker-dns", "crates/orcker-tunnel", "crates/orcker-proxy", "crates/orcker-doctor", "crates/orcker-mail", "crates/orcker-mcp", "crates/orcker-update", "crates/orcker-release-manifest", "crates/orcker-service-ctl", "crates/orcker-depcheck", "bin/orcker-helper", "bin/orckerd", "bin/orcker", "apps/orcker-gui/src-tauri", "xtask"]
 
 [workspace.package]
 version      = "0.0.0"

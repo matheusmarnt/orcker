@@ -282,3 +282,36 @@ Deviations, clarifications and trade-offs recorded by implementation cycles
   `.github/instructions/*.instructions.md` after a crate deletion, so a future
   SPEC-0002-style removal can re-orphan a file silently — which is exactly how
   SPEC-0033 came to exist.
+
+## 2026-08-30 · SPEC-0003 — `Ports` replaces R2's two separate port fields
+
+- Decision: R2 lists `http_loopback_port: u16` and `vite_port: u16` as two
+  `StackConfig` fields. They were implemented as one validated `Ports` pair type
+  (`crates/orcker-stack/src/config.rs`) exposing `http_loopback()` / `vite()`.
+- Why: R5 requires the ports to be "non-zero and distinct". Distinctness is a
+  property of the pair, not of either value, so with two independent fields the
+  check has nowhere honest to live and would have to be re-run by every future
+  constructor. Bundling them also holds `StackConfig::new` at seven arguments,
+  under clippy pedantic's `too_many_arguments` threshold, without an `#[allow]`.
+- Impact: the rendered output is unchanged, so no acceptance criterion moves.
+  Consumer specs (SPEC-0012/0013) construct `Ports::new(http, vite)?` before
+  `StackConfig::new`. Non-blocking wart the supervisor flagged for those specs:
+  `StackConfig::new` still returns `Result` with no failure path now that the
+  validation moved into `Ports`; collapse it when a consumer wires the crate.
+
+## 2026-08-30 · SPEC-0003 — `orcker-stack` deliberately does not depend on `orcker-core`
+
+- Decision: `orcker-stack` defines its own `SiteName` and `PhpVersion` instead of
+  reusing `orcker-core`'s, and depends only on `thiserror`.
+- Why: `orcker_core::PhpVersion` is a `(major, minor)` struct accepting
+  `major in 5..=9`, which cannot express R5's `8.1..=8.5` closed set, and core's
+  site-name validator is private (only `normalize_site_name` / `slugify_site_name`
+  are public). Reusing either would have meant widening `orcker-core`'s public API,
+  and `crates/orcker-core/` is not in SPEC-0003's `surface`.
+- Impact: DNS-label validation now exists in two pure crates. Accepted for now
+  because the two rule sets are not the same one (core's allows dots for hosts,
+  stack's is a single Docker/DNS label) and the duplication is ~15 lines. If a
+  third copy appears, consolidate via a spec whose surface covers both crates.
+  `orcker-stack` is a workspace member only and is in no binary's runtime graph,
+  so `no_runtime_deps` guards elsewhere are untouched.
+
