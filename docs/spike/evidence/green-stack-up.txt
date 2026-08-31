@@ -1,0 +1,44 @@
+# SPEC-0005 GREEN evidence - 2026-08-31T13:51:28-03:00
+
+$ docker compose ps
+SERVICE    STATUS                        PORTS
+app        Up 52 seconds                 127.0.0.1:5173->5173/tcp, 9000/tcp
+nginx      Up 51 seconds                 127.0.0.1:18080->80/tcp
+postgres   Up About a minute (healthy)   5432/tcp
+redis      Up About a minute             6379/tcp
+
+$ supervisorctl status
+laravel-horizon                  RUNNING   pid 8, uptime 0:00:52
+laravel-schedule                 RUNNING   pid 9, uptime 0:00:52
+php-fpm                          RUNNING   pid 7, uptime 0:00:52
+
+$ curl -s https://spike.test/ | grep -o "<title>.*</title>"
+<title>Laravel</title>
+laravel
+laravel
+
+## Latency, 20 requests each, warm (median ms)
+direct  nginx 127.0.0.1:18080 : 109.0 ms
+through orcker https://spike.test:8443 : 101.7 ms
+
+## Response headers seen by Laravel (proxy adds X-Forwarded-*)
+HTTP/1.1 200 OK
+server: nginx
+x-content-type-options: nosniff
+x-frame-options: SAMEORIGIN
+x-powered-by: PHP/8.4.25
+
+## Mounted volume ownership (host uid 1000 build arg)
+$ ls -ln ~/orcker-spike/app | head -4
+total 384
+-rw-r--r--  1 1000 1000   1446 ago 25 13:26 AGENTS.md
+drwxr-xr-x  5 1000 1000   4096 ago 25 13:26 app
+-rwxr-xr-x  1 1000 1000    425 ago 25 13:26 artisan
+$ docker compose exec app id && ls -ln /var/www/storage/logs
+uid=1000(orcker) gid=1000(orcker) groups=1000(orcker)
+total 32
+-rw-r--r-- 1 1000 1000 31052 Aug 31 16:50 laravel.log
+
+# NOTE (added after the fact, the transcript above is unmodified): this latency
+# pass ran against cold opcache and is superseded by evidence/elevated-443.txt.
+# Warm: ~25.7-31.3 ms direct vs 113-125 ms proxied, TLS handshake dominant.

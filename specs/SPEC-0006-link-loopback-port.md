@@ -23,6 +23,19 @@ allocates once and keeps stable. Full stack generation and compose lifecycle
 are Phase 1; in Phase 0 the containers still start via `docker compose up`
 manually (spike stack), with the compose port matching the allocated one.
 
+**SPEC-0005 outcome (2026-08-31), read before drafting further.** The spike served
+a containerized Laravel app at `https://spike.test` with **no code delta at all**:
+`orcker proxy add <name> http://127.0.0.1:<port>` plus `orcker secure <name>` already
+routes to a loopback upstream, websockets included (`101 Switching Protocols` with the
+`vite-hmr` subprotocol preserved). Latency was *not* settled: warm medians were
+~25.7-31.3 ms direct versus 113-125 ms proxied on a debug build, dominated by a
+per-request TLS handshake that no release build has been measured against - an NFR-02 /
+Phase-1 question, not a Phase-0 result. So R1's
+"building on the SPEC-0005 delta" has nothing to build on - there is no delta to
+consolidate. What this spec actually adds over the inherited mechanism is *port
+allocation, persistence and the project registry* (R2-R4), not routing. Findings and
+evidence: `docs/spike/PHASE0-SPIKE.md`.
+
 ## Requirements
 
 - R1. Site model: `orcker-core` gains a site kind for container projects whose

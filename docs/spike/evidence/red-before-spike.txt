@@ -1,0 +1,20 @@
+# RED evidence - SPEC-0005, captured 2026-08-31T13:33:08-03:00
+# branch feat/SPEC-0005-proxy-container-spike @ bbfb7d2
+
+$ getent hosts spike.test
+(no result: .test does not resolve on this host)
+
+$ curl -sv --max-time 5 https://spike.test
+* Could not resolve host: spike.test
+* Closing connection 0
+(curl exit 6)
+
+$ curl -s -o /dev/null -w "%{http_code}" --max-time 5 http://127.0.0.1:18080
+000
+(curl exit 7: nothing listening on 18080)
+
+$ docker compose ls
+NAME                STATUS              CONFIG FILES
+
+$ ss -ltn | grep -E ":(80|443|18080|5173) "
+(no listener on 80, 443, 18080 or 5173)

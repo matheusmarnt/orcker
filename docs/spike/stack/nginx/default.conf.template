@@ -1,0 +1,30 @@
+server {
+    listen 80;
+    server_name _;
+    root /var/www/public;
+    index index.php index.html;
+
+    charset utf-8;
+
+    location /storage/ {
+        alias /var/www/storage/app/public/;
+        try_files $uri =404;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        include fastcgi_params;
+        fastcgi_pass ${FASTCGI_PASS};
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_param HTTPS $http_x_forwarded_proto;
+        fastcgi_read_timeout 300;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+}

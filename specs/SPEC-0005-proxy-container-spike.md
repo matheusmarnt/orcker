@@ -10,8 +10,8 @@ surface:
   - crates/orcker-config/
   - bin/orckerd/
   - bin/orcker/
-status: approved
-attempts: 0
+status: accepted
+attempts: 1
 ---
 
 ## Context
@@ -62,18 +62,18 @@ the minimal enabling delta. No new dependencies. No template generation.
 
 ## Acceptance checklist
 
-- [ ] AC1 Runbook executes from scratch to a green padlock ->
+- [x] AC1 Runbook executes from scratch to a green padlock ->
       evidence: terminal transcript + screenshot refs in `docs/spike/`
-- [ ] AC2 `https://spike.test` returns 200 with a leaf issued by the local CA ->
+- [x] AC2 `https://spike.test` returns 200 with a leaf issued by the local CA ->
       evidence: `curl -sv https://spike.test` output (issuer line) in the runbook
-- [ ] AC3 Laravel welcome page served by nginx->php-fpm inside containers
+- [x] AC3 Laravel welcome page served by nginx->php-fpm inside containers
       (supervisor programs running: fpm + horizon + schedule) ->
       evidence: `docker compose ps` + supervisor status in the runbook
-- [ ] AC4 WebSocket/HMR result documented (works, or finding recorded) ->
+- [x] AC4 WebSocket/HMR result documented (works, or finding recorded) ->
       evidence: runbook results section
-- [ ] AC5 Findings list present and copied into SPEC-0006's context if it
+- [x] AC5 Findings list present and copied into SPEC-0006's context if it
       changes that spec -> evidence: runbook + specs/DECISIONS.md entry
-- [ ] AC6 `scripts/gate.sh specs/SPEC-0005-*.md` passes
+- [x] AC6 `scripts/gate.sh specs/SPEC-0005-*.md` passes
 
 ## Out of scope
 

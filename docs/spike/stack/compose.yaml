@@ -1,0 +1,74 @@
+# Phase-0 spike stack (SPEC-0005). Hand-written, not generated - generation is
+# SPEC-0003/0007. Set SPIKE_APP to the Laravel source checkout before running:
+#   export SPIKE_APP=$HOME/orcker-spike/app
+#   docker compose -f docs/spike/stack/compose.yaml up -d
+name: orcker-spike
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      args:
+        UID: ${SPIKE_UID:-1000}
+        GID: ${SPIKE_GID:-1000}
+    restart: "no"
+    volumes:
+      - ${SPIKE_APP:?set SPIKE_APP to the Laravel source path}:/var/www
+    ports:
+      - "127.0.0.1:5173:5173"
+    networks:
+      - app-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  nginx:
+    image: nginx:alpine
+    restart: "no"
+    ports:
+      - "127.0.0.1:18080:80"
+    environment:
+      FASTCGI_PASS: app:9000
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ${SPIKE_APP:?set SPIKE_APP to the Laravel source path}/public:/var/www/public
+      - ${SPIKE_APP:?set SPIKE_APP to the Laravel source path}/storage/app/public:/var/www/storage/app/public:ro
+    networks:
+      - app-network
+    depends_on:
+      - app
+
+  postgres:
+    image: postgres:18-alpine
+    restart: "no"
+    environment:
+      POSTGRES_DB: spike
+      POSTGRES_USER: spike
+      POSTGRES_PASSWORD: spike
+    volumes:
+      - pgsql-data:/var/lib/postgresql
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U spike -d spike"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - app-network
+
+  redis:
+    image: redis:alpine
+    restart: "no"
+    networks:
+      - app-network
+
+volumes:
+  pgsql-data:
+
+networks:
+  app-network:
+    driver: bridge
