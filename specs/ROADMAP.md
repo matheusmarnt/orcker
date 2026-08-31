@@ -6,7 +6,7 @@ spec's front matter; this table is the index (keep both in sync at S8).
 `planned` rows have no spec file yet — draft them with `/spec-new` when the
 queue approaches them.
 
-## Phase 0 — validation (drafted, awaiting human approval)
+## Phase 0 — validation (FR-001 and FR-002 accepted; FR-003 partial)
 
 | # | Spec | Status | Covers | Depends on |
 |---|------|--------|--------|------------|
@@ -18,10 +18,12 @@ queue approaches them.
 | 3 | SPEC-0003-stack-compose-renderer | accepted | FR-022 (partial) | SPEC-0001 |
 | 38 | SPEC-0038-tauri-host-coverage | draft | FR-002 | SPEC-0002, SPEC-0036 |
 | 4 | SPEC-0004-engine-docker-detection | draft | FR-010 | SPEC-0001, SPEC-0037 |
-| 5 | SPEC-0005-proxy-container-spike | accepted | FR-003 | SPEC-0002, SPEC-0037 |
+| 5 | SPEC-0005-proxy-container-spike | accepted | FR-003 (partial) | SPEC-0002, SPEC-0037 |
 | 6 | SPEC-0006-link-loopback-port | draft | FR-021, FR-013 (partial) | SPEC-0004, SPEC-0005, SPEC-0037 |
 
 Phase 0 exit: FR-001..003 accepted + process retrospective (SDD section 11-12).
+FR-003 is partial: SPEC-0005 satisfied its AC2 and AC3, while AC1 (`orcker link`
+registers the site with a loopback upstream, `docs/PRD.md`) closes with SPEC-0006.
 
 ## Phase 1 — MVP backlog (planned; draft via /spec-new after Phase 0 retro)
 
@@ -74,4 +76,4 @@ Never a merge, never a bulk sync. Numbered above the reserved Phase-1 range.
 | 44 | SPEC-0044-fix-dangling-prd-related-documents | draft | FR-001 | SPEC-0042 |
 | 45 | SPEC-0045-verifiable-human-approval | accepted | FR-001 | SPEC-0042 |
 | 46 | SPEC-0046-elevate-dev-instance-socket | draft | FR-001 | SPEC-0001 |
-| 47 | SPEC-0047-traceability-record-repair | approved | FR-001 | SPEC-0045 |
+| 47 | SPEC-0047-traceability-record-repair | accepted | FR-001 | SPEC-0045 |

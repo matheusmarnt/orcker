@@ -6,8 +6,8 @@ covers: [FR-001]
 depends_on: [SPEC-0045]
 surface:
   - specs/
-status: approved
-attempts: 0
+status: accepted
+attempts: 2
 ---
 
 ## Context
@@ -75,19 +75,22 @@ verdict block quoted in each log. Anything absent from both is `—`.
 
 ## Acceptance checklist
 
-- [ ] AC1 Every row in the spec table has the same column count as its header ->
-      evidence: `awk -F'|' 'NF' ` count per row, all equal
-- [ ] AC2 No row appears below the `## Process metrics` heading ->
+- [x] AC1 Every row's values sit under their own header, asserted per column and
+      not by field count (a field count is blind to a one-column shift) ->
+      evidence: `Attempts` matches `^[0-9]+$`, `Escalates` `^(—|[0-9]+)$`,
+      `Gate time` `^(—|[0-9]+ ?m(in)?|[0-9]+ ?s)$`, `Pure-crate coverage`
+      `^(—|[0-9.]+%)$` and `Cycle duration` `^(—|[0-9]+ sessions?.*)$` on all ten rows
+- [x] AC2 No row appears below the `## Process metrics` heading ->
       evidence: line number of the heading is greater than the last `| SPEC-` line
-- [ ] AC3 Each of section 11's four metrics has a column, and every backfilled
+- [x] AC3 Each of section 11's four metrics has a column, and every backfilled
       value is traceable to a cycle log or is `—` ->
       evidence: per-value citation table in `specs/logs/SPEC-0047.md`
-- [ ] AC4 SPEC-0005 reads `FR-003 (partial)` in `TRACEABILITY.md` and
+- [x] AC4 SPEC-0005 reads `FR-003 (partial)` in `TRACEABILITY.md` and
       `ROADMAP.md`; `git diff docs/PRD.md` is empty ->
       evidence: both greps plus the empty diff
-- [ ] AC5 The Phase-0 heading and exit line in `ROADMAP.md` match reality ->
+- [x] AC5 The Phase-0 heading and exit line in `ROADMAP.md` match reality ->
       evidence: heading text plus the FR-003/SPEC-0006 sentence
-- [ ] AC6 `scripts/gate.sh specs/SPEC-0047-*.md` passes
+- [x] AC6 `scripts/gate.sh specs/SPEC-0047-*.md` passes
 
 ## Out of scope
 

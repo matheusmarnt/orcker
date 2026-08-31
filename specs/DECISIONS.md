@@ -395,3 +395,20 @@ Deviations, clarifications and trade-offs recorded by implementation cycles
   matching the port the browser reaches; without it Vite answers 403 to any proxied
   request (F5). It must also mount `postgres:18` at `/var/lib/postgresql` (F4) and carry
   `libonig-dev` (F2), both bugs inherited from `docs/referencia-docker-laravel.md`.
+
+
+## 2026-08-31 · SPEC-0047 — the SPEC-0033 row changed content, against the spec's own Design
+
+- Decision: rewrite the two regex alternations in the SPEC-0033 row
+  (`yerd-php|yerd-services|yerd-supervise` and its `orcker-*` variant) as
+  `` `a` / `b` / `c` ``, even though the spec's *Design & contracts* section promised
+  that "the eight untouched rows keep their content verbatim".
+- Why: a raw `|` is a cell separator in Markdown, so those alternations split the row
+  into 11 fields against a 9-field header. That is the root cause of AC1's RED, not an
+  extra: AC1 cannot close without it. The semantic content survives — the three crate
+  names stay readable and quotable; only the separator changed.
+- Impact: any future row quoting a pipe (a regex, a shell pipeline, an alternation)
+  reintroduces the defect silently, because nothing in the gate validates the column
+  semantics of `specs/TRACEABILITY.md` — only the count, and round 1 of this cycle
+  proved a count is blind to a one-column shift. The S8 step that appends a row has to
+  escape before writing.
