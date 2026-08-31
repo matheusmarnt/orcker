@@ -1,0 +1,32 @@
+# SPEC-0005 - elevated, real :443 through the system trust store. 2026-08-31T14:24:26-03:00
+
+$ getent hosts spike.test
+::1             spike.test
+
+$ ss -ltn | grep -E ":(80|443) "
+LISTEN 0      128             127.0.0.1:80         0.0.0.0:*          
+LISTEN 0      128             127.0.0.1:443        0.0.0.0:*          
+
+$ getcap target/debug/orckerd
+target/debug/orckerd cap_net_bind_service=ep
+
+$ curl -sv https://spike.test/     (no --cacert: the system store validates it)
+* Connected to spike.test (127.0.0.1) port 443 (#0)
+* SSL connection using TLSv1.3 / TLS_AES_256_GCM_SHA384
+*  subject: CN=spike.test
+*  issuer: CN=Orcker Local CA
+*  SSL certificate verify ok.
+< HTTP/1.1 200 OK
+< server: nginx
+< content-type: text/html; charset=utf-8
+
+$ curl -s https://spike.test/ | grep -o "<title>[^<]*</title>"
+<title>Laravel</title>
+
+$ curl -sI http://spike.test/      (plain http redirects to https)
+HTTP/1.1 301 Moved Permanently
+location: https://spike.test/
+
+## Latency on :443, median of 20 warm requests
+through orcker https://spike.test : 125.3 ms
+direct  nginx  127.0.0.1:18080    : 25.7 ms

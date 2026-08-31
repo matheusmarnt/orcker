@@ -367,3 +367,31 @@ Deviations, clarifications and trade-offs recorded by implementation cycles
   section 9.2 and not to 9.3; the fix carried it to every copy. Ongoing rule for this
   repository: an embedded copy in section 9 is part of the change to the section it
   copies, not a separate spec.
+
+
+## 2026-08-31 · SPEC-0005 — the spike needed no code, and SPEC-0006 may need less than queued
+
+- Decision: R2's conditional code delta was not taken. `orcker proxy add spike
+  http://127.0.0.1:18080` plus `orcker secure spike` served a containerized Laravel app
+  at `https://spike.test` with a CA-issued leaf, so the declared code surface
+  (`crates/orcker-core`, `crates/orcker-config`, `bin/orckerd`, `bin/orcker`) stayed
+  untouched and the diff is docs + specs only.
+- Why: R2 asks for a delta *only if* the inherited custom-proxy mechanism cannot express
+  a loopback upstream. `bin/orcker/src/cli.rs` `ProxyAction::Add` already creates a
+  whole-host proxy against any `http://127.0.0.1:<port>`, and the inherited
+  `forward/http.rs` / `forward/upgrade.rs` carry both the HTTP and the websocket path.
+  Measured: `101 Switching Protocols` through the proxy with the `vite-hmr` subprotocol
+  intact, and, warm, medians of ~25.7-31.3 ms direct against nginx versus 113-125 ms
+  through the proxy on a **debug build**. The gap is the per-request TLS handshake
+  (`time_appconnect` 40-76 ms against `time_connect` ~3 ms), not forwarding. A first
+  measurement suggesting no overhead ran against cold opcache and is retracted; the
+  release-build cost is unmeasured and is an NFR-02 / Phase-1 question.
+- Impact on SPEC-0006: it is queued as "link/loopback port", but routing to a loopback
+  port is already expressed. What is actually missing is port allocation and a project
+  registry. SPEC-0006 must be re-read before it is drafted further - see finding F7 in
+  `docs/spike/PHASE0-SPIKE.md`.
+- Impact on SPEC-0007 (preset): the generated stack must emit Vite's
+  `server.allowedHosts` for the project's `.test` domain and an `server.hmr.clientPort`
+  matching the port the browser reaches; without it Vite answers 403 to any proxied
+  request (F5). It must also mount `postgres:18` at `/var/lib/postgresql` (F4) and carry
+  `libonig-dev` (F2), both bugs inherited from `docs/referencia-docker-laravel.md`.

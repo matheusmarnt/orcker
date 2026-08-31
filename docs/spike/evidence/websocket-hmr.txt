@@ -1,0 +1,15 @@
+# SPEC-0005 - Vite HMR websocket through the orcker proxy. 2026-08-31T13:57:16-03:00
+# vite.config.js: server.allowedHosts = ['vite.test','spike.test'], hmr.clientPort 8443
+
+## upgrade direct to the container port (baseline)
+http_code=101
+
+## upgrade through orcker: https://vite.test -> 127.0.0.1:5173
+HTTP/1.1 101 Switching Protocols
+upgrade: websocket
+sec-websocket-protocol: vite-hmr
+sec-websocket-accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=
+connection: upgrade
+
+## vite client asset through orcker
+http_code=200

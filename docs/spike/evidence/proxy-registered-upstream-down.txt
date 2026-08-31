@@ -1,0 +1,18 @@
+# SPEC-0005 - proxy registered, container stack not yet up. 2026-08-31T13:41:28-03:00
+
+$ orcker proxy list
+Whole-host proxies:
+  spike (https) -> http://127.0.0.1:18080
+
+$ curl -sv --cacert /tmp/orcker-dev/data/orcker/ca.cert.pem --resolve spike.test:8443:127.0.0.1 https://spike.test:8443/
+* SSL connection using TLSv1.3 / TLS_AES_256_GCM_SHA384
+* Server certificate:
+*  subject: CN=spike.test
+*  issuer: CN=Orcker Local CA
+*  SSL certificate verify ok.
+< HTTP/1.1 502 Bad Gateway
+< server: orcker
+< content-type: text/plain; charset=utf-8
+< content-length: 28
+< date: Mon, 31 Aug 2026 16:41:29 GMT
+< 
