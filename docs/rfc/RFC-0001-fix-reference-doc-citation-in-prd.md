@@ -3,7 +3,7 @@ id: RFC-0001
 title: Cite the reference document by its real repository path in the PRD
 target: docs/PRD.md line 14 (section 1, "Contexto e problema")
 raised_by: SPEC-0042
-status: open
+status: applied
 ---
 
 ## Why this is an RFC and not a diff

@@ -11,7 +11,7 @@
 
 Times e desenvolvedores Laravel escolhem hoje entre dois mundos incompletos: ferramentas nativas Herd-like (Herd, Yerd, Valet) com ótima ergonomia (`.test`, HTTPS local, GUI) porém **zero paridade com produção**, e Docker/Sail com paridade porém **sem orquestração multi-projeto** (sem domínios, sem TLS confiável, sem GUI, um compose isolado por projeto). O resultado prático: "funciona na minha máquina", conflitos de versão de PHP e surpresas no deploy.
 
-O Orcker resolve os dois lados de uma vez: fork do Yerd v2 (Rust, MIT) mantendo daemon, proxy TLS com CA local, DNS `.test`, GUI Tauri, CLI, doctor, tunnel e MCP — substituindo o runtime nativo por **Docker + docker compose**, gerando por projeto o stack de paridade de produção do documento de referência (`referenciadockerlaravel.md`): app com PHP-FPM + Supervisor (Horizon, scheduler, Pulse), nginx, banco por projeto, redes duais e serviços globais compartilhados.
+O Orcker resolve os dois lados de uma vez: fork do Yerd v2 (Rust, MIT) mantendo daemon, proxy TLS com CA local, DNS `.test`, GUI Tauri, CLI, doctor, tunnel e MCP — substituindo o runtime nativo por **Docker + docker compose**, gerando por projeto o stack de paridade de produção do documento de referência (`docs/referencia-docker-laravel.md`): app com PHP-FPM + Supervisor (Horizon, scheduler, Pulse), nginx, banco por projeto, redes duais e serviços globais compartilhados.
 
 ## 2. Visão e proposta de valor
 
