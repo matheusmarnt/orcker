@@ -1722,6 +1722,82 @@ mod tests {
         );
     }
 
+    /// `not_found_site` has two branches, and the proxy one carries a distinct
+    /// message so the user is told *why* a name they can see is not a site.
+    /// Retargeted from `set_php_on_a_proxy_name_says_it_is_a_proxy`
+    /// (`Request::SetPhp` deleted). `SetFrontController` is the substitute
+    /// because `apply_set_front_controller` has the deleted `apply_set_php`'s
+    /// exact shape - linked, then parked override, then `not_found_site`.
+    /// `SetSecure` would not do: it has a third branch that *handles* proxies
+    /// (see `secure_toggles_whole_host_proxy`), so it never reaches this seam.
+    /// The lookup is by lowercased name.
+    #[test]
+    fn a_site_only_command_on_a_proxy_name_says_it_is_a_proxy() {
+        let mut cfg = cfg_with_proxy("reverb");
+        let r = empty_router();
+        match apply(
+            &mut cfg,
+            &r,
+            &Request::SetFrontController {
+                name: "Reverb".into(),
+                enabled: true,
+            },
+            None,
+            v(8, 3),
+        ) {
+            Err(MutateError::NotFound(msg)) => assert_eq!(
+                msg,
+                "no site named reverb (reverb is a proxy - this command applies only to sites)"
+            ),
+            other => panic!("expected NotFound, got {other:?}"),
+        }
+        assert!(matches!(
+            not_found_site(&Config::default(), "ghost"),
+            MutateError::NotFound(ref m) if m == "no site named ghost"
+        ));
+    }
+
+    /// Two different site-only commands on the same parked site must merge into
+    /// one override entry rather than each writing its own. Retargeted from
+    /// `upsert_merges_php_and_secure` (`Request::SetPhp` deleted);
+    /// `SetFrontController` is the other surviving field-setter, so the pair
+    /// still exercises the merge.
+    #[test]
+    fn overrides_merge_rather_than_duplicating_for_a_parked_site() {
+        let mut cfg = Config::default();
+        let r = router_with_parked("blog", "/srv/blog");
+        apply(
+            &mut cfg,
+            &r,
+            &Request::SetSecure {
+                name: "blog".into(),
+                secure: true,
+            },
+            None,
+            v(8, 3),
+        )
+        .unwrap();
+        apply(
+            &mut cfg,
+            &r,
+            &Request::SetFrontController {
+                name: "blog".into(),
+                enabled: false,
+            },
+            None,
+            v(8, 3),
+        )
+        .unwrap();
+        assert_eq!(
+            cfg.overrides.len(),
+            1,
+            "the two commands must share an entry"
+        );
+        let ov = cfg.overrides.get("/srv/blog").unwrap();
+        assert_eq!(ov.secure, Some(true));
+        assert_eq!(ov.front_controller, Some(false));
+    }
+
     #[test]
     fn set_front_controller_unknown_is_not_found() {
         let mut cfg = Config::default();

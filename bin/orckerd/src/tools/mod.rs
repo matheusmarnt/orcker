@@ -415,8 +415,17 @@ mod tests {
         assert_eq!(Tool::Bun.display_name(), "Bun");
     }
 
-    /// Issue #150: an external `wp` can't stand in for the managed build, so
-    /// Tooling must keep offering Install rather than reporting it external.
+    /// `accepts_external` decides whether a copy already on the user's PATH
+    /// satisfies a tool's prerequisite, and the tooling preflight in
+    /// `ipc_server` gates on it. Every tool orcker still ships accepts one; the
+    /// exception this pinned (WP-CLI, issue #150) went with the tool itself.
+    #[test]
+    fn every_tool_accepts_an_external_copy() {
+        for t in Tool::ALL {
+            assert!(t.accepts_external(), "{t:?} should accept an external copy");
+        }
+    }
+
     #[test]
     fn installed_version_ignores_blank_marker() {
         let tmp = tempfile::tempdir().unwrap();

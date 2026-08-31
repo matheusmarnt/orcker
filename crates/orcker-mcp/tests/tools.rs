@@ -457,6 +457,26 @@ fn site_tools_map_to_their_requests() {
     );
 }
 
+/// The read-only tools' name -> `Request` mapping. `every_tool_builds_a_request`
+/// only proves each name builds *something*; this pins *which* variant the
+/// daemon receives, so a builder arm cannot be rewired to the wrong request
+/// without a test noticing.
+#[test]
+fn read_tools_map_to_their_requests() {
+    assert_eq!(built("list_sites", json!({})), Request::ListSites);
+    assert_eq!(built("list_parked", json!({})), Request::ListParked);
+    assert_eq!(built("list_proxies", json!({})), Request::ListProxies);
+    assert_eq!(built("list_mails", json!({})), Request::ListMails);
+    assert_eq!(built("status", json!({})), Request::Status);
+    assert_eq!(built("diagnose", json!({})), Request::Diagnose);
+    assert_eq!(
+        built("get_mail", json!({ "id": "000007" })),
+        Request::GetMail {
+            id: "000007".to_owned()
+        }
+    );
+}
+
 #[test]
 fn paging_tools_default_their_cursors_to_zero() {
     assert_eq!(
