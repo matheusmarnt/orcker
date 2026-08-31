@@ -9,8 +9,9 @@ use std::fmt::Write as _;
 
 use orcker_core::{PhpVersion, Site, SiteKind};
 use orcker_ipc::{
-    Channel, CloudflaredStatus, Diagnosis, FixReport, PortStatus, Request, Response, Severity,
-    SiteEntry, StatusReport, ToolStatus, TunnelInfo, TunnelRunState, UpdateSource,
+    Channel, CloudflaredStatus, ComposeStatus, Diagnosis, DockerStatus, FixReport, PortStatus,
+    Request, Response, Severity, SiteEntry, SocketKind, StatusReport, ToolStatus, TunnelInfo,
+    TunnelRunState, UpdateSource,
 };
 
 use crate::cli::{Command, MailAction, TunnelAction};
@@ -878,6 +879,132 @@ fn format_named_tunnels(
         }
     }
     out
+}
+
+/// Render `orcker status`: the daemon report plus the Docker section.
+///
+/// `orcker status` is the one command that needs two responses, so it does not
+/// go through [`render`]. Both output paths read the same pair of values: the
+/// human block appends a `docker`/`compose` section, and `--json` nests the
+/// `Status` response under `report` beside a `docker` object.
+///
+/// The exit code stays the daemon's: a stopped engine is reported, not an
+/// error (R8).
+#[must_use]
+pub fn render_status(report: &StatusReport, docker: Option<&DockerStatus>, json: bool) -> Rendered {
+    if json {
+        let body = serde_json::json!({
+            "type": "status",
+            "report": report,
+            "docker": docker.map(docker_json),
+        });
+        let text = serde_json::to_string_pretty(&body)
+            .unwrap_or_else(|e| format!("{{\"error\":\"serialize failed: {e}\"}}"));
+        return Rendered::ok(text);
+    }
+    let docker_block = docker.map_or_else(
+        || "docker    unknown (the daemon did not answer the docker probe)\n".to_owned(),
+        format_docker,
+    );
+    Rendered::ok(format!("{}{docker_block}", format_status(report)))
+}
+
+/// Split the `EngineStatus` exchange outcome into the section to render and a
+/// note for stderr.
+///
+/// Pure so the branch is testable without a daemon. The section is simply
+/// absent on any non-answer - `orcker status` reports, it does not fail (R8) -
+/// but the *reason* is never guessed: this fork ships the CLI and the daemon
+/// together, so a transport failure or an error response is far likelier than
+/// version skew, and inventing "your daemon is old" would send the user after
+/// the wrong problem. The real cause goes to stderr instead.
+pub fn docker_section(
+    outcome: Result<Response, ClientError>,
+) -> (Option<DockerStatus>, Option<String>) {
+    match outcome {
+        Ok(Response::EngineStatus { status }) => (Some(*status), None),
+        Ok(Response::Error { code, message }) => (
+            None,
+            Some(format!("docker status unavailable ({code:?}): {message}")),
+        ),
+        Ok(other) => (
+            None,
+            Some(format!(
+                "docker status unavailable: unexpected response {other:?}"
+            )),
+        ),
+        Err(e) => (None, Some(format!("docker status unavailable: {e}"))),
+    }
+}
+
+/// The `docker` object used by `orcker status --json`.
+///
+/// Hoists the compose version out of [`ComposeStatus`] so a consumer reads
+/// `docker.compose_version` without branching on the state tag, and keeps
+/// `compose` for the full verdict.
+fn docker_json(d: &DockerStatus) -> serde_json::Value {
+    serde_json::json!({
+        "socket": d.socket,
+        "reachable": d.reachable,
+        "engine_version": d.engine_version,
+        "compose_version": compose_version(&d.compose),
+        "compose": d.compose,
+        "problems": d.problems,
+    })
+}
+
+/// The version inside a [`ComposeStatus`], present whenever the plugin is
+/// installed at all - including when it is too old to use.
+fn compose_version(compose: &ComposeStatus) -> Option<&str> {
+    match compose {
+        ComposeStatus::Found { version } => Some(version),
+        ComposeStatus::TooOld { found, .. } => Some(found),
+        _ => None,
+    }
+}
+
+/// The endpoint as it reads in the human block.
+fn socket_label(socket: &SocketKind) -> &str {
+    match socket {
+        SocketKind::Unix { path } => path,
+        SocketKind::Tcp { endpoint } => endpoint,
+        _ => "no supported endpoint",
+    }
+}
+
+/// Render a [`DockerStatus`] as human-readable lines, in the same
+/// `label     value` column shape as the rest of `orcker status`.
+fn format_docker(d: &DockerStatus) -> String {
+    use std::fmt::Write;
+    let mut s = String::new();
+    let endpoint = socket_label(&d.socket);
+    match (d.reachable, d.engine_version.as_deref()) {
+        (true, Some(v)) => {
+            let _ = writeln!(s, "docker    {v} ({endpoint})");
+        }
+        (true, None) => {
+            let _ = writeln!(s, "docker    running, version unknown ({endpoint})");
+        }
+        (false, _) => {
+            let _ = writeln!(s, "docker    not running ({endpoint})");
+        }
+    }
+    match &d.compose {
+        ComposeStatus::Found { version } => {
+            let _ = writeln!(s, "compose   {version}");
+        }
+        ComposeStatus::TooOld { found, min } => {
+            let _ = writeln!(s, "compose   {found} (older than the supported {min})");
+        }
+        _ => {
+            let _ = writeln!(s, "compose   not installed");
+        }
+    }
+    for p in &d.problems {
+        let _ = writeln!(s, "          ! {}", p.message);
+        let _ = writeln!(s, "            -> {}", p.hint);
+    }
+    s
 }
 
 /// Render a [`StatusReport`] as a human-readable block.
@@ -2422,5 +2549,160 @@ mod tests {
         };
         let r = render_domains(&[e], "test", None, false);
         assert!(r.stdout.contains("foo.test (primary)"));
+    }
+
+    fn sample_docker(reachable: bool) -> DockerStatus {
+        DockerStatus {
+            socket: SocketKind::Unix {
+                path: "/var/run/docker.sock".into(),
+            },
+            reachable,
+            engine_version: reachable.then(|| "27.3.1".to_owned()),
+            compose: ComposeStatus::Found {
+                version: "2.29.7".into(),
+            },
+            problems: vec![],
+        }
+    }
+
+    #[test]
+    fn status_human_output_carries_the_docker_section() {
+        let out = render_status(&sample_report(), Some(&sample_docker(true)), false);
+        assert_eq!(out.code, 0);
+        assert!(out.stdout.contains("daemon    running"), "{}", out.stdout);
+        assert!(out.stdout.contains("docker"), "{}", out.stdout);
+        assert!(out.stdout.contains("27.3.1"), "{}", out.stdout);
+        assert!(out.stdout.contains("2.29.7"), "{}", out.stdout);
+    }
+
+    #[test]
+    fn status_json_output_carries_the_docker_section() {
+        let out = render_status(&sample_report(), Some(&sample_docker(true)), true);
+        assert_eq!(out.code, 0);
+        let v: serde_json::Value = serde_json::from_str(&out.stdout).unwrap();
+        assert_eq!(v["type"], "status");
+        assert_eq!(v["report"]["daemon_pid"], 4242);
+        assert_eq!(v["docker"]["engine_version"], "27.3.1");
+        assert_eq!(v["docker"]["compose_version"], "2.29.7");
+        assert!(v["docker"]["problems"].is_array());
+    }
+
+    /// A stopped engine is reported, with its hint, and still exits 0.
+    #[test]
+    fn status_with_the_engine_down_reports_and_exits_zero() {
+        let docker = DockerStatus {
+            socket: SocketKind::Unix {
+                path: "/var/run/docker.sock".into(),
+            },
+            reachable: false,
+            engine_version: None,
+            compose: ComposeStatus::Missing,
+            problems: vec![
+                orcker_ipc::EngineProblem {
+                    code: orcker_ipc::EngineProblemCode::EngineUnreachable,
+                    message: "docker engine unreachable on /var/run/docker.sock".into(),
+                    hint: "start Docker, then re-run `orcker status`".into(),
+                },
+                orcker_ipc::EngineProblem {
+                    code: orcker_ipc::EngineProblemCode::ComposeMissing,
+                    message: "the docker compose plugin is not installed".into(),
+                    hint: "install the docker-compose-plugin package".into(),
+                },
+            ],
+        };
+
+        let human = render_status(&sample_report(), Some(&docker), false);
+        assert_eq!(human.code, 0, "status reports, it does not fail");
+        assert!(
+            human.stdout.contains("docker engine unreachable"),
+            "{}",
+            human.stdout
+        );
+        assert!(
+            human.stdout.contains("start Docker, then re-run"),
+            "the hint must reach the user: {}",
+            human.stdout
+        );
+
+        let json = render_status(&sample_report(), Some(&docker), true);
+        assert_eq!(json.code, 0);
+        let v: serde_json::Value = serde_json::from_str(&json.stdout).unwrap();
+        assert_eq!(v["docker"]["engine_version"], serde_json::Value::Null);
+        assert_eq!(v["docker"]["compose_version"], serde_json::Value::Null);
+        assert_eq!(v["docker"]["problems"].as_array().unwrap().len(), 2);
+        assert_eq!(
+            v["docker"]["problems"][0]["hint"],
+            "start Docker, then re-run `orcker status`"
+        );
+    }
+
+    /// A daemon too old to answer `EngineStatus` must not blank the whole
+    /// command: the report still renders, the docker section says unknown.
+    #[test]
+    fn status_without_a_docker_section_still_renders() {
+        let human = render_status(&sample_report(), None, false);
+        assert_eq!(human.code, 0);
+        assert!(
+            human.stdout.contains("daemon    running"),
+            "{}",
+            human.stdout
+        );
+        assert!(human.stdout.contains("unknown"), "{}", human.stdout);
+        assert!(
+            !human.stdout.contains("predates"),
+            "the CLI cannot know why the section is missing, so it must not \
+             blame version skew: {}",
+            human.stdout
+        );
+
+        let json = render_status(&sample_report(), None, true);
+        let v: serde_json::Value = serde_json::from_str(&json.stdout).unwrap();
+        assert_eq!(v["docker"], serde_json::Value::Null);
+    }
+
+    /// Each way the `EngineStatus` exchange can fail drops the section *and*
+    /// surfaces its real cause, rather than collapsing into one invented reason.
+    #[test]
+    fn a_failed_engine_status_exchange_names_its_own_cause() {
+        let (section, note) = docker_section(Ok(Response::EngineStatus {
+            status: Box::new(sample_docker(true)),
+        }));
+        assert_eq!(section, Some(sample_docker(true)));
+        assert_eq!(note, None, "a good answer says nothing on stderr");
+
+        let (section, note) = docker_section(Ok(Response::Error {
+            code: orcker_ipc::ErrorCode::Internal,
+            message: "engine probe failed".into(),
+        }));
+        assert!(section.is_none());
+        let note = note.expect("an error response must explain itself");
+        assert!(note.contains("engine probe failed"), "{note}");
+        assert!(note.contains("Internal"), "{note}");
+
+        let (section, note) = docker_section(Ok(Response::Ok));
+        assert!(section.is_none());
+        assert!(note.unwrap().contains("unexpected response"));
+
+        let (section, note) = docker_section(Err(ClientError::DaemonUnreachable(
+            "socket vanished".into(),
+        )));
+        assert!(section.is_none());
+        let note = note.expect("a transport failure must explain itself");
+        assert!(note.contains("socket vanished"), "{note}");
+    }
+
+    /// `compose_version` is present but flagged when the plugin is too old.
+    #[test]
+    fn status_json_reports_a_too_old_compose_with_its_minimum() {
+        let mut docker = sample_docker(true);
+        docker.compose = ComposeStatus::TooOld {
+            found: "2.10.2".into(),
+            min: "2.20.0".into(),
+        };
+        let out = render_status(&sample_report(), Some(&docker), true);
+        let v: serde_json::Value = serde_json::from_str(&out.stdout).unwrap();
+        assert_eq!(v["docker"]["compose_version"], "2.10.2");
+        assert_eq!(v["docker"]["compose"]["state"], "too_old");
+        assert_eq!(v["docker"]["compose"]["min"], "2.20.0");
     }
 }

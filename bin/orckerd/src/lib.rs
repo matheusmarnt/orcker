@@ -16,6 +16,7 @@ pub mod backend_resolver;
 pub mod cert_store;
 pub mod detect_cache;
 pub mod download;
+pub mod engine_status;
 pub mod error;
 pub mod fs_watch;
 pub mod ipc_server;

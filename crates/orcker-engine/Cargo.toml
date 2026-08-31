@@ -1,0 +1,23 @@
+[package]
+name                   = "orcker-engine"
+version.workspace      = true
+edition.workspace      = true
+rust-version.workspace = true
+license.workspace      = true
+publish.workspace      = true
+description            = "Docker environment detection for Orcker: pure decision logic plus the Engine API / compose CLI edge."
+
+[dependencies]
+orcker-ipc  = { path = "../orcker-ipc" }
+thiserror   = { workspace = true }
+serde       = { workspace = true }
+serde_json  = { workspace = true }
+async-trait = { workspace = true }
+tokio       = { workspace = true, features = ["process", "time", "macros"] }
+bollard     = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt", "macros"] }
+
+[lints]
+workspace = true

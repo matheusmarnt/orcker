@@ -20,6 +20,7 @@ bin/orckerd/src/backend_resolver.rs:1
 bin/orckerd/src/cert_store.rs:1
 bin/orckerd/src/detect_cache.rs:1
 bin/orckerd/src/download.rs:1
+bin/orckerd/src/engine_status.rs:1
 bin/orckerd/src/error.rs:1
 bin/orckerd/src/ipc_server.rs:1
 bin/orckerd/src/jobs.rs:1
@@ -76,6 +77,8 @@ crates/orcker-dns/src/server.rs:1
 crates/orcker-dns/tests/pure_responder_no_io.rs:1
 crates/orcker-dns/tests/server_smoke.rs:1
 crates/orcker-doctor/src/lib.rs:1
+crates/orcker-engine/src/pure/mod.rs:1
+crates/orcker-engine/tests/assemble.rs:1
 crates/orcker-ipc/src/error.rs:1
 crates/orcker-ipc/src/frame.rs:1
 crates/orcker-ipc/src/lib.rs:1

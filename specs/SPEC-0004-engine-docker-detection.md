@@ -11,8 +11,8 @@ surface:
   - crates/orcker-ipc/
   - bin/orckerd/
   - bin/orcker/
-status: approved
-attempts: 0
+status: accepted
+attempts: 1
 ---
 
 ## Context
@@ -70,18 +70,18 @@ inside `orcker-engine`'s I/O edge; no other crate may depend on it.
 
 ## Acceptance checklist
 
-- [ ] AC1 Socket resolution honors DOCKER_HOST then platform defaults ->
+- [x] AC1 Socket resolution honors DOCKER_HOST then platform defaults ->
       test: `orcker_engine::pure::socket_resolution_matrix`
-- [ ] AC2 Compose JSON output parsing tolerates real-world variants ->
+- [x] AC2 Compose JSON output parsing tolerates real-world variants ->
       test: `orcker_engine::pure::compose_version_parsing`
-- [ ] AC3 Versions below minimum produce `TooOld` with hint ->
+- [x] AC3 Versions below minimum produce `TooOld` with hint ->
       test: `orcker_engine::pure::minimum_version_policy`
-- [ ] AC4 IPC `EngineStatus` round-trips; wire-stability suite green and
+- [x] AC4 IPC `EngineStatus` round-trips; wire-stability suite green and
       only extended -> test: `orcker_ipc::wire_stability`
-- [ ] AC5 `orcker status --json` contains the docker section; with the engine
+- [x] AC5 `orcker status --json` contains the docker section; with the engine
       down it reports the problem with hint, exit code 0 ->
       evidence: both outputs in the cycle log
-- [ ] AC6 `scripts/gate.sh specs/SPEC-0004-*.md` passes
+- [x] AC6 `scripts/gate.sh specs/SPEC-0004-*.md` passes
 
 ## Out of scope
 

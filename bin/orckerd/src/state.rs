@@ -134,6 +134,10 @@ pub struct DaemonState {
     /// Web-root detection cache, shared between the mutation path and the
     /// filesystem watcher so repeated parked-root rescans stay cheap.
     pub detect_cache: Arc<DetectCache>,
+    /// Short-TTL snapshot of the Docker environment, served to
+    /// `Request::EngineStatus`. The daemon owns the staleness policy; the
+    /// `orcker-engine` crate only reports what it finds.
+    pub engine_status: Arc<crate::engine_status::EngineStatusCache>,
     /// Pinged after a config mutation commits so the filesystem watcher
     /// reconciles its watch set (e.g. a newly-parked root) without waiting for
     /// an unrelated filesystem event.

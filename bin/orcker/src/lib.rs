@@ -48,6 +48,7 @@ pub async fn run(cli: Cli) -> ExitCode {
         Command::Domain {
             action: crate::cli::DomainAction::List { site },
         } => return run_domain_list(site.as_deref(), cli.json).await,
+        Command::Status => return run_status(cli.json).await,
         Command::Route {
             action: crate::cli::RouteAction::List { site: Some(site) },
         } => return run_route_list(site, cli.json).await,
@@ -211,6 +212,43 @@ async fn run_lan_toggle(enabled: bool, json: bool) -> ExitCode {
         }
     }
     ExitCode::SUCCESS
+}
+
+/// `orcker status`: the daemon health report plus the Docker section.
+///
+/// The only command that needs two responses. `EngineStatus` is a separate
+/// request because the probe talks to the Docker daemon, so its answer comes
+/// from a cache the daemon owns rather than being rebuilt inside every
+/// `StatusReport`. Anything other than an `EngineStatus` reply leaves the
+/// section absent, puts the real reason on stderr (see [`map::docker_section`])
+/// and still exits with the daemon report's code - a stopped engine is
+/// something `orcker status` reports, not something it exits non-zero on (R8).
+async fn run_status(json: bool) -> ExitCode {
+    use orcker_ipc::{Request, Response};
+    let report = match transport::exchange(&Request::Status).await {
+        Ok(Response::Status { report }) => report,
+        Ok(other) => {
+            eprintln!("orcker: unexpected response: {other:?}");
+            return ExitCode::from(1);
+        }
+        Err(e) => {
+            eprintln!("orcker: {e}");
+            return ExitCode::from(69);
+        }
+    };
+    let (docker, note) = map::docker_section(transport::exchange(&Request::EngineStatus).await);
+    if let Some(note) = note {
+        eprintln!("orcker: {note}");
+    }
+
+    let r = map::render_status(&report, docker.as_ref(), json);
+    if !r.stdout.is_empty() {
+        println!("{}", r.stdout);
+    }
+    if !r.stderr.is_empty() {
+        eprintln!("{}", r.stderr);
+    }
+    ExitCode::from(r.code)
 }
 
 /// `orcker lan status`: a LAN-focused view of the daemon's `Status`, showing

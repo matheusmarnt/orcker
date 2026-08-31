@@ -18,11 +18,12 @@ use std::path::PathBuf;
 
 use orcker_ipc::{
     types::{PhpVersion, Site},
-    CaStatus, Channel, CloudflaredSource, CloudflaredStatus, Diagnosis, DiagnosisCode, ErrorCode,
-    FixReport, FixResult, MailAttachment, MailDetail, MailHeader, MailStatus, MailSummary,
-    NamedTunnelMeta, PortRedirectTargets, PortStatus, ProxyEntry, ProxyRuleEntry, Request,
-    Response, Severity, SiteCounts, SiteHostname, StagedArtifact, StatusReport, ToolStatus,
-    TunnelInfo, TunnelKind, TunnelRunState, UpdateSource,
+    CaStatus, Channel, CloudflaredSource, CloudflaredStatus, ComposeStatus, Diagnosis,
+    DiagnosisCode, DockerStatus, EngineProblem, EngineProblemCode, ErrorCode, FixReport, FixResult,
+    MailAttachment, MailDetail, MailHeader, MailStatus, MailSummary, NamedTunnelMeta,
+    PortRedirectTargets, PortStatus, ProxyEntry, ProxyRuleEntry, Request, Response, Severity,
+    SiteCounts, SiteHostname, SocketKind, StagedArtifact, StatusReport, ToolStatus, TunnelInfo,
+    TunnelKind, TunnelRunState, UpdateSource,
 };
 
 // ---------- Request ----------
@@ -1903,4 +1904,100 @@ fn response_proxies_customized_domains_byte_shape() {
     let expected = r#"{"type":"proxies","proxies":[{"name":"reverb","target":"http://127.0.0.1:8080","secure":false,"primary_domain":"corp.test","domains":["corp.test","*.reverb.test"]}],"rules":[]}"#;
     assert_eq!(s, expected);
     assert_eq!(serde_json::from_str::<Response>(&s).unwrap(), r);
+}
+
+// ---------- Docker environment (SPEC-0004) ----------
+
+#[test]
+fn request_engine_status_byte_shape() {
+    let s = serde_json::to_string(&Request::EngineStatus).unwrap();
+    assert_eq!(s, r#"{"type":"engine_status"}"#);
+    let back: Request = serde_json::from_str(&s).unwrap();
+    assert_eq!(back, Request::EngineStatus);
+}
+
+/// The healthy shape: a unix socket, a reachable engine, compose found, and no
+/// problems.
+#[test]
+fn response_engine_status_healthy_byte_shape() {
+    let r = Response::EngineStatus {
+        status: Box::new(DockerStatus {
+            socket: SocketKind::Unix {
+                path: "/var/run/docker.sock".into(),
+            },
+            reachable: true,
+            engine_version: Some("27.3.1".into()),
+            compose: ComposeStatus::Found {
+                version: "2.29.7".into(),
+            },
+            problems: vec![],
+        }),
+    };
+    let s = serde_json::to_string(&r).unwrap();
+    let expected = r#"{"type":"engine_status","status":{"socket":{"kind":"unix","path":"/var/run/docker.sock"},"reachable":true,"engine_version":"27.3.1","compose":{"state":"found","version":"2.29.7"},"problems":[]}}"#;
+    assert_eq!(s, expected);
+    assert_eq!(serde_json::from_str::<Response>(&s).unwrap(), r);
+}
+
+/// The degraded shape: a tcp endpoint, nothing answering, compose too old, and
+/// one problem per finding - each carrying its hint.
+#[test]
+fn response_engine_status_degraded_byte_shape() {
+    let r = Response::EngineStatus {
+        status: Box::new(DockerStatus {
+            socket: SocketKind::Tcp {
+                endpoint: "tcp://10.0.0.5:2375".into(),
+            },
+            reachable: false,
+            engine_version: None,
+            compose: ComposeStatus::TooOld {
+                found: "2.10.2".into(),
+                min: "2.20.0".into(),
+            },
+            problems: vec![EngineProblem {
+                code: EngineProblemCode::EngineUnreachable,
+                message: "docker engine unreachable".into(),
+                hint: "start Docker and retry".into(),
+            }],
+        }),
+    };
+    let s = serde_json::to_string(&r).unwrap();
+    let expected = r#"{"type":"engine_status","status":{"socket":{"kind":"tcp","endpoint":"tcp://10.0.0.5:2375"},"reachable":false,"engine_version":null,"compose":{"state":"too_old","found":"2.10.2","min":"2.20.0"},"problems":[{"code":"engine_unreachable","message":"docker engine unreachable","hint":"start Docker and retry"}]}}"#;
+    assert_eq!(s, expected);
+    assert_eq!(serde_json::from_str::<Response>(&s).unwrap(), r);
+}
+
+/// Every `EngineProblemCode` gets its `snake_case` tag pinned, so a rename is a
+/// contract failure rather than a silent client regression.
+#[test]
+fn engine_problem_code_each_tag_byte_shape() {
+    let cases = [
+        (EngineProblemCode::EngineUnreachable, "engine_unreachable"),
+        (EngineProblemCode::EngineTooOld, "engine_too_old"),
+        (EngineProblemCode::ComposeMissing, "compose_missing"),
+        (EngineProblemCode::ComposeTooOld, "compose_too_old"),
+        (
+            EngineProblemCode::PlatformUnsupported,
+            "platform_unsupported",
+        ),
+    ];
+    for (code, tag) in cases {
+        let s = serde_json::to_string(&code).unwrap();
+        assert_eq!(s, format!("\"{tag}\""));
+        assert_eq!(serde_json::from_str::<EngineProblemCode>(&s).unwrap(), code);
+    }
+}
+
+/// `SocketKind::Unsupported` and `ComposeStatus::Missing` are unit variants;
+/// pin that they stay bare tag objects.
+#[test]
+fn engine_unit_variants_byte_shape() {
+    assert_eq!(
+        serde_json::to_string(&SocketKind::Unsupported).unwrap(),
+        r#"{"kind":"unsupported"}"#
+    );
+    assert_eq!(
+        serde_json::to_string(&ComposeStatus::Missing).unwrap(),
+        r#"{"state":"missing"}"#
+    );
 }
