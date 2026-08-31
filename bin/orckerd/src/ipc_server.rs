@@ -192,6 +192,9 @@ async fn dispatch(req: Request, state: &DaemonState) -> Response {
         Request::Status => Response::Status {
             report: Box::new(build_status_report(state).await),
         },
+        Request::EngineStatus => Response::EngineStatus {
+            status: Box::new(state.engine_status.get().await),
+        },
         Request::Diagnose => Response::Diagnoses {
             items: orcker_doctor::diagnose(
                 &build_status_report(state).await,

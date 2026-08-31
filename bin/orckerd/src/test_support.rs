@@ -75,6 +75,7 @@ pub fn state_in(tmp: &Path) -> DaemonState {
         shutdown_tx: tokio::sync::watch::channel(false).0,
         restart_requested: std::sync::atomic::AtomicBool::new(false),
         detect_cache: Arc::new(crate::detect_cache::DetectCache::new()),
+        engine_status: Arc::new(crate::engine_status::EngineStatusCache::new()),
         watch_dirty: tokio::sync::Notify::new(),
         shim_reconcile: Mutex::new(()),
         tunnel_manager: Arc::new(Mutex::new(crate::tunnel::new_manager())),

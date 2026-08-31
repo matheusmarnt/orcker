@@ -17,7 +17,7 @@ queue approaches them.
 | 37 | SPEC-0037-restore-coverage-deleted-by-spec-0002 | accepted | FR-002 | SPEC-0002 |
 | 3 | SPEC-0003-stack-compose-renderer | accepted | FR-022 (partial) | SPEC-0001 |
 | 38 | SPEC-0038-tauri-host-coverage | draft | FR-002 | SPEC-0002, SPEC-0036 |
-| 4 | SPEC-0004-engine-docker-detection | approved | FR-010 | SPEC-0001, SPEC-0037 |
+| 4 | SPEC-0004-engine-docker-detection | accepted | FR-010 | SPEC-0001, SPEC-0037 |
 | 5 | SPEC-0005-proxy-container-spike | accepted | FR-003 (partial) | SPEC-0002, SPEC-0037 |
 | 6 | SPEC-0006-link-loopback-port | draft | FR-021, FR-013 (partial) | SPEC-0004, SPEC-0005, SPEC-0037 |
 
@@ -77,3 +77,4 @@ Never a merge, never a bulk sync. Numbered above the reserved Phase-1 range.
 | 45 | SPEC-0045-verifiable-human-approval | accepted | FR-001 | SPEC-0042 |
 | 46 | SPEC-0046-elevate-dev-instance-socket | draft | FR-001 | SPEC-0001 |
 | 47 | SPEC-0047-traceability-record-repair | accepted | FR-001 | SPEC-0045 |
+| 48 | SPEC-0048-pure-crate-coverage-metric | draft | FR-001 | SPEC-0047 |

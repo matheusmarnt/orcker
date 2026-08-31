@@ -10,6 +10,7 @@ use orcker_core::Site;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
+use crate::engine::DockerStatus;
 use crate::status::{
     CloudflaredStatus, Diagnosis, FixReport, MailDetail, MailSummary, NamedTunnelMeta,
     SiteHostname, StatusReport, ToolStatus, TunnelInfo,
@@ -124,6 +125,16 @@ pub enum Response {
     Status {
         /// The assembled health report.
         report: Box<StatusReport>,
+    },
+    /// Reply to [`crate::Request::EngineStatus`] - the Docker environment.
+    ///
+    /// Boxed for the same reason as [`Self::Status`]: inline it is the largest
+    /// variant in the enum and pushes every `Result<_, Response>` in the daemon
+    /// over clippy's `result_large_err` threshold. `Box<T>` serializes
+    /// transparently, so the wire bytes are unchanged.
+    EngineStatus {
+        /// The assembled Docker snapshot.
+        status: Box<DockerStatus>,
     },
     /// Reply to [`crate::Request::Diagnose`] - the doctor findings.
     Diagnoses {
@@ -459,6 +470,7 @@ mod variant_name_pinning {
             Response::Info { .. } => {}
             Response::RemoteSetup { .. } => {}
             Response::Status { .. } => {}
+            Response::EngineStatus { .. } => {}
             Response::Diagnoses { .. } => {}
             Response::DoctorFix { .. } => {}
             Response::Mails { .. } => {}
@@ -570,6 +582,15 @@ mod variant_name_pinning {
                 lan_setup_bound: None,
                 port_redirect_targets: None,
                 lan_redirect_targets: None,
+            }),
+        });
+        pin_response(Response::EngineStatus {
+            status: Box::new(crate::engine::DockerStatus {
+                socket: crate::engine::SocketKind::Unsupported,
+                reachable: false,
+                engine_version: None,
+                compose: crate::engine::ComposeStatus::Missing,
+                problems: vec![],
             }),
         });
         pin_response(Response::Diagnoses {

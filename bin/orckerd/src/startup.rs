@@ -302,6 +302,7 @@ pub async fn bring_up_with_dirs(
         shutdown_tx: tokio::sync::watch::channel(false).0,
         restart_requested: std::sync::atomic::AtomicBool::new(false),
         detect_cache,
+        engine_status: Arc::new(crate::engine_status::EngineStatusCache::new()),
         watch_dirty: tokio::sync::Notify::new(),
         shim_reconcile: tokio::sync::Mutex::new(()),
         tool_mutate: tokio::sync::Mutex::new(()),
@@ -317,6 +318,8 @@ pub async fn bring_up_with_dirs(
         remote_setup_code: Mutex::new(None),
         lan_setup_script_sha256: Mutex::new(None),
     });
+
+    warm_engine_status(&state);
 
     Ok(Daemon {
         state,
@@ -334,6 +337,25 @@ pub async fn bring_up_with_dirs(
         lan_ip,
         mail_listener,
     })
+}
+
+/// Probe Docker once in the background so the first `orcker status` after boot
+/// answers from the cache.
+///
+/// Deliberately detached: a stopped engine costs a connect timeout, and the
+/// daemon must be serving IPC before that resolves. A failure is not an error -
+/// it becomes a problem entry in the snapshot the next caller reads.
+fn warm_engine_status(state: &Arc<DaemonState>) {
+    let cache = Arc::clone(&state.engine_status);
+    tokio::spawn(async move {
+        let status = cache.get().await;
+        tracing::info!(
+            reachable = status.reachable,
+            engine_version = status.engine_version.as_deref().unwrap_or("none"),
+            problems = status.problems.len(),
+            "docker environment probed"
+        );
+    });
 }
 
 /// Site name → `is_wordpress`, refreshed on every router rebuild - see

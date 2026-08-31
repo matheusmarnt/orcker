@@ -10,6 +10,56 @@ Deviations, clarifications and trade-offs recorded by implementation cycles
 - Impact: <files/specs/requirements affected; follow-up spec id if any>
 ```
 
+## 2026-08-31 · SPEC-0004 — the Docker model lives in `orcker-ipc`, not `orcker-engine`
+
+- Decision: R2's detection model ships as `orcker_ipc::DockerStatus` /
+  `SocketKind` / `ComposeStatus` / `EngineProblem`, with versions as strings on
+  the wire, and `orcker-engine` depends on `orcker-ipc` to assemble it. The spec
+  named the types `EngineStatus` / `SocketAddrKind` and typed the versions as
+  `Option<Version>` inside `orcker-engine`.
+- Why: the model has to cross the wire, and `orcker-doctor` is the standing
+  precedent - a pure crate that consumes `orcker_ipc::Diagnosis`. Defining it in
+  `orcker-engine` instead would have put `bollard` in the dependency graph of
+  every client, or forced a feature-gated split for one type. `Response` is
+  named `EngineStatus` as the spec asked; only the payload type is renamed, to
+  avoid a variant and a struct sharing one name. Versions cross as strings
+  because Docker and compose do not report strict semver (`v2.29.7`,
+  `27.4.0-rc.1`) and the minimums are two-component, so `orcker_engine::pure::Version`
+  owns parsing and ordering and `orcker-ipc` gains no version dependency.
+- Impact: `crates/orcker-ipc/src/engine.rs` is new; `crates/orcker-engine`
+  depends on `orcker-ipc`. Forced, not merely preferred: the alternative of
+  hanging the section off `StatusReport` is impossible inside SPEC-0004's
+  surface, because `StatusReport` is not `#[non_exhaustive]` and
+  `crates/orcker-mcp/tests/render.rs` builds it with a full struct literal. That
+  is also why the docker section reaches `orcker status` through a second round
+  trip rather than a new `StatusReport` field.
+
+## 2026-08-31 · SPEC-0004 — bollard ships with no TLS feature at all
+
+- Decision: `bollard = { version = "0.21", default-features = false, features =
+  ["http", "pipe"] }`. The spec asked for "rustls features only".
+- Why: bollard's TLS is opt-in (`ssl*`, which pulls OpenSSL), so enabling
+  nothing is stricter than enabling rustls and satisfies the same rule. Orcker
+  talks to a local unix socket; an https Docker endpoint is not a supported
+  configuration. `pipe` rather than `hyperlocal` because
+  `Docker::connect_with_socket` sits in an `#[cfg(all(feature = "pipe", …))]`
+  impl block; `pipe`'s Windows half is already `cfg(windows)`-gated upstream.
+- Impact: `Cargo.toml`, `Cargo.lock` (5 new entries, zero TLS crates). If a
+  future spec needs `tcp+tls://`, it must revisit this and add the rustls
+  feature deliberately - the comment beside the dependency says so.
+
+## 2026-08-31 · SPEC-0004 — pure-crate coverage is still unrecorded
+
+- Decision: `Pure-crate coverage` stays `—` in this cycle's traceability row.
+- Why: SPEC-0047 added the column and required cycles from that point on to fill
+  it in, but no coverage tool is installed on the machine and installing one is
+  outside any surface this spec declares. Guessing a number would be worse than
+  an honest dash.
+- Impact: SPEC-0004 is the first cycle to ship a pure crate and still cannot
+  answer the SDD section 11 metric. Queued as SPEC-0048
+  (`pure-crate-coverage-metric`), which must pick a tool and wire it in as a
+  reported number.
+
 ## 2026-08-30 · SPEC-0042 — historical records are never rewritten
 
 - Decision: `specs/TRACEABILITY.md` and `specs/logs/*.md` keep the wrong

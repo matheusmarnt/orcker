@@ -142,6 +142,13 @@ pub enum Request {
     DaemonInfo,
     /// Fetch a read-only [`crate::StatusReport`] of daemon/proxy/DNS/PHP health.
     Status,
+    /// Fetch a read-only [`crate::DockerStatus`] of the Docker environment.
+    ///
+    /// Separate from [`Self::Status`] because the probe talks to the Docker
+    /// daemon: the reply comes from a short-lived cache the daemon owns, so a
+    /// dead engine costs one connect attempt per TTL rather than one per
+    /// `orcker status`.
+    EngineStatus,
     /// Run the doctor checks and return the resulting diagnoses.
     Diagnose,
     /// Run the doctor checks, attempt the safe auto-fixes, and report what
@@ -480,6 +487,7 @@ mod variant_name_pinning {
             Request::ResetDomains { .. } => {}
             Request::DaemonInfo => {}
             Request::Status => {}
+            Request::EngineStatus => {}
             Request::Diagnose => {}
             Request::DoctorFix => {}
             Request::RestartDaemon => {}
@@ -575,6 +583,7 @@ mod variant_name_pinning {
         pin(Request::ResetDomains { name: "foo".into() });
         pin(Request::DaemonInfo);
         pin(Request::Status);
+        pin(Request::EngineStatus);
         pin(Request::Diagnose);
         pin(Request::DoctorFix);
         pin(Request::RestartDaemon);

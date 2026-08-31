@@ -35,6 +35,7 @@ orcker-dns       = { path = "../../crates/orcker-dns" }
 orcker-tunnel    = { path = "../../crates/orcker-tunnel" }
 orcker-proxy     = { path = "../../crates/orcker-proxy" }
 orcker-doctor    = { path = "../../crates/orcker-doctor" }
+orcker-engine    = { path = "../../crates/orcker-engine" }
 orcker-mail      = { path = "../../crates/orcker-mail" }
 orcker-update    = { path = "../../crates/orcker-update" }
 orcker-release-manifest = { path = "../../crates/orcker-release-manifest" }

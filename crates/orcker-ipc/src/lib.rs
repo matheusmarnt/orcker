@@ -22,6 +22,7 @@
 //! unknown `type` tag arrives.
 
 mod create;
+mod engine;
 mod error;
 mod frame;
 mod message;
@@ -43,6 +44,7 @@ mod transport;
 pub const PROTOCOL_VERSION: u32 = 2;
 
 pub use create::{JobId, JobState};
+pub use engine::{ComposeStatus, DockerStatus, EngineProblem, EngineProblemCode, SocketKind};
 pub use error::{FrameError, IpcError, IpcErrorKind};
 pub use frame::{encode_frame, FrameDecoder, DEFAULT_MAX_FRAME};
 pub use message::{decode_message, encode_message};

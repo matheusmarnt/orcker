@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members  = ["crates/orcker-core", "crates/orcker-stack", "crates/orcker-ipc", "crates/orcker-config", "crates/orcker-tls", "crates/orcker-platform", "crates/orcker-dns", "crates/orcker-tunnel", "crates/orcker-proxy", "crates/orcker-doctor", "crates/orcker-mail", "crates/orcker-mcp", "crates/orcker-update", "crates/orcker-release-manifest", "crates/orcker-service-ctl", "crates/orcker-depcheck", "bin/orcker-helper", "bin/orckerd", "bin/orcker", "apps/orcker-gui/src-tauri", "xtask"]
+members  = ["crates/orcker-core", "crates/orcker-stack", "crates/orcker-engine", "crates/orcker-ipc", "crates/orcker-config", "crates/orcker-tls", "crates/orcker-platform", "crates/orcker-dns", "crates/orcker-tunnel", "crates/orcker-proxy", "crates/orcker-doctor", "crates/orcker-mail", "crates/orcker-mcp", "crates/orcker-update", "crates/orcker-release-manifest", "crates/orcker-service-ctl", "crates/orcker-depcheck", "bin/orcker-helper", "bin/orckerd", "bin/orcker", "apps/orcker-gui/src-tauri", "xtask"]
 
 [workspace.package]
 version      = "0.0.0"
@@ -19,6 +19,14 @@ semver      = "1"
 minisign-verify = "0.2"
 minisign    = "0.7"
 tokio       = { version = "1", default-features = false, features = ["io-util"] }
+# Docker Engine API client for orcker-engine's I/O edge. The feature set is
+# spelled out rather than inherited so a future change to bollard's defaults
+# cannot quietly add a TLS stack: every `ssl*` feature stays off, which is what
+# satisfies the workspace's rustls-only rule (bollard's ssl pulls OpenSSL) and
+# keeps `bin/orckerd/tests/no_runtime_deps.rs` green. `pipe` gates the unix
+# socket API, and its `hyper-named-pipe` half is already cfg(windows)-only, so
+# it costs nothing here; `http` brings hyper-util, already a workspace dep.
+bollard     = { version = "0.21", default-features = false, features = ["http", "pipe"] }
 tempfile    = "=3.10.1"
 rcgen            = { version = "=0.13.2", default-features = false, features = ["pem", "crypto", "ring", "x509-parser"] }
 sha2             = { version = "0.10", default-features = false }
