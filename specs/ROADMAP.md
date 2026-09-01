@@ -79,3 +79,6 @@ Never a merge, never a bulk sync. Numbered above the reserved Phase-1 range.
 | 47 | SPEC-0047-traceability-record-repair | accepted | FR-001 | SPEC-0045 |
 | 48 | SPEC-0048-pure-crate-coverage-metric | draft | FR-001 | SPEC-0047 |
 | 49 | SPEC-0049-engine-detection-test-gaps | draft | FR-010 | SPEC-0004 |
+| 50 | SPEC-0050-ipc-variant-literal-precheck | draft | FR-002 | SPEC-0004, SPEC-0006 |
+| 51 | SPEC-0051-cover-container-link-cli-semantics | draft | FR-021 | SPEC-0006 |
+| 52 | SPEC-0052-evidence-blocks-must-be-captured | draft | FR-001 | SPEC-0045, SPEC-0047 |
