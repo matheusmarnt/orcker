@@ -35,6 +35,23 @@ pub enum Request {
         /// The directory to link.
         path: PathBuf,
     },
+    /// Enumerate the linked container projects.
+    ListProjects,
+    /// Link a directory as a container project: register it, read or create
+    /// its `orcker.yml`, and allocate the loopback port its stack publishes
+    /// on. Idempotent - relinking an already-linked project changes nothing.
+    ///
+    /// Distinct from [`Self::Link`], which registers a directory served from
+    /// disk. `name` defaults to the directory's own name; `port` pins the
+    /// allocation instead of letting the daemon choose.
+    LinkProject {
+        /// The project directory.
+        path: PathBuf,
+        /// The site name to register under. `None` derives it from `path`.
+        name: Option<String>,
+        /// A specific loopback port to claim. `None` allocates one.
+        port: Option<u16>,
+    },
     /// Remove a linked or parked site by name.
     Unlink {
         /// The site name to remove.
@@ -476,6 +493,8 @@ mod variant_name_pinning {
             Request::ListSites => {}
             Request::Park { .. } => {}
             Request::Link { .. } => {}
+            Request::ListProjects => {}
+            Request::LinkProject { .. } => {}
             Request::Unlink { .. } => {}
             Request::ListParked => {}
             Request::Unpark { .. } => {}
@@ -556,6 +575,12 @@ mod variant_name_pinning {
         pin(Request::Link {
             name: "x".into(),
             path: PathBuf::from("/x"),
+        });
+        pin(Request::ListProjects);
+        pin(Request::LinkProject {
+            path: PathBuf::from("/x"),
+            name: None,
+            port: None,
         });
         pin(Request::Unlink { name: "x".into() });
         pin(Request::ListParked);

@@ -225,6 +225,14 @@ fn is_under_root(docroot: &str, root: &str) -> bool {
 /// `apply_link`'s promotion; otherwise the site vanishes and the delta is dropped.
 fn apply_unlink(cfg: &mut Config, router: &SiteRouter, name: &str) -> Result<Applied, MutateError> {
     let name_lc = name.to_ascii_lowercase();
+    if let Some(project) = cfg.projects.iter().find(|p| p.name() == name_lc) {
+        let port = project.port();
+        cfg.projects.retain(|p| p.name() != name_lc);
+        cfg.domains.proxy.remove(&name_lc);
+        return Ok(Applied {
+            summary: format!("unlinked project {name_lc} (freed port {port})"),
+        });
+    }
     let Some(site) = cfg.linked.iter().find(|s| s.name() == name_lc) else {
         return if router.get(&name_lc).is_some() {
             Err(MutateError::NotFound(format!(
@@ -290,6 +298,11 @@ fn apply_set_secure(
         proxy.set_secure(secure);
         Ok(Applied {
             summary: format!("proxy {name_lc} secure={secure}"),
+        })
+    } else if let Some(project) = cfg.projects.iter_mut().find(|p| p.name() == name_lc) {
+        project.set_secure(secure);
+        Ok(Applied {
+            summary: format!("project {name_lc} secure={secure}"),
         })
     } else {
         Err(MutateError::NotFound(format!("no site named {name_lc}")))
@@ -978,6 +991,31 @@ mod tests {
 
     fn empty_router() -> SiteRouter {
         SiteRouter::new(RouterConfig::with_tld(Tld::new("test").unwrap()))
+    }
+
+    fn config_with_project() -> Config {
+        let mut cfg = Config::default();
+        cfg.projects
+            .push(orcker_core::ContainerProject::new("spike", "/srv/spike", 20000).unwrap());
+        cfg
+    }
+
+    #[test]
+    fn set_secure_promotes_a_container_project() {
+        let mut cfg = config_with_project();
+        apply_set_secure(&mut cfg, &empty_router(), "spike", true).unwrap();
+        assert!(
+            cfg.projects.first().unwrap().secure(),
+            "orcker secure <project> must flip the project's HTTPS flag (R8)"
+        );
+    }
+
+    #[test]
+    fn unlink_removes_a_container_project_and_frees_its_port() {
+        let mut cfg = config_with_project();
+        apply_unlink(&mut cfg, &empty_router(), "spike").unwrap();
+        assert!(cfg.projects.is_empty());
+        assert!(orcker_config::taken_ports(&cfg).is_empty());
     }
 
     fn router_with_parked(name: &str, root: &str) -> SiteRouter {

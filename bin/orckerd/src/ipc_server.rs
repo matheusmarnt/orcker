@@ -16,7 +16,7 @@ use orcker_ipc::{
 
 use crate::error::DaemonError;
 use crate::state::DaemonState;
-use crate::{mutate, startup};
+use crate::{link, mutate, startup};
 
 /// Run the IPC accept loop until `shutdown_rx` resolves.
 pub async fn run(
@@ -85,6 +85,50 @@ async fn handle_client(stream: IpcStream, state: Arc<DaemonState>) {
             return;
         }
     }
+}
+
+/// Builds the payload of a [`Response::Projects`] reply.
+///
+/// Each project's `orcker.yml` is read from its root on every call: that file
+/// is the project's own source of truth (FR-024), so the daemon does not mirror
+/// it into `orcker.toml`. A missing or invalid descriptor leaves the optional
+/// fields empty rather than failing the whole listing. Cache it the way
+/// `wordpress_sites` is cached if this listing's polling ever costs.
+fn project_entries(
+    config: &orcker_config::Config,
+    router: &orcker_core::SiteRouter,
+) -> Vec<orcker_ipc::ProjectEntry> {
+    let mut entries: Vec<_> = config
+        .projects
+        .iter()
+        .map(|p| {
+            let yml = std::fs::read_to_string(p.root().join(orcker_config::orcker_yml::FILE_NAME))
+                .ok()
+                .and_then(|raw| orcker_config::OrckerYml::parse(&raw).ok());
+            orcker_ipc::ProjectEntry {
+                name: p.name().to_owned(),
+                root: p.root().to_path_buf(),
+                port: p.port(),
+                secure: p.secure(),
+                primary_domain: Some(project_domain(router, p.name(), config.tld.as_str())),
+                schema_version: yml.as_ref().map(|y| y.schema_version),
+                php: yml.as_ref().map(|y| y.php),
+                db: yml.as_ref().map(|y| y.db.clone()),
+                preset: yml.map(|y| y.preset),
+            }
+        })
+        .collect();
+    entries.sort_by(|a, b| a.name.cmp(&b.name));
+    entries
+}
+
+/// A project's primary FQDN, taken from the live router so a custom domain or a
+/// non-default TLD is reflected, and falling back to the apex when the router
+/// does not hold the project (a name collision dropped it).
+fn project_domain(router: &orcker_core::SiteRouter, name: &str, tld: &str) -> String {
+    site_entry_domains(router, name, tld)
+        .0
+        .unwrap_or_else(|| format!("{name}.{tld}"))
 }
 
 #[allow(clippy::too_many_lines)]
@@ -175,6 +219,13 @@ async fn dispatch(req: Request, state: &DaemonState) -> Response {
                 handle_mutation(req, state).await
             }
         }
+        Request::ListProjects => {
+            let router = state.router.read().await;
+            Response::Projects {
+                projects: project_entries(&*state.config.lock().await, &router),
+            }
+        }
+        Request::LinkProject { .. } => handle_link_project(req, state).await,
         Request::ListProxies => list_proxies(state).await,
         Request::ListRoutes => list_routes(state).await,
         Request::ListGroups => {
@@ -1154,36 +1205,184 @@ pub(crate) async fn handle_mutation(req: Request, state: &DaemonState) -> Respon
         }
     }
 
+    if let Some(failure) = commit_config(new, &mut cfg_guard, state, &applied.summary).await {
+        return failure;
+    }
+    drop(cfg_guard);
+    Response::Ok
+}
+
+/// Handles [`Request::LinkProject`]: register a directory as a container
+/// project on a persistent loopback port (FR-021, FR-013).
+///
+/// The I/O lives here (canonicalising the path, reading or creating
+/// `orcker.yml`, probing ports); the decision is [`link::plan_link`], which is
+/// pure and takes the probe as a trait. A relink of an already-registered
+/// directory touches neither the config nor the descriptor.
+async fn handle_link_project(req: Request, state: &DaemonState) -> Response {
+    let Request::LinkProject { path, name, port } = req else {
+        return internal("handle_link_project called with the wrong request".to_owned());
+    };
+
+    let root = match canonicalize_dir(&path) {
+        Ok(p) => p,
+        Err(resp) => return resp,
+    };
+    let descriptor_path = root.join(orcker_config::orcker_yml::FILE_NAME);
+    let existing = match std::fs::read_to_string(&descriptor_path) {
+        Ok(raw) => match orcker_config::OrckerYml::parse(&raw) {
+            Ok(yml) => Some(yml),
+            Err(e) => {
+                return Response::Error {
+                    code: ErrorCode::InvalidPath,
+                    message: format!("{}: {e}", descriptor_path.display()),
+                }
+            }
+        },
+        Err(_) => None,
+    };
+
+    let mut cfg_guard = state.config.lock().await;
+    let mut new = cfg_guard.clone();
+
+    let plan = match link::plan_link(
+        &new,
+        &root,
+        name.as_deref(),
+        port,
+        existing.as_ref(),
+        &link::TcpPortProbe,
+    ) {
+        Ok(plan) => plan,
+        Err(e) => {
+            return Response::Error {
+                code: link_error_code(&e),
+                message: e.to_string(),
+            }
+        }
+    };
+
+    let (project, descriptor, wrote_descriptor) = match plan {
+        link::LinkPlan::AlreadyLinked { project } => {
+            let domain = project_domain(
+                &*state.router.read().await,
+                project.name(),
+                new.tld.as_str(),
+            );
+            return Response::Project {
+                project: Box::new(project_entry(&project, existing.as_ref(), domain)),
+                created: false,
+                wrote_descriptor: false,
+            };
+        }
+        link::LinkPlan::Link { project, write_yml } => match write_yml {
+            Some(yml) => {
+                if let Err(e) = std::fs::write(&descriptor_path, yml.render()) {
+                    return internal(format!(
+                        "could not write {}: {e}",
+                        descriptor_path.display()
+                    ));
+                }
+                (project, Some(yml), true)
+            }
+            None => (project, existing, false),
+        },
+    };
+
+    let tld = new.tld.as_str().to_owned();
+    let summary = format!(
+        "linked project {} on port {}",
+        project.name(),
+        project.port()
+    );
+    new.projects.push(project.clone());
+    if let Some(failure) = commit_config(new, &mut cfg_guard, state, &summary).await {
+        return failure;
+    }
+    drop(cfg_guard);
+
+    let domain = project_domain(&*state.router.read().await, project.name(), &tld);
+    Response::Project {
+        project: Box::new(project_entry(&project, descriptor.as_ref(), domain)),
+        created: true,
+        wrote_descriptor,
+    }
+}
+
+/// Maps a [`link::LinkError`] onto the wire error code clients match on.
+fn link_error_code(e: &link::LinkError) -> ErrorCode {
+    match e {
+        link::LinkError::NameTaken { .. } => ErrorCode::AlreadyExists,
+        link::LinkError::PortTaken { .. } => ErrorCode::PortReserved,
+        link::LinkError::Core(orcker_core::CoreError::PortRangeExhausted { .. }) => {
+            ErrorCode::PortRangeExhausted
+        }
+        link::LinkError::NoName { .. } | link::LinkError::Config(_) | link::LinkError::Core(_) => {
+            ErrorCode::InvalidPath
+        }
+    }
+}
+
+/// One project's wire entry, with the descriptor fields filled in from `yml`.
+fn project_entry(
+    project: &orcker_core::ContainerProject,
+    yml: Option<&orcker_config::OrckerYml>,
+    domain: String,
+) -> orcker_ipc::ProjectEntry {
+    orcker_ipc::ProjectEntry {
+        name: project.name().to_owned(),
+        root: project.root().to_path_buf(),
+        port: project.port(),
+        secure: project.secure(),
+        primary_domain: Some(domain),
+        schema_version: yml.map(|y| y.schema_version),
+        php: yml.map(|y| y.php),
+        db: yml.map(|y| y.db.clone()),
+        preset: yml.map(|y| y.preset.clone()),
+    }
+}
+
+/// Validates `new`, rebuilds the router from it, saves it, and swaps both into
+/// the live state. Returns the error [`Response`] on failure and `None` on
+/// success, leaving the caller to send its own success reply.
+///
+/// Shared by [`handle_mutation`] and [`handle_link_project`] so the commit
+/// sequence (validate, rebuild, save, swap, notify the watcher) exists once.
+async fn commit_config(
+    new: orcker_config::Config,
+    cfg_guard: &mut tokio::sync::MutexGuard<'_, orcker_config::Config>,
+    state: &DaemonState,
+    summary: &str,
+) -> Option<Response> {
     if let Err(e) = new.validate() {
-        return internal(format!("config validation failed: {e}"));
+        return Some(internal(format!("config validation failed: {e}")));
     }
 
     let (candidate, candidate_wordpress, candidate_laravel) =
         match startup::build_router(&new, &state.dirs, &state.detect_cache) {
             Ok(r) => r,
             Err(DaemonError::Core(orcker_core::CoreError::DuplicateSite { name })) => {
-                return Response::Error {
+                return Some(Response::Error {
                     code: ErrorCode::AlreadyExists,
                     message: format!("duplicate site: {name}"),
-                }
+                })
             }
-            Err(e) => return internal(format!("router rebuild failed: {e}")),
+            Err(e) => return Some(internal(format!("router rebuild failed: {e}"))),
         };
 
     if let Err(e) = new.save(&state.config_path) {
-        return internal(format!("config save failed: {e}"));
+        return Some(internal(format!("config save failed: {e}")));
     }
 
-    *cfg_guard = new;
+    **cfg_guard = new;
     *state.router.write().await = candidate;
     *state.wordpress_sites.write().await = candidate_wordpress;
     *state.laravel_sites.write().await = candidate_laravel;
-    drop(cfg_guard);
 
     state.watch_dirty.notify_one();
 
-    tracing::info!(summary = %applied.summary, "applied mutation");
-    Response::Ok
+    tracing::info!(summary, "applied mutation");
+    None
 }
 
 /// Whether `url` is a loopback target on one of Orcker's **actively bound** proxy

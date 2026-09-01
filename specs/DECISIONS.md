@@ -10,6 +10,66 @@ Deviations, clarifications and trade-offs recorded by implementation cycles
 - Impact: <files/specs/requirements affected; follow-up spec id if any>
 ```
 
+## 2026-08-31 · SPEC-0006 — a container project routes as a `ProxySite`, not a new site kind
+
+- Decision: R1 asked `orcker-core` for a site kind for container projects. It
+  got `ContainerProject` (name, root, port, secure) plus a `proxy_site()`
+  projection onto the existing `ProxySite`, inserted by
+  `bin/orckerd/src/site_domains.rs::plan_proxies`. No new `Route` arm.
+- Why: `Site` is the on-disk-served model (document root, web subpath, PHP), and
+  a third routing arm would have required `crates/orcker-proxy/`, outside the
+  spec's surface. SPEC-0005 had already proved the whole-host proxy path serves a
+  containerized app over HTTPS with websockets and **zero** code delta, so
+  consolidating onto it is what R1's own "consolidate, do not duplicate" asks
+  for. The spec's Context section already retires R1's premise.
+- Impact: `crates/orcker-core/src/project.rs`, `bin/orckerd/src/site_domains.rs`.
+  Phase-1 specs that expect a `SiteKind::Container` (SPEC-0012, SPEC-0014) should
+  read the registry as a separate list, not as a variant of `Site`.
+
+## 2026-08-31 · SPEC-0006 — projects ship as their own IPC reply, not a field on `Response::Sites`
+
+- Decision: R7's "additive messages for link/unlink/list" became
+  `Request::LinkProject`, `Request::ListProjects`, `Response::Project`,
+  `Response::Projects` and a reused `Request::Unlink`. The first attempt added a
+  `projects` field to `Response::Sites` and was backed out.
+- Why: `crates/orcker-mcp/tests/render.rs` builds `Response::Sites` with a full
+  struct literal and sits outside this spec's surface, so growing the variant
+  breaks a file the cycle may not touch. Exactly the trap SPEC-0004 hit with
+  `StatusReport`. `orcker sites` now sends two requests and renders one table,
+  the pattern `orcker status` already uses for `Status` + `EngineStatus`.
+- Impact: `crates/orcker-ipc/src/{request,response}.rs`, `bin/orcker/src/lib.rs`
+  (`run_sites`), `bin/orcker/src/map.rs` (`render_sites`). Any future spec adding
+  data to a `Response` variant should check for out-of-surface struct literals
+  first; the wire being additive is not sufficient.
+
+## 2026-08-31 · SPEC-0006 — `orcker link` is the container link; the native link stays on the wire
+
+- Decision: `Command::Link` maps to `Request::LinkProject`. The inherited
+  `Request::Link` (an on-disk site) is untouched and still served for the GUI,
+  and `orcker::resolve_link` stays public.
+- Why: `.github/instructions/orcker-cli.instructions.md` states the command
+  surface is designed fresh and must not port a prior tool's vocabulary, and PRD
+  FR-021 defines `orcker link` as the project-adoption command. Confirmed with
+  the human before implementation.
+- Impact: `bin/orcker/src/{cli,lib,map}.rs`. `bin/orcker/tests/cli_e2e.rs` still
+  exercises only the legacy path, since it calls `resolve_link` directly rather
+  than going through `map::to_request`; the new CLI semantics rest on manual
+  evidence until SPEC-0014 revisits link/park.
+
+## 2026-08-31 · SPEC-0006 — the golden thread was driven without DNS or a privileged bind
+
+- Decision: AC5's request went to `127.0.0.1:8443` with SNI and
+  `Host: spike.test`, not to `https://spike.test` on 443 as R8 words it.
+- Why: the isolated dev instance binds the rootless fallback ports and installs
+  no `.test` resolver. Both fixes (`orcker elevate ports`, `orcker elevate
+  resolver`) are privileged changes to the human's machine, which an agent must
+  not make unattended. Everything R8 tests is still exercised: allocated port to
+  registry to router to proxy to a CA-signed leaf for `spike.test`. The two
+  untested pieces are inherited and were proven by SPEC-0005 on the same stack.
+- Impact: `specs/logs/SPEC-0006.md` AC5. A human closes the literal form with
+  `orcker elevate ports resolver` and a browser. FR-003 AC1 should be re-read
+  against that before Phase 0 is declared exit-ready.
+
 ## 2026-08-31 · SPEC-0004 — the Docker model lives in `orcker-ipc`, not `orcker-engine`
 
 - Decision: R2's detection model ships as `orcker_ipc::DockerStatus` /

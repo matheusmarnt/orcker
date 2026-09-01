@@ -30,17 +30,19 @@ pub enum Command {
         /// Directory to park.
         path: PathBuf,
     },
-    /// Link a single directory as a named site. With one argument, infers
-    /// whichever of name/path is missing; with none, links the current
-    /// directory under its folder name.
+    /// Link a directory as a container project: register it, create its
+    /// `orcker.yml` when absent, and allocate the loopback port its stack
+    /// publishes on. Idempotent: relinking changes nothing.
     Link {
-        /// A site name (bare word), or a directory to link (its folder name
-        /// becomes the site name). Omit entirely to link the current
-        /// directory.
-        name_or_path: Option<String>,
-        /// Directory to serve, when the first argument is a name. Omit to
-        /// use the current directory.
+        /// Directory to link. Omit to link the current directory.
         path: Option<PathBuf>,
+        /// Site name to register under. Defaults to the directory's own name,
+        /// or the `site` already recorded in the project's `orcker.yml`.
+        #[arg(long)]
+        name: Option<String>,
+        /// Loopback port to claim instead of letting the daemon allocate one.
+        #[arg(long)]
+        port: Option<u16>,
     },
     /// Remove a linked site by name.
     Unlink {

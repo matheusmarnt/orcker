@@ -56,6 +56,15 @@ pub enum CoreError {
         reason: SiteNameErrorReason,
     },
 
+    /// Every port in the container-project range is already allocated or busy.
+    #[error("no free loopback port in {first}..={last}")]
+    PortRangeExhausted {
+        /// First port of the exhausted range.
+        first: u16,
+        /// Last port of the exhausted range (inclusive).
+        last: u16,
+    },
+
     /// A string failed to validate as a [`Domain`](crate::Domain).
     #[error("invalid domain {input:?}: {reason}")]
     InvalidDomain {

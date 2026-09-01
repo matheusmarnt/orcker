@@ -10,8 +10,8 @@ use std::fmt::Write as _;
 use orcker_core::{PhpVersion, Site, SiteKind};
 use orcker_ipc::{
     Channel, CloudflaredStatus, ComposeStatus, Diagnosis, DockerStatus, FixReport, PortStatus,
-    Request, Response, Severity, SiteEntry, SocketKind, StatusReport, ToolStatus, TunnelInfo,
-    TunnelRunState, UpdateSource,
+    ProjectEntry, Request, Response, Severity, SiteEntry, SocketKind, StatusReport, ToolStatus,
+    TunnelInfo, TunnelRunState, UpdateSource,
 };
 
 use crate::cli::{Command, MailAction, TunnelAction};
@@ -492,8 +492,14 @@ pub fn render(resp: &Response, json: bool) -> Rendered {
     match resp {
         Response::Pong => Rendered::ok("pong".to_owned()),
         Response::Ok => Rendered::ok("ok".to_owned()),
-        Response::Sites { sites } => Rendered::ok(format_sites(sites)),
+        Response::Sites { sites } => Rendered::ok(format_sites(sites, &[])),
+        Response::Projects { projects } => Rendered::ok(format_projects(projects)),
         Response::Parked { paths } => Rendered::ok(format_parked(paths)),
+        Response::Project {
+            project,
+            created,
+            wrote_descriptor,
+        } => Rendered::ok(format_linked_project(project, *created, *wrote_descriptor)),
         Response::Error { code: c, message } => Rendered::err(format!("error ({c:?}): {message}")),
         Response::RemoteSetup {
             code: _,
@@ -673,9 +679,12 @@ pub fn doctor_exit_code(resp: &Response) -> u8 {
 /// Renders the `orcker sites` table. The optional WORDPRESS and DOMAIN columns are
 /// added only when at least one listed site needs them, so the common case's
 /// table stays unchanged; full per-site domain lists live in `orcker domain list`.
-fn format_sites(sites: &[SiteEntry]) -> String {
-    if sites.is_empty() {
+fn format_sites(sites: &[SiteEntry], projects: &[ProjectEntry]) -> String {
+    if sites.is_empty() && projects.is_empty() {
         return "no sites".to_owned();
+    }
+    if sites.is_empty() {
+        return format_projects(projects);
     }
     let show_wordpress = sites.iter().any(|entry| entry.is_wordpress);
     let show_domain = sites
@@ -727,6 +736,74 @@ fn format_sites(sites: &[SiteEntry]) -> String {
             let wp = if entry.is_wordpress { "yes" } else { "-" };
             let _ = write!(out, "\t{wp}");
         }
+    }
+    if !projects.is_empty() {
+        out.push_str("\n\n");
+        out.push_str(&format_projects(projects));
+    }
+    out
+}
+
+/// Renders `orcker sites`: the on-disk site table followed by the container
+/// project table. In `--json` the two replies are merged into one object so a
+/// script sees a single document.
+#[must_use]
+pub fn render_sites(sites: &[SiteEntry], projects: &[ProjectEntry], json: bool) -> Rendered {
+    if json {
+        let body = serde_json::to_string_pretty(&serde_json::json!({
+            "sites": sites,
+            "projects": projects,
+        }))
+        .unwrap_or_else(|e| format!("{{\"error\":\"serialize failed: {e}\"}}"));
+        return Rendered {
+            stdout: body,
+            stderr: String::new(),
+            code: 0,
+        };
+    }
+    Rendered::ok(format_sites(sites, projects))
+}
+
+/// The reply to `orcker link`: the site's URL plus what the command actually
+/// changed. A relink states that nothing changed (R5 idempotence).
+fn format_linked_project(project: &ProjectEntry, created: bool, wrote_descriptor: bool) -> String {
+    let scheme = if project.secure { "https" } else { "http" };
+    let host = project.primary_domain.as_deref().unwrap_or(&project.name);
+    let mut out = if created {
+        format!(
+            "linked {} -> {scheme}://{host} (upstream 127.0.0.1:{})",
+            project.name, project.port
+        )
+    } else {
+        format!(
+            "{} is already linked on port {}; nothing changed",
+            project.name, project.port
+        )
+    };
+    if wrote_descriptor {
+        let _ = write!(out, "\ncreated {}/orcker.yml", project.root.display());
+    }
+    out
+}
+
+/// The container-project table: one row per linked project with its loopback
+/// port and the values its own `orcker.yml` declares (`-` when the file is
+/// missing or unreadable).
+fn format_projects(projects: &[ProjectEntry]) -> String {
+    let mut out = String::from("PROJECT\tDOMAIN\tPORT\tSECURE\tPHP\tDB\tPRESET\tROOT");
+    for p in projects {
+        let _ = write!(
+            out,
+            "\n{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
+            p.name,
+            p.primary_domain.as_deref().unwrap_or("-"),
+            p.port,
+            p.secure,
+            p.php.map_or_else(|| "-".to_owned(), |v| v.to_string()),
+            p.db.as_deref().unwrap_or("-"),
+            p.preset.as_deref().unwrap_or("-"),
+            p.root.display()
+        );
     }
     out
 }

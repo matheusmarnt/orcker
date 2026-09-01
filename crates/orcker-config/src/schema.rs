@@ -7,7 +7,9 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use orcker_core::{Domain, PhpVersion, ProxyRule, ProxySite, RouteRule, Site, Tld};
+use orcker_core::{
+    ContainerProject, Domain, PhpVersion, ProxyRule, ProxySite, RouteRule, Site, Tld,
+};
 
 /// Top-level on-disk config.
 ///
@@ -64,6 +66,10 @@ pub struct Config {
     pub parked: ParkedSection,
     /// Explicitly linked sites. Order is preserved on round-trip.
     pub linked: Vec<Site>,
+    /// Linked container projects: a directory served by its own container
+    /// stack, reached through the loopback port allocated for it. Order is
+    /// preserved on round-trip. Empty by default.
+    pub projects: Vec<ContainerProject>,
     /// Per-site overrides for **parked** sites, keyed by document-root path.
     ///
     /// A parked site is otherwise derived purely from its directory listing, so
@@ -117,6 +123,7 @@ impl Default for Config {
             php: PhpSection::default(),
             parked: ParkedSection::default(),
             linked: Vec::new(),
+            projects: Vec::new(),
             overrides: BTreeMap::new(),
             services: ServicesSection::default(),
             mail: MailSection::default(),

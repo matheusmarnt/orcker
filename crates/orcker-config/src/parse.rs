@@ -139,6 +139,22 @@ struct Wire {
     // v20: optional `[route_rules]` table; absent in v19 and earlier → empty.
     #[serde(default)]
     route_rules: RouteRulesSectionWire,
+    // v24: optional `[[projects]]` array; absent in v23 and earlier → empty.
+    // Emitted last so an existing config's byte shape is untouched.
+    #[serde(default)]
+    projects: Vec<ProjectWire>,
+}
+
+/// One `[[projects]]` table: a container project's name, directory, allocated
+/// loopback port, and HTTPS flag.
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ProjectWire {
+    name: String,
+    root: PathBuf,
+    port: u16,
+    #[serde(default)]
+    secure: bool,
 }
 
 /// One `[[proxies]]` table: a whole-host proxy's name, upstream, and HTTPS flag.
@@ -602,6 +618,7 @@ impl TryFrom<Wire> for Config {
             proxy: convert_domain_deltas(w.domains.proxy)?,
         };
         let proxies = convert_proxies(w.proxies)?;
+        let projects = convert_projects(w.projects)?;
         let proxy_rules = crate::schema::ProxyRulesSection {
             linked: convert_proxy_rules(w.proxy_rules.linked)?,
             parked: convert_proxy_rules(w.proxy_rules.parked)?,
@@ -623,6 +640,7 @@ impl TryFrom<Wire> for Config {
             php,
             parked,
             linked,
+            projects,
             overrides,
             services,
             mail,
@@ -635,6 +653,21 @@ impl TryFrom<Wire> for Config {
             route_rules,
         })
     }
+}
+
+/// Convert `[[projects]]` wire tables into validated
+/// [`orcker_core::ContainerProject`]s. A bad name surfaces as
+/// [`ConfigError::Core`].
+fn convert_projects(
+    wire: Vec<ProjectWire>,
+) -> Result<Vec<orcker_core::ContainerProject>, ConfigError> {
+    wire.into_iter()
+        .map(|p| {
+            let mut project = orcker_core::ContainerProject::new(&p.name, p.root, p.port)?;
+            project.set_secure(p.secure);
+            Ok(project)
+        })
+        .collect()
 }
 
 /// Convert `[[proxies]]` wire tables into validated [`orcker_core::ProxySite`]s.
@@ -1352,7 +1385,7 @@ mod tests {
         match Config::from_toml("version = 99\n") {
             Err(ConfigError::UnsupportedVersion {
                 found: 99,
-                current: 23,
+                current: 24,
             }) => {}
             other => panic!("expected UnsupportedVersion, got {other:?}"),
         }
@@ -1569,7 +1602,7 @@ mod tests {
 
     #[test]
     #[allow(clippy::field_reassign_with_default)]
-    fn v22_config_migrates_to_v23_changing_only_the_version_line() {
+    fn v23_config_migrates_to_v24_changing_only_the_version_line() {
         let mut c = Config::default();
         c.domains.linked.insert(
             "blog".to_owned(),
@@ -1579,15 +1612,15 @@ mod tests {
                 primary: None,
             },
         );
-        let v23 = c.to_toml().unwrap();
-        let v22 = v23.replacen("version = 23\n", "version = 22\n", 1);
+        let v24 = c.to_toml().unwrap();
+        let v23 = v24.replacen("version = 24\n", "version = 23\n", 1);
         assert_ne!(
-            v22, v23,
+            v23, v24,
             "the replace must actually downgrade the version line"
         );
-        let migrated = Config::from_toml(&v22).unwrap();
+        let migrated = Config::from_toml(&v23).unwrap();
         assert_eq!(migrated, c);
-        assert_eq!(migrated.to_toml().unwrap(), v23);
+        assert_eq!(migrated.to_toml().unwrap(), v24);
     }
 
     #[test]

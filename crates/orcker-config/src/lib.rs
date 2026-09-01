@@ -17,11 +17,15 @@
 mod error;
 mod io;
 mod migrate;
+pub mod orcker_yml;
 mod parse;
+pub mod ports;
 mod schema;
 mod serialize;
 
-pub use error::{ConfigError, MigrationErrorReason, ValidateErrorReason};
+pub use error::{ConfigError, MigrationErrorReason, OrckerYmlErrorReason, ValidateErrorReason};
+pub use orcker_yml::OrckerYml;
+pub use ports::taken_ports;
 pub use schema::{
     Config, DomainDelta, DomainsSection, DumpsSection, ExtEntry, GroupsSection, MailSection,
     ParkedSection, PhpSection, Ports, ServiceInstance, ServicesSection, SiteOverride,
@@ -107,4 +111,4 @@ pub use schema::{
 ///
 /// The per-version detail, including how to hand-edit a file back down for an
 /// older binary, lives in `docs/developer/config-schema-history.md`.
-pub const CURRENT_VERSION: u32 = 23;
+pub const CURRENT_VERSION: u32 = 24;

@@ -49,7 +49,9 @@ pub use error::{FrameError, IpcError, IpcErrorKind};
 pub use frame::{encode_frame, FrameDecoder, DEFAULT_MAX_FRAME};
 pub use message::{decode_message, encode_message};
 pub use request::Request;
-pub use response::{ErrorCode, ProxyEntry, ProxyRuleEntry, Response, RouteRuleEntry, SiteEntry};
+pub use response::{
+    ErrorCode, ProjectEntry, ProxyEntry, ProxyRuleEntry, Response, RouteRuleEntry, SiteEntry,
+};
 pub use status::{
     BrowserTrust, CaStatus, CloudflaredSource, CloudflaredStatus, Diagnosis, DiagnosisCode,
     DomainShadow, FixReport, FixResult, MailAttachment, MailDetail, MailHeader, MailStatus,

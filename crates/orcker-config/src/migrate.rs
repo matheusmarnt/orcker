@@ -47,6 +47,7 @@ pub(crate) const STEPS: &[MigrationStep] = &[
     migrate_v20_to_v21,
     migrate_v21_to_v22,
     migrate_v22_to_v23,
+    migrate_v23_to_v24,
 ];
 
 /// `v0 → v1`: bump the version. v0 predates any shipped config, so there is no
@@ -246,6 +247,13 @@ fn migrate_v22_to_v23(value: &mut Value) -> Result<(), ConfigError> {
     set_version(value, 23)
 }
 
+/// v23 to v24: SPEC-0006 adds the optional `[[projects]]` array of linked
+/// container projects, which defaults to empty when absent, so an in-place
+/// version bump is the entire migration.
+fn migrate_v23_to_v24(value: &mut Value) -> Result<(), ConfigError> {
+    set_version(value, 24)
+}
+
 /// Set the top-level `version` key, erroring if the root is not a table.
 fn set_version(value: &mut Value, n: i64) -> Result<(), ConfigError> {
     let table = value.as_table_mut().ok_or(ConfigError::Migration {
@@ -315,7 +323,7 @@ mod tests {
 
     #[test]
     fn current_version_pinned() {
-        assert_eq!(crate::CURRENT_VERSION, 23);
+        assert_eq!(crate::CURRENT_VERSION, 24);
     }
 
     #[test]
