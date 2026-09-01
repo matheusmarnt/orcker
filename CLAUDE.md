@@ -130,6 +130,18 @@ in this repository the spec loop commits:
   Skipping a hook is the same move as weakening the gate: if a hook blocks the
   commit, fix the cause or escalate.
 - Never `git push`, never release, never `cargo publish` — human acts.
+- **The moment a PR is merged into `main`, run `git checkout main && git pull`.**
+  Merges here are rebase merges, so the branch keeps the pre-rebase SHAs and stops
+  being a valid base the instant the PR lands. Staying on it means the next commit
+  is written onto a branch already slated for deletion, on top of duplicates of
+  what is now upstream — which then has to be rescued and rebased by hand. Return
+  to `main` before writing anything else.
+- **Before recommending or running `git branch -D`, prove the branch holds nothing
+  unpublished:** `git cherry origin/main <branch>` must print no `+` line. A `+` is
+  work that lives only there, and deleting the ref strands it. Never substitute
+  `git branch --merged` for this check — a rebase merge rewrites the SHAs, so it
+  omits branches whose content is fully upstream and tells you nothing about what
+  is not.
 - Never edit `docs/PRD.md`; propose requirement changes via `docs/rfc/`.
 
 # context-mode — MANDATORY routing rules
