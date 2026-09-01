@@ -83,3 +83,4 @@ Never a merge, never a bulk sync. Numbered above the reserved Phase-1 range.
 | 51 | SPEC-0051-cover-container-link-cli-semantics | draft | FR-021 | SPEC-0006 |
 | 52 | SPEC-0052-evidence-blocks-must-be-captured | draft | FR-001 | SPEC-0045, SPEC-0047 |
 | 53 | SPEC-0053-validate-container-project-ports | draft | FR-013, FR-021 | SPEC-0006 |
+| 54 | SPEC-0054-fr-acceptance-must-be-enumerated | draft | FR-001 | SPEC-0045, SPEC-0047 |
