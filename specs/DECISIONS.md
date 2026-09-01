@@ -66,9 +66,14 @@ Deviations, clarifications and trade-offs recorded by implementation cycles
   not make unattended. Everything R8 tests is still exercised: allocated port to
   registry to router to proxy to a CA-signed leaf for `spike.test`. The two
   untested pieces are inherited and were proven by SPEC-0005 on the same stack.
-- Impact: `specs/logs/SPEC-0006.md` AC5. A human closes the literal form with
-  `orcker elevate ports resolver` and a browser. FR-003 AC1 should be re-read
-  against that before Phase 0 is declared exit-ready.
+- Impact: `specs/logs/SPEC-0006.md` AC5 only. **FR-003 is not left open by
+  this**: its AC1 (link registers the site with a `127.0.0.1:<port>` upstream)
+  is what SPEC-0006 closed, and its AC2 (browser, valid local CA cert) and AC3
+  (WebSocket upgrade) were closed by SPEC-0005 against the same stack. A human
+  who wants the literal `https://spike.test` on 443 back runs
+  `orcker elevate ports resolver`, but nothing in the PRD waits on it. An
+  earlier revision of this entry pointed at AC1 as the open item; that was
+  wrong, and AC1 is precisely the criterion that needs no browser.
 
 ## 2026-08-31 · SPEC-0004 — the Docker model lives in `orcker-ipc`, not `orcker-engine`
 
