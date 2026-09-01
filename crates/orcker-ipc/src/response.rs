@@ -6,7 +6,7 @@
 use std::net::SocketAddr;
 use std::path::PathBuf;
 
-use orcker_core::Site;
+use orcker_core::{PhpVersion, Site};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -32,6 +32,31 @@ pub enum Response {
         /// The sites currently known to the daemon, in lexicographic
         /// name order.
         sites: Vec<SiteEntry>,
+    },
+    /// Reply to [`crate::Request::ListProjects`]: the linked container
+    /// projects, in lexicographic name order.
+    ///
+    /// A separate reply rather than a field on [`Self::Sites`]: that variant is
+    /// built with a full struct literal outside this spec's surface, so growing
+    /// it would break a file this cycle may not touch. `orcker sites` issues
+    /// both requests and renders one table, the way `orcker status` already
+    /// combines `Status` and `EngineStatus`.
+    Projects {
+        /// The linked container projects.
+        projects: Vec<ProjectEntry>,
+    },
+    /// Reply to [`crate::Request::LinkProject`]: the project as it now stands.
+    Project {
+        /// The linked project. Boxed so this variant does not dominate
+        /// `Response`'s size, exactly like [`Self::Status`]'s report.
+        project: Box<ProjectEntry>,
+        /// Whether this call created the registration. `false` on an
+        /// idempotent relink, where nothing changed.
+        created: bool,
+        /// Whether this call created the project's `orcker.yml`. `false` when
+        /// the project already shipped one, which is never rewritten.
+        #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+        wrote_descriptor: bool,
     },
     /// Generic success for mutating requests
     /// ([`crate::Request::Park`], [`crate::Request::Link`],
@@ -334,6 +359,45 @@ pub struct SiteEntry {
     pub is_laravel: bool,
 }
 
+/// One linked container project (element of [`Response::Projects`], and the
+/// payload of [`Response::Project`]).
+///
+/// `port` is the persisted loopback allocation; `root` is the project
+/// directory. The remaining fields mirror the project's own `orcker.yml`,
+/// which the daemon reads from `root` - the file is the source of truth for
+/// them, not the daemon's config.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ProjectEntry {
+    /// The site name the project is served under.
+    pub name: String,
+    /// The project directory.
+    pub root: PathBuf,
+    /// The allocated loopback port the project's stack publishes on.
+    pub port: u16,
+    /// Whether the site is served over HTTPS.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub secure: bool,
+    /// The project's primary (canonical) domain FQDN, computed by the daemon
+    /// from the live router and the configured TLD. Clients render URLs from
+    /// this rather than synthesising `{name}.test`, which is wrong on any
+    /// non-default TLD. Omitted only by a daemon that predates the field.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub primary_domain: Option<String>,
+    /// `schema_version` from `orcker.yml`. Omitted when the file is missing or
+    /// unreadable.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub schema_version: Option<u32>,
+    /// `php` from `orcker.yml`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub php: Option<PhpVersion>,
+    /// `db` from `orcker.yml`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub db: Option<String>,
+    /// `preset` from `orcker.yml`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub preset: Option<String>,
+}
+
 /// One whole-host reverse proxy (reply element of [`Response::Proxies`]).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ProxyEntry {
@@ -419,6 +483,10 @@ pub enum ErrorCode {
     /// requests (`AddService`), never on pre-existing ones, so older clients
     /// cannot receive it.
     PortReserved,
+    /// Every loopback port in the container-project range is already
+    /// allocated or busy, so no port could be given to a new project.
+    /// Returned only on `LinkProject`, so older clients never receive it.
+    PortRangeExhausted,
     /// The named site does not exist.
     SiteNotFound,
     /// The named site is not a Laravel app (no `artisan` marker), so it cannot
@@ -464,6 +532,8 @@ mod variant_name_pinning {
         match r {
             Response::Pong => {}
             Response::Sites { .. } => {}
+            Response::Project { .. } => {}
+            Response::Projects { .. } => {}
             Response::Ok => {}
             Response::Error { .. } => {}
             Response::Parked { .. } => {}
@@ -498,6 +568,7 @@ mod variant_name_pinning {
             ErrorCode::PortInUse => {}
             ErrorCode::ExtensionLoadFailed => {}
             ErrorCode::PortReserved => {}
+            ErrorCode::PortRangeExhausted => {}
             ErrorCode::SiteNotFound => {}
             ErrorCode::SiteNotLaravel => {}
             ErrorCode::UnknownServiceType => {}
@@ -513,6 +584,22 @@ mod variant_name_pinning {
     fn touch_every_variant() {
         pin_response(Response::Pong);
         pin_response(Response::Sites { sites: vec![] });
+        pin_response(Response::Projects { projects: vec![] });
+        pin_response(Response::Project {
+            project: Box::new(ProjectEntry {
+                name: "x".into(),
+                root: PathBuf::from("/x"),
+                port: 20000,
+                secure: false,
+                primary_domain: None,
+                schema_version: None,
+                php: None,
+                db: None,
+                preset: None,
+            }),
+            created: true,
+            wrote_descriptor: false,
+        });
         pin_response(Response::Ok);
         pin_response(Response::Error {
             code: ErrorCode::Internal,

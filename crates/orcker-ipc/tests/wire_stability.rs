@@ -21,9 +21,9 @@ use orcker_ipc::{
     CaStatus, Channel, CloudflaredSource, CloudflaredStatus, ComposeStatus, Diagnosis,
     DiagnosisCode, DockerStatus, EngineProblem, EngineProblemCode, ErrorCode, FixReport, FixResult,
     MailAttachment, MailDetail, MailHeader, MailStatus, MailSummary, NamedTunnelMeta,
-    PortRedirectTargets, PortStatus, ProxyEntry, ProxyRuleEntry, Request, Response, Severity,
-    SiteCounts, SiteHostname, SocketKind, StagedArtifact, StatusReport, ToolStatus, TunnelInfo,
-    TunnelKind, TunnelRunState, UpdateSource,
+    PortRedirectTargets, PortStatus, ProjectEntry, ProxyEntry, ProxyRuleEntry, Request, Response,
+    Severity, SiteCounts, SiteHostname, SocketKind, StagedArtifact, StatusReport, ToolStatus,
+    TunnelInfo, TunnelKind, TunnelRunState, UpdateSource,
 };
 
 // ---------- Request ----------
@@ -2000,4 +2000,191 @@ fn engine_unit_variants_byte_shape() {
         serde_json::to_string(&ComposeStatus::Missing).unwrap(),
         r#"{"state":"missing"}"#
     );
+}
+
+// ---------- SPEC-0006: container projects (additive) ----------
+
+#[test]
+fn request_link_project_byte_shape() {
+    let r = Request::LinkProject {
+        path: PathBuf::from("/srv/spike"),
+        name: None,
+        port: None,
+    };
+    let s = serde_json::to_string(&r).unwrap();
+    assert_eq!(
+        s,
+        r#"{"type":"link_project","path":"/srv/spike","name":null,"port":null}"#
+    );
+    let back: Request = serde_json::from_str(&s).unwrap();
+    assert_eq!(back, r);
+}
+
+#[test]
+fn request_link_project_with_name_and_port_byte_shape() {
+    let r = Request::LinkProject {
+        path: PathBuf::from("/srv/spike"),
+        name: Some("spike".into()),
+        port: Some(20000),
+    };
+    let s = serde_json::to_string(&r).unwrap();
+    assert_eq!(
+        s,
+        r#"{"type":"link_project","path":"/srv/spike","name":"spike","port":20000}"#
+    );
+    let back: Request = serde_json::from_str(&s).unwrap();
+    assert_eq!(back, r);
+}
+
+#[test]
+fn project_entry_byte_shape() {
+    let e = ProjectEntry {
+        name: "spike".into(),
+        root: PathBuf::from("/srv/spike"),
+        port: 20000,
+        secure: true,
+        primary_domain: Some("spike.test".into()),
+        schema_version: Some(1),
+        php: Some(PhpVersion::new(8, 4)),
+        db: Some("postgres".into()),
+        preset: Some("reference".into()),
+    };
+    let s = serde_json::to_string(&e).unwrap();
+    assert_eq!(
+        s,
+        r#"{"name":"spike","root":"/srv/spike","port":20000,"secure":true,"primary_domain":"spike.test","schema_version":1,"php":"8.4","db":"postgres","preset":"reference"}"#
+    );
+    let back: ProjectEntry = serde_json::from_str(&s).unwrap();
+    assert_eq!(back, e);
+}
+
+/// A project whose `orcker.yml` could not be read, and which is not secured:
+/// every optional field drops out of the wire.
+#[test]
+fn project_entry_minimal_byte_shape() {
+    let e = ProjectEntry {
+        name: "spike".into(),
+        root: PathBuf::from("/srv/spike"),
+        port: 20000,
+        secure: false,
+        primary_domain: None,
+        schema_version: None,
+        php: None,
+        db: None,
+        preset: None,
+    };
+    let s = serde_json::to_string(&e).unwrap();
+    assert_eq!(s, r#"{"name":"spike","root":"/srv/spike","port":20000}"#);
+    let back: ProjectEntry = serde_json::from_str(&s).unwrap();
+    assert_eq!(back, e);
+}
+
+#[test]
+fn response_projects_byte_shape() {
+    let r = Response::Projects {
+        projects: vec![ProjectEntry {
+            name: "spike".into(),
+            root: PathBuf::from("/srv/spike"),
+            port: 20000,
+            secure: false,
+            primary_domain: Some("spike.test".into()),
+            schema_version: Some(1),
+            php: Some(PhpVersion::new(8, 4)),
+            db: Some("postgres".into()),
+            preset: Some("reference".into()),
+        }],
+    };
+    let s = serde_json::to_string(&r).unwrap();
+    assert_eq!(
+        s,
+        r#"{"type":"projects","projects":[{"name":"spike","root":"/srv/spike","port":20000,"primary_domain":"spike.test","schema_version":1,"php":"8.4","db":"postgres","preset":"reference"}]}"#
+    );
+    let back: Response = serde_json::from_str(&s).unwrap();
+    assert_eq!(back, r);
+}
+
+#[test]
+fn request_list_projects_byte_shape() {
+    let s = serde_json::to_string(&Request::ListProjects).unwrap();
+    assert_eq!(s, r#"{"type":"list_projects"}"#);
+    let back: Request = serde_json::from_str(&s).unwrap();
+    assert_eq!(back, Request::ListProjects);
+}
+
+#[test]
+fn response_projects_empty_byte_shape() {
+    let r = Response::Projects { projects: vec![] };
+    let s = serde_json::to_string(&r).unwrap();
+    assert_eq!(s, r#"{"type":"projects","projects":[]}"#);
+    let back: Response = serde_json::from_str(&s).unwrap();
+    assert_eq!(back, r);
+}
+
+/// `Response::Sites` keeps the shape it had before this spec: projects arrived
+/// as their own reply precisely so this literal would not move.
+#[test]
+fn response_sites_shape_is_unchanged_by_projects() {
+    let back: Response = serde_json::from_str(r#"{"type":"sites","sites":[]}"#).unwrap();
+    assert_eq!(back, Response::Sites { sites: vec![] });
+}
+
+#[test]
+fn error_code_port_range_exhausted_byte_shape() {
+    let s = serde_json::to_string(&ErrorCode::PortRangeExhausted).unwrap();
+    assert_eq!(s, r#""port_range_exhausted""#);
+    let back: ErrorCode = serde_json::from_str(&s).unwrap();
+    assert_eq!(back, ErrorCode::PortRangeExhausted);
+}
+
+#[test]
+fn response_project_byte_shape() {
+    let r = Response::Project {
+        project: Box::new(ProjectEntry {
+            name: "spike".into(),
+            root: PathBuf::from("/srv/spike"),
+            port: 20000,
+            secure: false,
+            primary_domain: Some("spike.test".into()),
+            schema_version: Some(1),
+            php: Some(PhpVersion::new(8, 4)),
+            db: Some("postgres".into()),
+            preset: Some("reference".into()),
+        }),
+        created: true,
+        wrote_descriptor: true,
+    };
+    let s = serde_json::to_string(&r).unwrap();
+    assert_eq!(
+        s,
+        r#"{"type":"project","project":{"name":"spike","root":"/srv/spike","port":20000,"primary_domain":"spike.test","schema_version":1,"php":"8.4","db":"postgres","preset":"reference"},"created":true,"wrote_descriptor":true}"#
+    );
+    let back: Response = serde_json::from_str(&s).unwrap();
+    assert_eq!(back, r);
+}
+
+/// An idempotent relink: nothing was created, so `wrote_descriptor` drops out.
+#[test]
+fn response_project_relink_byte_shape() {
+    let r = Response::Project {
+        project: Box::new(ProjectEntry {
+            name: "spike".into(),
+            root: PathBuf::from("/srv/spike"),
+            port: 20000,
+            secure: false,
+            primary_domain: None,
+            schema_version: None,
+            php: None,
+            db: None,
+            preset: None,
+        }),
+        created: false,
+        wrote_descriptor: false,
+    };
+    let s = serde_json::to_string(&r).unwrap();
+    assert_eq!(
+        s,
+        r#"{"type":"project","project":{"name":"spike","root":"/srv/spike","port":20000},"created":false}"#
+    );
+    let back: Response = serde_json::from_str(&s).unwrap();
+    assert_eq!(back, r);
 }

@@ -71,6 +71,13 @@ pub enum ConfigError {
         reason: MigrationErrorReason,
     },
 
+    /// A project's `orcker.yml` could not be read or built.
+    #[error("invalid orcker.yml: {reason}")]
+    OrckerYml {
+        /// Specific failure.
+        reason: OrckerYmlErrorReason,
+    },
+
     /// I/O failed during [`crate::Config::load`] or [`crate::Config::save`].
     #[error("config I/O failed at {}: {source}", path.display())]
     Io {
@@ -430,6 +437,53 @@ mod tests {
         match toml::to_string(&42i64) {
             Ok(_) => panic!("expected toml::ser to reject non-table root"),
             Err(e) => e,
+        }
+    }
+}
+
+/// Specific failure modes for [`crate::orcker_yml::OrckerYml`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum OrckerYmlErrorReason {
+    /// A line was neither blank, a comment, nested content, nor `key: value`.
+    Malformed {
+        /// 1-based line number.
+        line: usize,
+    },
+    /// A required top-level key was absent.
+    MissingKey {
+        /// The missing key.
+        key: &'static str,
+    },
+    /// A known key appeared twice.
+    DuplicateKey {
+        /// The repeated key.
+        key: String,
+    },
+    /// The file declares a `schema_version` this build does not read.
+    UnsupportedSchemaVersion {
+        /// The version found in the file.
+        found: u32,
+    },
+    /// A known key carried a value outside its allowed set.
+    InvalidValue {
+        /// The key whose value failed.
+        key: &'static str,
+        /// The offending value.
+        value: String,
+    },
+}
+
+impl fmt::Display for OrckerYmlErrorReason {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Malformed { line } => write!(f, "line {line} is not `key: value`"),
+            Self::MissingKey { key } => write!(f, "missing required key `{key}`"),
+            Self::DuplicateKey { key } => write!(f, "duplicate key `{key}`"),
+            Self::UnsupportedSchemaVersion { found } => {
+                write!(f, "unsupported schema_version {found}")
+            }
+            Self::InvalidValue { key, value } => write!(f, "invalid `{key}` value {value:?}"),
         }
     }
 }

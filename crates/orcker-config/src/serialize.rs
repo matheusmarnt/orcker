@@ -89,6 +89,21 @@ struct WireSer<'a> {
     // are empty, so a default config emits no `[route_rules]` region.
     #[serde(skip_serializing_if = "Option::is_none")]
     route_rules: Option<RouteRulesSectionSer<'a>>,
+    // v24: optional `[[projects]]` array - a trailing sub-table region, emitted
+    // after `[route_rules]`. Skipped when empty so a default config emits no
+    // `[[projects]]`, keeping the byte-shape goldens intact.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    projects: Vec<ProjectSer<'a>>,
+}
+
+#[derive(Serialize)]
+struct ProjectSer<'a> {
+    name: &'a str,
+    root: &'a std::path::Path,
+    port: u16,
+    // A default (off) `secure` still emits, for the same reason as
+    // [`ProxySer::secure`]: the entry already emits a table.
+    secure: bool,
 }
 
 #[derive(Serialize)]
@@ -426,6 +441,16 @@ pub(crate) fn to_toml(c: &Config) -> Result<String, ConfigError> {
                 proxy: domain_delta_map(&c.domains.proxy),
             })
         },
+        projects: c
+            .projects
+            .iter()
+            .map(|p| ProjectSer {
+                name: p.name(),
+                root: p.root(),
+                port: p.port(),
+                secure: p.secure(),
+            })
+            .collect(),
         proxies: c
             .proxies
             .iter()
@@ -540,8 +565,8 @@ mod tests {
     fn default_to_toml_starts_with_version_line() {
         let s = to_toml(&Config::default()).unwrap();
         assert!(
-            s.starts_with("version = 23\n"),
-            "expected `version = 23` first line; got: {s}"
+            s.starts_with("version = 24\n"),
+            "expected `version = 24` first line; got: {s}"
         );
     }
 

@@ -28,7 +28,27 @@ Each entry below states what changed, whether the daemon's own migration is a ba
 
 ## Version-by-version
 
-### v23 (current)
+### v24 (current)
+
+**Added:** the optional `[[projects]]` array - one table per **container project**, the directories `orcker link` adopts. Each entry records the site name, the project directory, the loopback port allocated for it, and whether it is served over HTTPS. It is emitted after `[route_rules]` and skipped when empty, so an uncustomised file omits it entirely.
+
+```toml
+[[projects]]
+name = "spike"
+root = "/home/you/code/spike"
+port = 20000
+secure = true
+```
+
+The port is allocated once from `20000..=29999`, skipping ports already recorded here and ports a probe finds busy, and it is reused across daemon restarts - that stability is the whole point of persisting it (FR-013). `orcker unlink <name>` removes the entry and frees the port for the next project.
+
+Everything else about a project lives in its own `orcker.yml`, inside `root`, which is committed with the repo and is the source of truth for its PHP version, database engine and preset. The daemon deliberately does not mirror those values here, so a clone on another machine reproduces the project from the repo alone (FR-024).
+
+**Migration from v23:** bare version bump - the array defaults to empty when absent, so a v23 file needs no other change.
+
+**To downgrade to v23:** change `version = 24` to `version = 23` and delete any `[[projects]]` tables (a v23 daemon rejects the unknown table under `deny_unknown_fields`, it doesn't just ignore it). Those sites stop being served; re-link them after upgrading again, or add a `[[proxies]]` entry pointing at `http://127.0.0.1:<port>` to keep them routed in the meantime.
+
+### v23
 
 **Added:** the optional `[domains.proxy]` table - routable-domain deltas for **whole-host proxies**, keyed by proxy name. It sits alongside the existing `[domains.linked]` (by site name) and `[domains.parked]` (by document-root string) maps and carries the same three keys: `added`, `suppressed`, and `primary`. It defaults to empty when absent, so an uncustomised file omits it entirely.
 

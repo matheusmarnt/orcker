@@ -10,8 +10,8 @@ surface:
   - crates/orcker-ipc/
   - bin/orckerd/
   - bin/orcker/
-status: approved
-attempts: 0
+status: accepted
+attempts: 2
 ---
 
 ## Context
@@ -84,18 +84,18 @@ TCP-bind impl at the edge and a fake in tests.
 
 ## Acceptance checklist
 
-- [ ] AC1 Allocation is deterministic, collision-free and persistent ->
+- [x] AC1 Allocation is deterministic, collision-free and persistent ->
       tests: `orcker_core::ports::allocation_matrix`,
       `orcker_config::ports::allocation_roundtrip`
-- [ ] AC2 orcker.yml v1 round-trip with unknown-key tolerance ->
+- [x] AC2 orcker.yml v1 round-trip with unknown-key tolerance ->
       test: `orcker_config::orcker_yml::v1_roundtrip_and_forward_compat`
-- [ ] AC3 `orcker link` is idempotent (second run: no changes, explicit
+- [x] AC3 `orcker link` is idempotent (second run: no changes, explicit
       message) -> test: `link::idempotent_relink` (fake edge)
-- [ ] AC4 `orcker sites --json` lists the project with port and metadata ->
+- [x] AC4 `orcker sites --json` lists the project with port and metadata ->
       evidence: output in the cycle log
-- [ ] AC5 Golden thread (R8) passes -> evidence: transcript in the cycle log
-- [ ] AC6 IPC wire-stability suite green, extensions additive only
-- [ ] AC7 `scripts/gate.sh specs/SPEC-0006-*.md` passes
+- [x] AC5 Golden thread (R8) passes -> evidence: transcript in the cycle log
+- [x] AC6 IPC wire-stability suite green, extensions additive only
+- [x] AC7 `scripts/gate.sh specs/SPEC-0006-*.md` passes
 
 ## Out of scope
 

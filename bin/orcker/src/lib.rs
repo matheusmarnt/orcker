@@ -48,6 +48,7 @@ pub async fn run(cli: Cli) -> ExitCode {
         Command::Domain {
             action: crate::cli::DomainAction::List { site },
         } => return run_domain_list(site.as_deref(), cli.json).await,
+        Command::Sites => return run_sites(cli.json).await,
         Command::Status => return run_status(cli.json).await,
         Command::Route {
             action: crate::cli::RouteAction::List { site: Some(site) },
@@ -83,8 +84,8 @@ pub async fn run(cli: Cli) -> ExitCode {
     }
 
     let req = match &cli.command {
-        Command::Link { name_or_path, path } => {
-            resolve_link(name_or_path.as_deref(), path.as_deref())
+        Command::Link { path, name, port } => {
+            resolve_link_project(path.as_deref(), name.as_deref(), *port)
         }
         _ => map::to_request(&cli.command)
             .map(canonicalize_unpark)
@@ -242,6 +243,39 @@ async fn run_status(json: bool) -> ExitCode {
     }
 
     let r = map::render_status(&report, docker.as_ref(), json);
+    if !r.stdout.is_empty() {
+        println!("{}", r.stdout);
+    }
+    if !r.stderr.is_empty() {
+        eprintln!("{}", r.stderr);
+    }
+    ExitCode::from(r.code)
+}
+
+/// `orcker sites`: on-disk sites and container projects in one view.
+///
+/// Two requests, one rendering, the same shape as [`run_status`]: projects live
+/// in their own reply rather than as a field on `Response::Sites`. A daemon that
+/// does not know `ListProjects` simply contributes no projects.
+async fn run_sites(json: bool) -> ExitCode {
+    use orcker_ipc::{Request, Response};
+    let sites = match transport::exchange(&Request::ListSites).await {
+        Ok(Response::Sites { sites }) => sites,
+        Ok(other) => {
+            eprintln!("orcker: unexpected response: {other:?}");
+            return ExitCode::from(1);
+        }
+        Err(e) => {
+            eprintln!("orcker: {e}");
+            return ExitCode::from(69);
+        }
+    };
+    let projects = match transport::exchange(&Request::ListProjects).await {
+        Ok(Response::Projects { projects }) => projects,
+        _ => Vec::new(),
+    };
+
+    let r = map::render_sites(&sites, &projects, json);
     if !r.stdout.is_empty() {
         println!("{}", r.stdout);
     }
@@ -825,6 +859,50 @@ fn looks_like_path(s: &str) -> bool {
 ///
 /// Public so `tests/cli_e2e.rs` can drive the same CLI-side resolution this
 /// crate's `run()` uses, then exchange the result with a real daemon.
+/// Builds a [`orcker_ipc::Request::LinkProject`] from `orcker link`'s
+/// arguments: an omitted `path` means the current directory, and an omitted
+/// `--name` leaves the daemon to derive one from the directory or the
+/// project's existing `orcker.yml`.
+///
+/// The path is resolved here (the CLI is the only side that knows the user's
+/// working directory); the daemon canonicalises it again before use.
+///
+/// # Errors
+///
+/// [`ClientError::Usage`] when the current directory cannot be read, the path
+/// cannot be made absolute, or `--name` is not a valid site name.
+pub fn resolve_link_project(
+    path: Option<&std::path::Path>,
+    name: Option<&str>,
+    port: Option<u16>,
+) -> Result<orcker_ipc::Request, ClientError> {
+    let resolved_path = match path {
+        Some(p) => absolutise(p)?,
+        None => std::env::current_dir()
+            .map_err(|e| ClientError::Usage(format!("cannot resolve current directory: {e}")))?,
+    };
+    if let Some(name) = name {
+        map::validate_name(name)?;
+    }
+    Ok(orcker_ipc::Request::LinkProject {
+        path: resolved_path,
+        name: name.map(str::to_owned),
+        port,
+    })
+}
+
+/// Builds a [`orcker_ipc::Request::Link`] for the inherited on-disk site link,
+/// inferring whichever of name/path was omitted.
+///
+/// Not reachable from `orcker link` any more: that command now links container
+/// projects (see [`resolve_link_project`]). Kept because the daemon still
+/// serves `Request::Link` for the GUI, and the CLI's end-to-end tests drive
+/// that path through here.
+///
+/// # Errors
+///
+/// [`ClientError::Usage`] when the current directory cannot be read, the path
+/// cannot be made absolute, or no valid site name can be derived.
 pub fn resolve_link(
     name_or_path: Option<&str>,
     path: Option<&std::path::Path>,

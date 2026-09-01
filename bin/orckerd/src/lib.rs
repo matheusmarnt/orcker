@@ -23,6 +23,7 @@ pub mod ipc_server;
 pub mod jobs;
 pub mod lan_setup;
 pub mod laravel_detect;
+pub mod link;
 pub mod mutate;
 pub mod secure_fs;
 pub mod self_update;

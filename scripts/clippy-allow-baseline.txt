@@ -26,6 +26,7 @@ bin/orckerd/src/ipc_server.rs:1
 bin/orckerd/src/jobs.rs:1
 bin/orckerd/src/lan_setup.rs:2
 bin/orckerd/src/laravel_detect.rs:1
+bin/orckerd/src/link.rs:1
 bin/orckerd/src/mutate.rs:1
 bin/orckerd/src/secure_fs.rs:1
 bin/orckerd/src/self_update.rs:1
@@ -45,7 +46,9 @@ bin/orckerd/src/wordpress_detect.rs:1
 bin/orckerd/tests/lifecycle.rs:1
 crates/orcker-config/src/error.rs:1
 crates/orcker-config/src/migrate.rs:1
+crates/orcker-config/src/orcker_yml.rs:1
 crates/orcker-config/src/parse.rs:1
+crates/orcker-config/src/ports.rs:1
 crates/orcker-config/src/schema.rs:1
 crates/orcker-config/src/serialize.rs:1
 crates/orcker-config/tests/io.rs:1
@@ -62,6 +65,8 @@ crates/orcker-core/src/php_directives.rs:1
 crates/orcker-core/src/php_extensions.rs:1
 crates/orcker-core/src/php_pool.rs:1
 crates/orcker-core/src/php_settings.rs:1
+crates/orcker-core/src/ports.rs:1
+crates/orcker-core/src/project.rs:1
 crates/orcker-core/src/proxy.rs:1
 crates/orcker-core/src/route_rule.rs:1
 crates/orcker-core/src/router.rs:1

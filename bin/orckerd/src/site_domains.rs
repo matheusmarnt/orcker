@@ -222,7 +222,12 @@ fn plan_proxies(cfg: &Config, site_plans: &[SitePlan]) -> Vec<ProxyPlan> {
     let site_names: HashSet<&str> = site_plans.iter().map(|p| p.site.name()).collect();
     let mut seen: HashSet<String> = HashSet::new();
     let mut plans = Vec::with_capacity(cfg.proxies.len());
-    for proxy in &cfg.proxies {
+    for proxy in cfg
+        .proxies
+        .iter()
+        .cloned()
+        .chain(project_proxies(&cfg.projects))
+    {
         if !seen.insert(proxy.name().to_owned()) {
             tracing::warn!(
                 proxy = proxy.name(),
@@ -248,13 +253,37 @@ fn plan_proxies(cfg: &Config, site_plans: &[SitePlan]) -> Vec<ProxyPlan> {
             );
         }
         plans.push(ProxyPlan {
-            proxy: proxy.clone(),
+            proxy,
             effective,
             primary,
             shadowed,
         });
     }
     plans
+}
+
+/// The whole-host proxies contributed by linked container projects.
+///
+/// A container project routes exactly like a `[[proxies]]` entry aimed at its
+/// allocated loopback port - the mechanism SPEC-0005 validated end to end - so
+/// projecting them here keeps one routing path instead of teaching the router a
+/// second site kind. A project whose entry cannot be built is dropped with a
+/// log line, mirroring how a bad proxy is handled.
+fn project_proxies(projects: &[orcker_core::ContainerProject]) -> Vec<ProxySite> {
+    projects
+        .iter()
+        .filter_map(|p| match p.proxy_site() {
+            Ok(proxy) => Some(proxy),
+            Err(e) => {
+                tracing::error!(
+                    project = p.name(),
+                    error = %e,
+                    "dropping project: proxy build failed"
+                );
+                None
+            }
+        })
+        .collect()
 }
 
 /// One entry of the unified claimant sequence consumed by [`build_claims`] and
@@ -355,6 +384,59 @@ mod tests {
 
     fn d(sub: &str) -> Domain {
         Domain::parse_subpart(sub).unwrap()
+    }
+
+    /// A linked container project must reach the router as a whole-host proxy
+    /// aimed at its loopback port: this projection is what makes the golden
+    /// thread (R8) work, and nothing else covers it.
+    #[test]
+    fn plan_proxies_projects_container_projects() {
+        let mut cfg = cfg_with_tld("test");
+        cfg.projects
+            .push(orcker_core::ContainerProject::new("spike", "/srv/spike", 20000).unwrap());
+
+        let plans = plan_proxies(&cfg, &[]);
+
+        assert_eq!(plans.len(), 1, "the project contributes exactly one proxy");
+        let plan = plans.first().unwrap();
+        assert_eq!(plan.proxy.name(), "spike");
+        assert_eq!(plan.proxy.target().host(), "127.0.0.1");
+        assert_eq!(plan.proxy.target().port(), 20000);
+        assert!(!plan.shadowed);
+        assert_eq!(plan.effective, vec![d("spike")], "answers on its apex");
+    }
+
+    /// A project's HTTPS flag has to survive the projection, or `orcker secure`
+    /// would set a flag the router never sees.
+    #[test]
+    fn plan_proxies_carries_a_secured_project() {
+        let mut cfg = cfg_with_tld("test");
+        let mut project = orcker_core::ContainerProject::new("spike", "/srv/spike", 20000).unwrap();
+        project.set_secure(true);
+        cfg.projects.push(project);
+
+        let plans = plan_proxies(&cfg, &[]);
+        assert!(plans.first().unwrap().proxy.secure());
+    }
+
+    /// A site of the same name shadows the project, exactly as it shadows a
+    /// configured proxy - the project must not silently win the host.
+    #[test]
+    fn a_site_shadows_a_same_named_project() {
+        let mut cfg = cfg_with_tld("test");
+        cfg.projects
+            .push(orcker_core::ContainerProject::new("spike", "/srv/spike", 20000).unwrap());
+        let site = linked("spike", "/srv/other");
+        let plans = plan_proxies(
+            &cfg,
+            &[SitePlan {
+                site,
+                effective: vec![d("spike")],
+                primary: d("spike"),
+            }],
+        );
+
+        assert!(plans.first().unwrap().shadowed);
     }
 
     #[test]
