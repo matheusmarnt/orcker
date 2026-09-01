@@ -119,6 +119,15 @@ This section supersedes the upstream "commits are the user's job" agreement —
 in this repository the spec loop commits:
 
 - Branch per spec: `feat/SPEC-0007-short-name`.
+- **American English, always — subject and body, and the same for PR titles and
+  descriptions.** This holds regardless of the language the session is being
+  conducted in: the commit log and the pull requests are the repository's shared
+  record, read by people and tools that never saw the conversation. The same rule
+  covers every shared record here — `specs/`, `docs/`, `DECISIONS.md`,
+  `TRACEABILITY.md`, cycle logs and code comments. It has bitten twice: SPEC-0047
+  round 2 was a REWORK for a Portuguese `DECISIONS.md` entry in a file whose 395
+  prior lines were English, and PR #15 opened with a Portuguese title and body and
+  had to be rewritten.
 - Conventional Commits with crate scope; body references SPEC and FR ids.
 - One atomic commit per accepted spec; commit only after supervisor APPROVE.
 - **No AI co-authorship, ever.** A commit must never carry a `Co-Authored-By:`
