@@ -7,7 +7,7 @@ depends_on: [SPEC-0006]
 surface:
   - crates/orcker-config/
   - bin/orckerd/
-status: draft
+status: approved
 attempts: 0
 ---
 
