@@ -7,7 +7,7 @@ depends_on: [SPEC-0006]
 surface:
   - crates/orcker-config/
   - bin/orckerd/
-status: approved
+status: accepted
 attempts: 0
 ---
 
@@ -80,14 +80,14 @@ SPEC-0006's acceptance run did not surface it.
 
 ## Acceptance checklist
 
-- [ ] AC1 (R1) `orcker link --port <bound listener>` is refused with the same
+- [x] AC1 (R1) `orcker link --port <bound listener>` is refused with the same
       code and message class as `orcker proxy add` -> test in `bin/orckerd`
-- [ ] AC2 (R2) out-of-range and zero ports are refused -> test:
+- [x] AC2 (R2) out-of-range and zero ports are refused -> test:
       `link::tests::port_outside_the_range_is_rejected`
-- [ ] AC3 (R3) the four invariants -> test:
+- [x] AC3 (R3) the four invariants -> test:
       `orcker_config::parse::tests::validate_projects_matrix`
-- [ ] AC4 (R4) `tests/toml_byte_shape.rs` unchanged and green
-- [ ] AC5 `scripts/gate.sh specs/SPEC-0053-*.md` passes
+- [x] AC4 (R4) `tests/toml_byte_shape.rs` unchanged and green
+- [x] AC5 `scripts/gate.sh specs/SPEC-0053-*.md` passes
 
 ## Out of scope
 

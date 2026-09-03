@@ -82,5 +82,6 @@ Never a merge, never a bulk sync. Numbered above the reserved Phase-1 range.
 | 50 | SPEC-0050-ipc-variant-literal-precheck | draft | FR-002 | SPEC-0004, SPEC-0006 |
 | 51 | SPEC-0051-cover-container-link-cli-semantics | draft | FR-021 | SPEC-0006 |
 | 52 | SPEC-0052-evidence-blocks-must-be-captured | draft | FR-001 | SPEC-0045, SPEC-0047 |
-| 53 | SPEC-0053-validate-container-project-ports | approved | FR-013, FR-021 | SPEC-0006 |
+| 53 | SPEC-0053-validate-container-project-ports | accepted | FR-013, FR-021 | SPEC-0006 |
 | 54 | SPEC-0054-fr-acceptance-must-be-enumerated | draft | FR-001 | SPEC-0045, SPEC-0047 |
+| 55 | SPEC-0055-validate-reason-display-list-is-partial | draft | FR-001 | SPEC-0053 |

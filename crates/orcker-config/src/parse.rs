@@ -917,7 +917,47 @@ pub(crate) fn validate(c: &Config) -> Result<(), ConfigError> {
     validate_groups(c)?;
     validate_domains(c)?;
     validate_proxies(c)?;
+    validate_projects(c)?;
     validate_route_rules(c)?;
+    Ok(())
+}
+
+/// `[[projects]]` invariants, mirroring [`validate_proxies`]: a project name is
+/// unique among projects and collides with neither a linked site nor a proxy, no
+/// two projects claim the same port, and no port is 0.
+///
+/// A project is projected into the router as a whole-host proxy, so a name that
+/// loses a collision is dropped there with a warning while its entry keeps
+/// holding its port, and an unlink by that name removes every entry sharing it.
+/// The check belongs here for the same reason `ProxyNameCollision` does: a
+/// hand-edited or half-written file must not load into that state.
+///
+/// Only 0 is rejected, not the whole allocation range: a port outside it is
+/// refused when the link is planned, and re-judging an already-persisted port at
+/// load would turn a config the daemon itself wrote into one it cannot read.
+/// Collisions with **parked** sites are not visible here either, matching
+/// `[[proxies]]`.
+fn validate_projects(c: &Config) -> Result<(), ConfigError> {
+    let taken: BTreeSet<&str> = c
+        .linked
+        .iter()
+        .map(orcker_core::Site::name)
+        .chain(c.proxies.iter().map(orcker_core::ProxySite::name))
+        .collect();
+
+    let mut seen_name: BTreeSet<&str> = BTreeSet::new();
+    let mut seen_port: BTreeSet<u16> = BTreeSet::new();
+    for p in &c.projects {
+        if taken.contains(p.name()) || !seen_name.insert(p.name()) {
+            return Err(ve(ValidateErrorReason::ProjectNameCollision));
+        }
+        if p.port() == 0 {
+            return Err(ve(ValidateErrorReason::ProjectPortZero));
+        }
+        if !seen_port.insert(p.port()) {
+            return Err(ve(ValidateErrorReason::ProjectPortCollision));
+        }
+    }
     Ok(())
 }
 
@@ -2177,6 +2217,99 @@ target = \"../../etc/passwd\"\n";
                 reason: ValidateErrorReason::ProxyNameCollision,
             }) => {}
             other => panic!("expected ProxyNameCollision, got {other:?}"),
+        }
+    }
+
+    /// The `[[projects]]` invariants, each with the config that satisfies it and
+    /// the config that breaks it.
+    ///
+    /// Nothing downstream survives a duplicate: `plan_proxies` drops the second
+    /// entry with a warning, so it is invisible in the router while still
+    /// holding its port, and an unlink by name removes both at once. Two
+    /// projects sharing a name and a proxy shadowing a site are the same class
+    /// of failure, so they share `ProxyNameCollision`'s treatment.
+    #[test]
+    fn validate_projects_matrix() {
+        let project = |name: &str, port: u16| {
+            orcker_core::ContainerProject::new(name, format!("/srv/{name}"), port).unwrap()
+        };
+
+        let mut duplicate_name = Config::default();
+        duplicate_name.projects.push(project("dup", 20000));
+        duplicate_name
+            .projects
+            .push(orcker_core::ContainerProject::new("dup", "/srv/elsewhere", 20001).unwrap());
+
+        let mut shadows_linked = Config::default();
+        shadows_linked.linked.push(
+            orcker_core::Site::linked("blog", "/srv/blog", orcker_core::PhpVersion::new(8, 3))
+                .unwrap(),
+        );
+        shadows_linked.projects.push(project("blog", 20000));
+
+        let mut shadows_proxy = Config::default();
+        shadows_proxy.proxies.push(
+            orcker_core::ProxySite::new("reverb", upstream("http://127.0.0.1:3000")).unwrap(),
+        );
+        shadows_proxy.projects.push(project("reverb", 20000));
+
+        let mut duplicate_port = Config::default();
+        duplicate_port.projects.push(project("one", 20000));
+        duplicate_port.projects.push(project("two", 20000));
+
+        let mut port_zero = Config::default();
+        port_zero.projects.push(project("spike", 0));
+
+        let mut all_distinct = Config::default();
+        all_distinct.linked.push(
+            orcker_core::Site::linked("blog", "/srv/blog", orcker_core::PhpVersion::new(8, 3))
+                .unwrap(),
+        );
+        all_distinct.proxies.push(
+            orcker_core::ProxySite::new("reverb", upstream("http://127.0.0.1:3000")).unwrap(),
+        );
+        all_distinct.projects.push(project("one", 20000));
+        all_distinct.projects.push(project("two", 20001));
+
+        for (label, cfg, want) in [
+            (
+                "two projects share a name",
+                duplicate_name,
+                Some(ValidateErrorReason::ProjectNameCollision),
+            ),
+            (
+                "a project shadows a linked site",
+                shadows_linked,
+                Some(ValidateErrorReason::ProjectNameCollision),
+            ),
+            (
+                "a project shadows a proxy",
+                shadows_proxy,
+                Some(ValidateErrorReason::ProjectNameCollision),
+            ),
+            (
+                "two projects share a port",
+                duplicate_port,
+                Some(ValidateErrorReason::ProjectPortCollision),
+            ),
+            (
+                "a project port is zero",
+                port_zero,
+                Some(ValidateErrorReason::ProjectPortZero),
+            ),
+            (
+                "distinct names and ports beside a site and a proxy",
+                all_distinct,
+                None,
+            ),
+        ] {
+            match (cfg.validate(), want) {
+                (Ok(()), None) => {}
+                (Err(ConfigError::Validate { reason }), Some(expected)) => {
+                    assert_eq!(reason, expected, "{label}");
+                }
+                (got, _) => panic!("{label}: unexpected {got:?}"),
+            }
         }
     }
 

@@ -210,11 +210,7 @@ async fn dispatch(req: Request, state: &DaemonState) -> Response {
         | Request::RemoveRouteRule { .. } => handle_mutation(req, state).await,
         Request::AddProxy { ref url, .. } | Request::AddProxyRule { ref url, .. } => {
             if is_self_forward(url, &[state.http.bound, state.https.bound]) {
-                Response::Error {
-                    code: ErrorCode::InvalidPath,
-                    message: "proxy target points at orcker's own listening port (routing loop)"
-                        .to_owned(),
-                }
+                self_forward_refusal()
             } else {
                 handle_mutation(req, state).await
             }
@@ -1275,18 +1271,25 @@ async fn handle_link_project(req: Request, state: &DaemonState) -> Response {
                 wrote_descriptor: false,
             };
         }
-        link::LinkPlan::Link { project, write_yml } => match write_yml {
-            Some(yml) => {
-                if let Err(e) = std::fs::write(&descriptor_path, yml.render()) {
-                    return internal(format!(
-                        "could not write {}: {e}",
-                        descriptor_path.display()
-                    ));
-                }
-                (project, Some(yml), true)
+        link::LinkPlan::Link { project, write_yml } => {
+            if let Some(refusal) =
+                project_loop_refusal(&project, &[state.http.bound, state.https.bound])
+            {
+                return refusal;
             }
-            None => (project, existing, false),
-        },
+            match write_yml {
+                Some(yml) => {
+                    if let Err(e) = std::fs::write(&descriptor_path, yml.render()) {
+                        return internal(format!(
+                            "could not write {}: {e}",
+                            descriptor_path.display()
+                        ));
+                    }
+                    (project, Some(yml), true)
+                }
+                None => (project, existing, false),
+            }
+        }
     };
 
     let tld = new.tld.as_str().to_owned();
@@ -1317,9 +1320,10 @@ fn link_error_code(e: &link::LinkError) -> ErrorCode {
         link::LinkError::Core(orcker_core::CoreError::PortRangeExhausted { .. }) => {
             ErrorCode::PortRangeExhausted
         }
-        link::LinkError::NoName { .. } | link::LinkError::Config(_) | link::LinkError::Core(_) => {
-            ErrorCode::InvalidPath
-        }
+        link::LinkError::PortOutOfRange { .. }
+        | link::LinkError::NoName { .. }
+        | link::LinkError::Config(_)
+        | link::LinkError::Core(_) => ErrorCode::InvalidPath,
     }
 }
 
@@ -1394,12 +1398,47 @@ fn is_self_forward(url: &str, bound_ports: &[u16]) -> bool {
     let Ok(target) = orcker_core::UpstreamTarget::from_url_str(url) else {
         return false;
     };
+    targets_bound_listener(&target, bound_ports)
+}
+
+/// The loop test itself, over an already-typed target. A linked project is
+/// routed as a proxy onto its own loopback port, so it has to answer this
+/// question too, and it holds a [`orcker_core::ContainerProject`] rather than a
+/// URL string - formatting one just to re-parse it would be a second
+/// implementation of the same rule.
+fn targets_bound_listener(target: &orcker_core::UpstreamTarget, bound_ports: &[u16]) -> bool {
     let loopback = target.host() == "localhost"
         || target
             .host()
             .parse::<std::net::IpAddr>()
             .is_ok_and(|ip| ip.is_loopback());
     loopback && bound_ports.contains(&target.port())
+}
+
+/// The refusal a project about to be linked earns, or `None` when it routes
+/// somewhere other than Orcker itself. A project that cannot even be projected
+/// into a proxy would be dropped by the router later, so it is refused here
+/// instead of being registered into a config that silently does nothing.
+fn project_loop_refusal(
+    project: &orcker_core::ContainerProject,
+    bound_ports: &[u16],
+) -> Option<Response> {
+    match project.proxy_site() {
+        Ok(proxy) => targets_bound_listener(proxy.target(), bound_ports).then(self_forward_refusal),
+        Err(e) => Some(Response::Error {
+            code: ErrorCode::InvalidPath,
+            message: e.to_string(),
+        }),
+    }
+}
+
+/// The refusal both `AddProxy` and `LinkProject` return for a target that points
+/// back at Orcker's own listener.
+fn self_forward_refusal() -> Response {
+    Response::Error {
+        code: ErrorCode::InvalidPath,
+        message: "proxy target points at orcker's own listening port (routing loop)".to_owned(),
+    }
 }
 
 /// Reply to [`Request::ListProxies`]: whole-host proxies plus every per-site

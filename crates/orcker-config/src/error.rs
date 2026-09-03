@@ -187,6 +187,17 @@ pub enum ValidateErrorReason {
     /// A `[route_rules.linked.<name>]` key names a linked site that does not
     /// exist; the rule would silently never apply.
     RouteRuleUnknownSite,
+    /// A `[[projects]]` name collides with another project, a linked site or a
+    /// proxy. The project is routed as a proxy, so the loser is dropped from the
+    /// router while it keeps holding its port, and an unlink by name would take
+    /// both entries at once.
+    ProjectNameCollision,
+    /// Two `[[projects]]` entries claim the same loopback port, so one of the
+    /// two stacks would publish onto a port the other already answers on.
+    ProjectPortCollision,
+    /// A `[[projects]]` port is 0. A project's port is a fixed loopback address
+    /// its stack publishes on, not a request for an ephemeral one.
+    ProjectPortZero,
 }
 
 impl fmt::Display for ValidateErrorReason {
@@ -247,6 +258,11 @@ impl fmt::Display for ValidateErrorReason {
             Self::RouteRuleUnknownSite => {
                 "a routing rule references a linked site that does not exist"
             }
+            Self::ProjectNameCollision => {
+                "a project name collides with another project, a linked site or a proxy"
+            }
+            Self::ProjectPortCollision => "two projects claim the same port",
+            Self::ProjectPortZero => "a project port must be non-zero",
         };
         f.write_str(msg)
     }
@@ -331,6 +347,9 @@ mod tests {
             ValidateErrorReason::ProxyRuleDuplicatePrefix,
             ValidateErrorReason::ProxyTargetLoop,
             ValidateErrorReason::ProxyRuleUnknownSite,
+            ValidateErrorReason::ProjectNameCollision,
+            ValidateErrorReason::ProjectPortCollision,
+            ValidateErrorReason::ProjectPortZero,
         ] {
             assert!(!r.to_string().is_empty());
             let _ = format!("{r:?}");

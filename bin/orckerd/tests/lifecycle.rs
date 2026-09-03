@@ -64,6 +64,100 @@ mod tests {
         cfg
     }
 
+    /// A currently-free port inside the project range (`20000..=29999`).
+    ///
+    /// The loop-guard test pins the daemon's HTTP listener here rather than on
+    /// an ephemeral port so that the range check cannot mask the guard: an
+    /// out-of-range port is refused before the link is ever planned, which would
+    /// prove nothing about `LinkProject` reaching `is_self_forward`.
+    fn free_project_range_port() -> u16 {
+        (orcker_core::FIRST_PROJECT_PORT..=orcker_core::LAST_PROJECT_PORT)
+            .find(|p| std::net::TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, *p)).is_ok())
+            .expect("a free port inside the project range")
+    }
+
+    /// `orcker link --port <a bound orcker listener>` must be refused exactly as
+    /// `orcker proxy add` on the same upstream is: the linked project routes
+    /// through the same proxy path, so accepting it points `<name>.test` back
+    /// into Orcker's own listener, which re-resolves it and forwards again.
+    ///
+    /// Driven over the real socket against a daemon that actually bound its
+    /// listeners, because the defect was that `Request::LinkProject` never
+    /// reached the guard - a test calling the predicate directly would pass
+    /// against the broken build.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn link_project_onto_a_bound_listener_is_refused() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dirs = make_dirs(tmp.path());
+        let http = free_project_range_port();
+        let (_, https) = free_ports();
+        let mut cfg = orcker_config::Config::default();
+        cfg.ports.http = http;
+        cfg.ports.https = https;
+        cfg.dns_port = 0;
+        let cfg_path = dirs.config.join("orcker.toml");
+
+        let project_root = tmp.path().join("loop");
+        std::fs::create_dir_all(&project_root).unwrap();
+
+        let daemon = orckerd::startup::bring_up_with_dirs(dirs.clone(), cfg, cfg_path)
+            .await
+            .expect("bring_up_with_dirs");
+        assert_eq!(
+            daemon.state.http.bound, http,
+            "the guard is inert unless the listener really bound"
+        );
+
+        let (shutdown_tx, shutdown_rx) = watch::channel(false);
+        let daemon_task = tokio::spawn(async move { drive_subsystems(daemon, shutdown_rx).await });
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        let ipc_sock = dirs.runtime.join("orcker.sock");
+
+        let proxy_refusal = round_trip(
+            &ipc_sock,
+            &Request::AddProxy {
+                name: "loopb".to_owned(),
+                url: format!("http://127.0.0.1:{http}"),
+            },
+        )
+        .await;
+        let link_refusal = round_trip(
+            &ipc_sock,
+            &Request::LinkProject {
+                path: project_root,
+                name: Some("loop".to_owned()),
+                port: Some(http),
+            },
+        )
+        .await;
+
+        shutdown_tx.send_replace(true);
+        let _ = tokio::time::timeout(Duration::from_secs(10), daemon_task).await;
+
+        let Response::Error {
+            code: proxy_code, ..
+        } = proxy_refusal
+        else {
+            panic!("expected proxy add to be refused, got {proxy_refusal:?}");
+        };
+        let Response::Error {
+            code: link_code,
+            message,
+        } = link_refusal
+        else {
+            panic!("expected the link to be refused, got {link_refusal:?}");
+        };
+        assert_eq!(
+            link_code, proxy_code,
+            "link must be refused with the code proxy add uses"
+        );
+        assert!(
+            message.contains("routing loop"),
+            "expected a routing-loop refusal, got {message:?}"
+        );
+    }
+
     /// A mutation (`Park`) over the real socket persists the config and is
     /// reflected by a follow-up `ListSites`. Uses valid (persistable) ports.
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

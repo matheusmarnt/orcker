@@ -8,7 +8,10 @@
 use std::path::{Path, PathBuf};
 
 use orcker_config::{Config, ConfigError, OrckerYml};
-use orcker_core::{allocate_port, ContainerProject, CoreError, PhpVersion, PortProbe};
+use orcker_core::{
+    allocate_port, ContainerProject, CoreError, PhpVersion, PortProbe, FIRST_PROJECT_PORT,
+    LAST_PROJECT_PORT,
+};
 
 /// What linking `root` would do.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -47,6 +50,18 @@ pub enum LinkError {
         /// The colliding name.
         name: String,
     },
+    /// The requested port lies outside the range projects are allocated from,
+    /// so honouring it would put a project on a port `taken_ports` never
+    /// accounts for.
+    #[error("port {port} is outside the project port range {first}-{last}")]
+    PortOutOfRange {
+        /// The requested port.
+        port: u16,
+        /// First port of the allowed range.
+        first: u16,
+        /// Last port of the allowed range.
+        last: u16,
+    },
     /// The requested port is already allocated to another project.
     #[error("port {port} is already allocated to project {owner:?}")]
     PortTaken {
@@ -67,7 +82,9 @@ pub enum LinkError {
 ///
 /// `existing_yml` is the already-read `<root>/orcker.yml`, or `None` when the
 /// file is absent. `requested_port` pins the allocation (the SPEC-0005 spike
-/// flow); otherwise a port is allocated from the free range.
+/// flow) and must fall inside the same range an automatic allocation draws
+/// from, so that the config's ports stay a complete account of what is
+/// allocated; otherwise a port is allocated from the free range.
 ///
 /// # Errors
 ///
@@ -99,6 +116,13 @@ pub fn plan_link(
 
     let port = match requested_port {
         Some(requested) => {
+            if !(FIRST_PROJECT_PORT..=LAST_PROJECT_PORT).contains(&requested) {
+                return Err(LinkError::PortOutOfRange {
+                    port: requested,
+                    first: FIRST_PROJECT_PORT,
+                    last: LAST_PROJECT_PORT,
+                });
+            }
             if let Some(owner) = cfg.projects.iter().find(|p| p.port() == requested) {
                 return Err(LinkError::PortTaken {
                     port: requested,
@@ -283,6 +307,45 @@ mod tests {
                 assert_eq!(owner, "spike");
             }
             other => panic!("expected PortTaken, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn port_outside_the_range_is_rejected() {
+        let cfg = Config::default();
+
+        for requested in [0, 80, FIRST_PROJECT_PORT - 1, LAST_PROJECT_PORT + 1] {
+            match plan_link(
+                &cfg,
+                Path::new("/srv/spike"),
+                Some("spike"),
+                Some(requested),
+                None,
+                &AllFree,
+            ) {
+                Err(LinkError::PortOutOfRange { port, first, last }) => {
+                    assert_eq!(port, requested);
+                    assert_eq!(first, FIRST_PROJECT_PORT);
+                    assert_eq!(last, LAST_PROJECT_PORT);
+                }
+                other => panic!("expected PortOutOfRange for {requested}, got {other:?}"),
+            }
+        }
+
+        for requested in [FIRST_PROJECT_PORT, LAST_PROJECT_PORT] {
+            let plan = plan_link(
+                &cfg,
+                Path::new("/srv/spike"),
+                Some("spike"),
+                Some(requested),
+                None,
+                &AllFree,
+            )
+            .expect("a port inside the range is honoured");
+            let LinkPlan::Link { project, .. } = plan else {
+                panic!("expected a link at {requested}");
+            };
+            assert_eq!(project.port(), requested);
         }
     }
 
