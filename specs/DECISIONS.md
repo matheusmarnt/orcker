@@ -527,3 +527,48 @@ Deviations, clarifications and trade-offs recorded by implementation cycles
   semantics of `specs/TRACEABILITY.md` — only the count, and round 1 of this cycle
   proved a count is blind to a one-column shift. The S8 step that appends a row has to
   escape before writing.
+
+
+## 2026-09-03 · SPEC-0053 — `Config::validate` rejects a zero project port, not an out-of-range one
+
+- Decision: `validate_projects` enforces "no project port is 0" and stops there,
+  even though R2 fixes the legitimate range at `20000..=29999` and a port outside
+  it is refused at link time.
+- Why: R4 requires configs that satisfy the invariants to keep loading, and R2's
+  range check landed in the same cycle. A config SPEC-0006 already wrote could
+  hold any port the old, unchecked `--port` accepted; enforcing the range at load
+  would turn a file the daemon itself produced into one it can no longer read,
+  which is a worse failure than the loose entry it would catch. The range is a
+  rule about what may be *allocated*, so it belongs where allocation happens.
+- Impact: an out-of-range port that predates this spec survives in the config and
+  is invisible to `taken_ports`' range accounting. Nothing re-checks it. A future
+  spec that wants the invariant at load has to ship a migration that rehomes such
+  a port, not just a stricter validator.
+
+## 2026-09-03 · SPEC-0053 — three reasons for R3's four invariants
+
+- Decision: `ProjectNameCollision` covers both "two projects share a name" and "a
+  project name collides with a linked site or a proxy", so R3's four invariants
+  are expressed as three `ValidateErrorReason` variants.
+- Why: `ProxyNameCollision` — the precedent the spec names — already merges
+  exactly that pair, and both cases have the same cause and the same repair:
+  a name that more than one claimant wants. Splitting them here would make the
+  project path describe a distinction the proxy path does not.
+- Impact: a caller cannot tell from the reason alone whether the other claimant is
+  a project, a site or a proxy. `validate_projects_matrix` asserts all four
+  invariants regardless, so the coverage is not what was traded away — only the
+  granularity of the wire reason.
+
+## 2026-09-03 · SPEC-0053 — R2's range check makes R1's loop guard unreachable in production
+
+- Decision: keep both guards, with the range check running first.
+- Why: they answer different questions. R2 asks whether a port may be allocated at
+  all; R1 asks whether this particular port is one Orcker is already listening on.
+  On a daemon bound to 80/443 the two never meet, because any such port is refused
+  as out of range before the link is planned. They do meet on a dev instance bound
+  inside `20000..=29999`, which is exactly the configuration that reproduced H1.
+- Impact: `link_project_onto_a_bound_listener_is_refused` has to pin the daemon's
+  HTTP listener inside the project range on purpose. A future change that narrows
+  the configurable HTTP port away from that range would make R1's guard dead code
+  and that test vacuous — the assertion `daemon.state.http.bound == http` is what
+  would catch it.
