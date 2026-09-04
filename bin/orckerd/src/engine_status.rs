@@ -8,6 +8,7 @@
 //! The TTL lives here, not in `orcker-engine`: the crate reports what it finds,
 //! the daemon decides how stale an answer may be.
 
+use std::future::Future;
 use std::sync::{Mutex, MutexGuard};
 use std::time::{Duration, Instant};
 
@@ -40,10 +41,16 @@ impl EngineStatusCache {
     /// simply overwrites the winner's. A lock held across the probe would be
     /// worse - it would serialize every client behind one connect timeout.
     pub async fn get(&self) -> DockerStatus {
+        self.get_with(orcker_engine::io::detect_from_env()).await
+    }
+
+    /// [`get`](Self::get)'s freshness decision, taking the probe as a future so
+    /// tests can drive the expiry path without a real Docker daemon.
+    async fn get_with(&self, probe: impl Future<Output = DockerStatus>) -> DockerStatus {
         if let Some(fresh) = self.fresh() {
             return fresh;
         }
-        let status = orcker_engine::io::detect_from_env().await;
+        let status = probe.await;
         *self.lock() = Some((Instant::now(), status.clone()));
         status
     }
@@ -101,5 +108,28 @@ mod tests {
     #[test]
     fn an_empty_cache_serves_nothing() {
         assert_eq!(EngineStatusCache::new().fresh(), None);
+    }
+
+    #[tokio::test]
+    async fn an_expired_entry_is_reprobed_and_the_result_is_stored() {
+        let cache = EngineStatusCache::new();
+        let stale = Instant::now()
+            .checked_sub(TTL + Duration::from_secs(1))
+            .expect("the test clock is well past the TTL");
+        let old = sample();
+        *cache.lock() = Some((stale, old.clone()));
+
+        let mut fresh_probe = sample();
+        fresh_probe.engine_version = Some("28.0.0".to_owned());
+        let result = cache
+            .get_with(std::future::ready(fresh_probe.clone()))
+            .await;
+
+        assert_eq!(result, fresh_probe, "an expired entry must be reprobed");
+        assert_eq!(
+            cache.fresh(),
+            Some(fresh_probe),
+            "the reprobed result must be written back"
+        );
     }
 }

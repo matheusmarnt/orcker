@@ -215,7 +215,7 @@ async fn run_lan_toggle(enabled: bool, json: bool) -> ExitCode {
     ExitCode::SUCCESS
 }
 
-/// `orcker status`: the daemon health report plus the Docker section.
+/// Gathers both `orcker status` responses and renders the result.
 ///
 /// The only command that needs two responses. `EngineStatus` is a separate
 /// request because the probe talks to the Docker daemon, so its answer comes
@@ -224,25 +224,56 @@ async fn run_lan_toggle(enabled: bool, json: bool) -> ExitCode {
 /// section absent, puts the real reason on stderr (see [`map::docker_section`])
 /// and still exits with the daemon report's code - a stopped engine is
 /// something `orcker status` reports, not something it exits non-zero on (R8).
-async fn run_status(json: bool) -> ExitCode {
+///
+/// Returns data rather than printing, and takes the daemon socket explicitly
+/// (mirroring [`transport::exchange_at`]) so `bin/orcker/tests/cli_e2e.rs` can
+/// drive the two-exchange wiring directly against its per-test daemon: a
+/// broken second exchange fails a test instead of only being invisible in a
+/// terminal (SPEC-0049 R2).
+pub async fn status_outcome(sock: &std::path::Path, json: bool) -> map::Rendered {
     use orcker_ipc::{Request, Response};
-    let report = match transport::exchange(&Request::Status).await {
+    let report = match transport::exchange_at(sock, &Request::Status).await {
         Ok(Response::Status { report }) => report,
         Ok(other) => {
-            eprintln!("orcker: unexpected response: {other:?}");
-            return ExitCode::from(1);
+            return map::Rendered {
+                stdout: String::new(),
+                stderr: format!("orcker: unexpected response: {other:?}"),
+                code: 1,
+            };
         }
+        Err(e) => {
+            return map::Rendered {
+                stdout: String::new(),
+                stderr: format!("orcker: {e}"),
+                code: 69,
+            };
+        }
+    };
+    let (docker, note) =
+        map::docker_section(transport::exchange_at(sock, &Request::EngineStatus).await);
+    let mut r = map::render_status(&report, docker.as_ref(), json);
+    if let Some(note) = note {
+        let note_line = format!("orcker: {note}");
+        r.stderr = if r.stderr.is_empty() {
+            note_line
+        } else {
+            format!("{note_line}\n{}", r.stderr)
+        };
+    }
+    r
+}
+
+/// `orcker status`: resolves the default daemon socket, prints
+/// [`status_outcome`]'s result and converts its code to an [`ExitCode`].
+async fn run_status(json: bool) -> ExitCode {
+    let sock = match transport::default_sock() {
+        Ok(s) => s,
         Err(e) => {
             eprintln!("orcker: {e}");
             return ExitCode::from(69);
         }
     };
-    let (docker, note) = map::docker_section(transport::exchange(&Request::EngineStatus).await);
-    if let Some(note) = note {
-        eprintln!("orcker: {note}");
-    }
-
-    let r = map::render_status(&report, docker.as_ref(), json);
+    let r = status_outcome(&sock, json).await;
     if !r.stdout.is_empty() {
         println!("{}", r.stdout);
     }
