@@ -75,7 +75,7 @@ Never a merge, never a bulk sync. Numbered above the reserved Phase-1 range.
 | 43 | SPEC-0043-orcker-stack-instruction-file | draft | FR-022 | SPEC-0003, SPEC-0004 |
 | 44 | SPEC-0044-fix-dangling-prd-related-documents | draft | FR-001 | SPEC-0042 |
 | 45 | SPEC-0045-verifiable-human-approval | accepted | FR-001 | SPEC-0042 |
-| 46 | SPEC-0046-elevate-dev-instance-socket | draft | FR-001 | SPEC-0001 |
+| 46 | SPEC-0046-elevate-dev-instance-socket | approved | FR-001 | SPEC-0001 |
 | 47 | SPEC-0047-traceability-record-repair | accepted | FR-001 | SPEC-0045 |
 | 48 | SPEC-0048-pure-crate-coverage-metric | draft | FR-001 | SPEC-0047 |
 | 49 | SPEC-0049-engine-detection-test-gaps | accepted | FR-010 | SPEC-0004 |
