@@ -15,9 +15,25 @@ use orcker_ipc::{Request, Response};
 /// client (tracked as a Phase-2 follow-up).
 #[cfg(unix)]
 pub async fn exchange(req: &Request) -> Result<Response, ClientError> {
+    exchange_at(&default_sock()?, req).await
+}
+
+/// Resolve the daemon socket path without exchanging a request, for a caller
+/// that needs the same path for more than one [`exchange_at`] call (`orcker
+/// status`'s two exchanges).
+#[cfg(unix)]
+pub fn default_sock() -> Result<std::path::PathBuf, ClientError> {
     use orcker_platform::{ActivePaths, Paths};
     let dirs = ActivePaths::new().resolve()?;
-    exchange_at(&dirs.runtime.join("orcker.sock"), req).await
+    Ok(dirs.runtime.join("orcker.sock"))
+}
+
+#[cfg(not(unix))]
+pub fn default_sock() -> Result<std::path::PathBuf, ClientError> {
+    Err(ClientError::DaemonUnreachable(
+        "the Windows IPC client is not yet supported (daemon pipe name is non-deterministic)"
+            .to_owned(),
+    ))
 }
 
 /// Connect to the daemon at an explicit socket path and exchange one
@@ -52,6 +68,14 @@ pub async fn exchange_at(sock: &std::path::Path, req: &Request) -> Result<Respon
 
 #[cfg(not(unix))]
 pub async fn exchange(_req: &Request) -> Result<Response, ClientError> {
+    Err(ClientError::DaemonUnreachable(
+        "the Windows IPC client is not yet supported (daemon pipe name is non-deterministic)"
+            .to_owned(),
+    ))
+}
+
+#[cfg(not(unix))]
+pub async fn exchange_at(_sock: &std::path::Path, _req: &Request) -> Result<Response, ClientError> {
     Err(ClientError::DaemonUnreachable(
         "the Windows IPC client is not yet supported (daemon pipe name is non-deterministic)"
             .to_owned(),

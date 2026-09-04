@@ -253,6 +253,21 @@ mod tests {
             other => panic!("expected Status, got {other:?}"),
         }
 
+        // SPEC-0049 R2: drive `status_outcome` itself (not a hand-replay of its
+        // two exchanges) so a broken `EngineStatus` exchange fails this test.
+        let rendered = orcker::status_outcome(&sock, true).await;
+        assert_eq!(
+            rendered.code, 0,
+            "a docker section, present or absent, must not fail the exit code (R8)"
+        );
+        let body: serde_json::Value =
+            serde_json::from_str(&rendered.stdout).expect("status_outcome --json is valid JSON");
+        assert!(
+            !body["docker"].is_null(),
+            "orcker status must wire the EngineStatus exchange: {}",
+            rendered.stderr
+        );
+
         let diag = send(&sock, &Command::Doctor { action: None }).await;
         match &diag {
             Response::Diagnoses { items } => {
