@@ -572,3 +572,21 @@ Deviations, clarifications and trade-offs recorded by implementation cycles
   the configurable HTTP port away from that range would make R1's guard dead code
   and that test vacuous — the assertion `daemon.state.http.bound == http` is what
   would catch it.
+
+## 2026-09-04 · SPEC-0046 — R2 is discharged by AC4's narrow scope, not by fixing every stale line in `building.md`
+
+- Decision: R2 ("`docs/developer/building.md` and the elevation guide agree with
+  the code") is satisfied by AC4 alone: the new paragraph documenting
+  `sudo env XDG_RUNTIME_DIR=... orcker elevate`. `building.md:230`'s unrelated
+  `cargo run -p orckerd -- -v` (stale since `orckerd` gained a `serve`
+  subcommand) is left untouched here.
+- Why: CLAUDE.md's spec-driven workflow requires parking work discovered
+  mid-cycle as a new draft spec rather than expanding the current diff. The `-v`
+  drift is unrelated to elevate/XDG socket discovery, this spec's actual
+  subject, and was found only incidentally while manually verifying AC3. Fixing
+  it inline would be scope creep against the approved Requirements.
+- Impact: `building.md`'s dev-instance section still has one stale command
+  block until `specs/SPEC-0056-fix-stale-daemon-serve-subcommand-in-docs.md`
+  (draft, FR-001) is picked up. Anyone following that recipe verbatim hits
+  `error: unexpected argument '-v' found` on the daemon-start step, independent
+  of anything this spec changed.
