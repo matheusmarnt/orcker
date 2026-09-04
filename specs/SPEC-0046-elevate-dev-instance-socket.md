@@ -7,7 +7,7 @@ depends_on: [SPEC-0001]
 surface:
   - bin/orcker/
   - docs/
-status: approved
+status: accepted
 attempts: 0
 ---
 

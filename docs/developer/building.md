@@ -235,6 +235,18 @@ resolves the same scratch socket and talks to your dev daemon; a shell without
 those variables still reaches production. Tear the instance down by deleting
 `/tmp/orcker-dev`.
 
+Reaching this instance with `sudo orcker elevate` needs the override passed
+through explicitly, since sudo's default `env_reset` strips anything merely
+`export`ed in your shell:
+
+```sh
+sudo env XDG_RUNTIME_DIR=/tmp/orcker-dev/run orcker elevate
+```
+
+A plain `sudo orcker elevate` after the `export` above does not error - it
+silently elevates the production daemon instead, since sudo already dropped
+the override before `orcker` ever saw it.
+
 ::: warning macOS has no equivalent override
 On macOS the config/data/state/cache paths are fixed to
 `~/Library/Application Support/io.orcker.Orcker` and the socket to `/tmp/orcker-$UID`,

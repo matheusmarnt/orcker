@@ -495,11 +495,13 @@ mod unix_impl {
 
     /// Candidate socket paths for the invoking user's daemon. Under sudo the
     /// process env points at root, so reconstruct from `SUDO_UID` (uid-based,
-    /// home-independent); fall back to the normal resolution for logged-in root.
+    /// home-independent), trying an `XDG_RUNTIME_DIR` still present in this
+    /// process's own environment first (e.g. `sudo env XDG_RUNTIME_DIR=...
+    /// orcker elevate`); fall back to the normal resolution for logged-in root.
     fn socket_candidates() -> Vec<PathBuf> {
         use orcker_platform::{ActivePaths, Paths};
         if let Some(uid) = sudo_uid() {
-            return user_socket_candidates(uid);
+            return user_socket_candidates(uid, std::env::var("XDG_RUNTIME_DIR").ok().as_deref());
         }
         match ActivePaths::new().resolve() {
             Ok(dirs) => vec![dirs.runtime.join("orcker.sock")],
@@ -507,13 +509,18 @@ mod unix_impl {
         }
     }
 
-    /// Pure: the uid-based socket paths the daemon would use (XDG runtime dir,
-    /// then the `/tmp` fallback), mirroring `orcker_platform`'s Linux resolution.
-    fn user_socket_candidates(uid: u32) -> Vec<PathBuf> {
-        vec![
-            PathBuf::from(format!("/run/user/{uid}/orcker/orcker.sock")),
-            PathBuf::from(format!("/tmp/orcker-{uid}/orcker.sock")),
-        ]
+    /// Pure: the uid-based socket paths the daemon would use, mirroring
+    /// `orcker_platform`'s Linux resolution. `xdg_runtime_dir`, when set and
+    /// non-empty, is tried first (`$XDG_RUNTIME_DIR/orcker/orcker.sock`); the
+    /// caller reads it from the environment so this stays testable without one.
+    fn user_socket_candidates(uid: u32, xdg_runtime_dir: Option<&str>) -> Vec<PathBuf> {
+        let mut candidates = Vec::new();
+        if let Some(dir) = xdg_runtime_dir.filter(|d| !d.is_empty()) {
+            candidates.push(PathBuf::from(dir).join("orcker").join("orcker.sock"));
+        }
+        candidates.push(PathBuf::from(format!("/run/user/{uid}/orcker/orcker.sock")));
+        candidates.push(PathBuf::from(format!("/tmp/orcker-{uid}/orcker.sock")));
+        candidates
     }
 
     pub(crate) fn sudo_uid() -> Option<u32> {
@@ -622,10 +629,25 @@ mod unix_impl {
         }
 
         #[test]
-        fn user_socket_candidates_are_uid_based() {
-            let c = user_socket_candidates(1000);
-            assert_eq!(c[0], PathBuf::from("/run/user/1000/orcker/orcker.sock"));
-            assert_eq!(c[1], PathBuf::from("/tmp/orcker-1000/orcker.sock"));
+        fn user_socket_candidates_without_xdg_override_is_unchanged() {
+            for xdg in [None, Some("")] {
+                let c = user_socket_candidates(1000, xdg);
+                assert_eq!(c.len(), 2);
+                assert_eq!(c[0], PathBuf::from("/run/user/1000/orcker/orcker.sock"));
+                assert_eq!(c[1], PathBuf::from("/tmp/orcker-1000/orcker.sock"));
+            }
+        }
+
+        #[test]
+        fn user_socket_candidates_prefers_xdg_runtime_dir_override() {
+            let c = user_socket_candidates(1000, Some("/tmp/orcker-dev/run"));
+            assert_eq!(c.len(), 3);
+            assert_eq!(
+                c[0],
+                PathBuf::from("/tmp/orcker-dev/run/orcker/orcker.sock")
+            );
+            assert_eq!(c[1], PathBuf::from("/run/user/1000/orcker/orcker.sock"));
+            assert_eq!(c[2], PathBuf::from("/tmp/orcker-1000/orcker.sock"));
         }
 
         #[test]
