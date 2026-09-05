@@ -7,7 +7,7 @@ depends_on: [SPEC-0045, SPEC-0047]
 surface:
   - docs/
   - .claude/
-status: approved
+status: in_progress
 attempts: 0
 ---
 
