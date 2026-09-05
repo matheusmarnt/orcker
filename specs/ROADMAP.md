@@ -77,7 +77,7 @@ Never a merge, never a bulk sync. Numbered above the reserved Phase-1 range.
 | 45 | SPEC-0045-verifiable-human-approval | accepted | FR-001 | SPEC-0042 |
 | 46 | SPEC-0046-elevate-dev-instance-socket | accepted | FR-001 | SPEC-0001 |
 | 47 | SPEC-0047-traceability-record-repair | accepted | FR-001 | SPEC-0045 |
-| 48 | SPEC-0048-pure-crate-coverage-metric | approved | FR-001 | SPEC-0047 |
+| 48 | SPEC-0048-pure-crate-coverage-metric | accepted | FR-001 | SPEC-0047 |
 | 49 | SPEC-0049-engine-detection-test-gaps | accepted | FR-010 | SPEC-0004 |
 | 50 | SPEC-0050-ipc-variant-literal-precheck | draft | FR-002 | SPEC-0004, SPEC-0006 |
 | 51 | SPEC-0051-cover-container-link-cli-semantics | accepted | FR-021 | SPEC-0006 |

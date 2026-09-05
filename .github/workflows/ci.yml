@@ -104,6 +104,20 @@ jobs:
           fi
           echo "OK: pacman+rpm correctly refuses to compile"
 
+      # Coverage of the pure crates is a reported metric for the SDD section 11
+      # retrospective (specs/TRACEABILITY.md's `Pure-crate coverage` column), never a
+      # gate: scripts/gate.sh does not run it, and continue-on-error means a failed or
+      # skipped run never fails this job. Runs once, on the single x86_64 Linux leg
+      # (not ubuntu-22.04-arm or macos-14), so the number is reported once, not three
+      # times. `orcker-catalog` joins the -p list once it lands (no such crate yet).
+      - name: Pure-crate coverage (report only)
+        if: matrix.os == 'ubuntu-22.04'
+        continue-on-error: true
+        run: |
+          rustup component add llvm-tools-preview
+          cargo install cargo-llvm-cov --locked
+          cargo llvm-cov --summary-only -p orcker-core -p orcker-stack -p orcker-engine
+
   # Frontend unit/component tests + production build (type-check via vue-tsc).
   frontend:
     name: frontend

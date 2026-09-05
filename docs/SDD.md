@@ -437,6 +437,8 @@ O agente comita **somente** após veredito APPROVE (S8). Merge na `main` e push 
 
 Registradas por ciclo em `specs/TRACEABILITY.md` (colunas: spec, attempts, duração, veredito final): **taxa de REWORK** (alvo < 30% — acima disso as specs estão ambíguas: melhorar spec-writer, não o implementador), **taxa de ESCALATE** (alvo < 10%), **duração do gate** (alvo < 10 min local), **cobertura das crates puras novas** (≥ 80%, NFR-03). Retrospectiva a cada 10 specs aceitas: o humano revê `DECISIONS.md` e ajusta template/critérios — o processo também é versionado.
 
+The `Pure-crate coverage` number comes from the `rust (ubuntu-22.04)` CI job's `Pure-crate coverage (report only)` step (`cargo llvm-cov --summary-only` over the pure crates), which is report-only (`continue-on-error: true`) and deliberately absent from `scripts/gate.sh`. A failed or skipped run leaves the column `—` at S8 rather than blocking the cycle.
+
 ## 12. Bootstrap — fila inicial (Fase 0)
 
 O harness (este documento, `CLAUDE.md`, `.claude/`, `scripts/`, `specs/_TEMPLATE.md`) é instalado **manualmente pelo humano** antes da primeira spec — é o único trabalho fora do loop. Fila inicial proposta em `specs/ROADMAP.md`:
