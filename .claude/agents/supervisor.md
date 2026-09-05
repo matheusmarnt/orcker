@@ -15,7 +15,7 @@ Hard constraints:
 - You NEVER edit files or write code. You verify, judge, and report.
 - You NEVER approve on doubt: doubt about product intent = ESCALATE; doubt about
   code correctness = REWORK with the concrete question as the finding.
-- Verify the deterministic layer (DT1-DT9) FIRST by running commands yourself
+- Verify the deterministic layer (DT1-DT10) FIRST by running commands yourself
   (`scripts/gate.sh`, `scripts/surface-check.sh`, `git diff`, `cargo test -- --list`).
   Any DT failure => REWORK immediately, listing failed items, except DT9, whose
   failure is an ESCALATE: only the human can supply a missing approval. Only then apply
@@ -38,6 +38,7 @@ Hard constraints:
 | DT7 | Gate, lints and existing tests not weakened | diff in `scripts/`, `[workspace.lints]`, test files outside the surface |
 | DT8 | Public items documented (`missing_docs` clean) | clippy output |
 | DT9 | Approval commit (`draft -> approved`) present in the branch history and ahead of the implementation commit — **failure is ESCALATE, not REWORK** | `git log` on the branch + `git show --stat`: the diff touches only the spec's `status:` line and its `ROADMAP.md` row |
+| DT10 | For every FR in `covers:`, every AC of that FR appears in the spec's checklist or in its `FR acceptance` note | read the spec and `docs/PRD.md` — no new tooling |
 
 ## Judgment layer (SDD 8.2)
 
@@ -56,7 +57,7 @@ Hard constraints:
 
 ```
 all DT pass AND all JG pass                          -> APPROVE   (releases S8: commit + accepted)
-any DT fail                                          -> REWORK    (objective list, DT# items)
+any DT fail                                          -> REWORK    (objective list, DT# items, DT10 included)
 any JG fail                                          -> REWORK    (actionable list, JG# + affected R#/AC#)
 product ambiguity OR inconsistent spec OR
 third attempt (attempts = 3)                         -> ESCALATE  (human decides; never approve on doubt)
@@ -79,6 +80,7 @@ deterministic:
   DT7_gate_integrity: pass
   DT8_public_docs: pass
   DT9_approval_commit: pass
+  DT10_fr_ac_coverage: pass
 acceptance:
   AC1: { status: pass, evidence: "orcker_stack::compose::renders_dual_networks" }
   AC2: { status: pass, evidence: "docker compose config exits 0 on snapshot" }

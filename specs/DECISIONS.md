@@ -10,6 +10,31 @@ Deviations, clarifications and trade-offs recorded by implementation cycles
 - Impact: <files/specs/requirements affected; follow-up spec id if any>
 ```
 
+## 2026-09-05 · SPEC-0054 — AC3's positive control narrowed to FR-003, not all of SPEC-0006's coverage
+
+- Decision: AC3's negative reproduction originally claimed a full `DT10` audit of
+  `specs/SPEC-0006-link-loopback-port.md` (all ACs of both `FR-021` and `FR-013`)
+  would pass. It does not: `FR-013` AC2 (no project port on `0.0.0.0` in generated
+  composes) and `FR-021`'s generation ACs are closed by neither SPEC-0006 nor
+  SPEC-0053 (compose/stack generation is Phase 1, out of scope for both). Escalated
+  per SDD section 6's "spec contradicts the code" rule rather than patched by
+  guessing a replacement positive control or editing an accepted spec. The human
+  narrowed AC3 and the Test plan to check `DT10` against FR-003 only — SPEC-0005
+  fails (AC1 never enumerated), SPEC-0006 passes vacuously (FR-003 is not in its
+  `covers`) — matching what the spec's own Context section actually discusses.
+- Why: no accepted spec today would survive a full `DT10` audit, since the `FR
+  acceptance` note format postdates all of them; treating that gap as a defect in
+  SPEC-0006 rather than in AC3's chosen example would have meant either back-filling
+  an accepted spec's record (explicitly out of scope for this cycle) or asserting a
+  false claim to force a pass.
+- Impact: `specs/SPEC-0054-fr-acceptance-must-be-enumerated.md`'s Test plan and AC3
+  wording. Two supporting facts worth carrying forward: no pre-SPEC-0054 accepted
+  spec would pass a full `DT10` audit (the rule binds specs written from now on,
+  not the thirteen already accepted); and `FR-013` AC2 / `FR-021`'s generation ACs
+  remain genuinely open, expected to close with Phase-1 stack generation
+  (SPEC-0007 and successors) — no new spec filed for this, since it is already the
+  Phase-1 backlog's own subject, not a gap needing its own tracking entry.
+
 ## 2026-08-31 · SPEC-0006 — a container project routes as a `ProxySite`, not a new site kind
 
 - Decision: R1 asked `orcker-core` for a site kind for container projects. It

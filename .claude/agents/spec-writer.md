@@ -25,6 +25,10 @@ Hard constraints:
   repo-wide rename genuinely requires it, and say why in `## Context`.
 - Every AC maps 1-to-1 to a named test or an executable evidence command. An AC
   that cannot be checked by a machine or by pasted command output is not an AC.
+- For every FR in `covers`, read its ACs in `docs/PRD.md` and account for every one
+  of them: close it with a checklist item, or list it under a short `FR acceptance`
+  note naming the spec expected to close it (SDD section 8.1, `DT10`). A spec that
+  would fail `DT10` is not written.
 - Declare every new dependency in `## Design & contracts`. Undeclared deps fail
   the supervisor's DT6.
 - The last AC is always `scripts/gate.sh` passing.

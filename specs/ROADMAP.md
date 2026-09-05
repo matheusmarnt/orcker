@@ -6,7 +6,7 @@ spec's front matter; this table is the index (keep both in sync at S8).
 `planned` rows have no spec file yet — draft them with `/spec-new` when the
 queue approaches them.
 
-## Phase 0 — validation (FR-001 and FR-002 accepted; FR-003 partial)
+## Phase 0 — validation (FR-001, FR-002, FR-003 accepted)
 
 | # | Spec | Status | Covers | Depends on |
 |---|------|--------|--------|------------|
@@ -22,8 +22,8 @@ queue approaches them.
 | 6 | SPEC-0006-link-loopback-port | accepted | FR-021, FR-013 (partial) | SPEC-0004, SPEC-0005, SPEC-0037 |
 
 Phase 0 exit: FR-001..003 accepted + process retrospective (SDD section 11-12).
-FR-003 is partial: SPEC-0005 satisfied its AC2 and AC3, while AC1 (`orcker link`
-registers the site with a loopback upstream, `docs/PRD.md`) closes with SPEC-0006.
+FR-003 closed: SPEC-0005 satisfied its AC2 and AC3, and SPEC-0006 closed AC1
+(`orcker link` registers the site with a loopback upstream, `docs/PRD.md`).
 
 ## Phase 1 — MVP backlog (planned; draft via /spec-new after Phase 0 retro)
 
@@ -83,5 +83,5 @@ Never a merge, never a bulk sync. Numbered above the reserved Phase-1 range.
 | 51 | SPEC-0051-cover-container-link-cli-semantics | accepted | FR-021 | SPEC-0006 |
 | 52 | SPEC-0052-evidence-blocks-must-be-captured | draft | FR-001 | SPEC-0045, SPEC-0047 |
 | 53 | SPEC-0053-validate-container-project-ports | accepted | FR-013, FR-021 | SPEC-0006 |
-| 54 | SPEC-0054-fr-acceptance-must-be-enumerated | approved | FR-001 | SPEC-0045, SPEC-0047 |
+| 54 | SPEC-0054-fr-acceptance-must-be-enumerated | accepted | FR-001 | SPEC-0045, SPEC-0047 |
 | 55 | SPEC-0055-validate-reason-display-list-is-partial | draft | FR-001 | SPEC-0053 |
