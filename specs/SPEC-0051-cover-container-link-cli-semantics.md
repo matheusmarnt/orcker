@@ -6,7 +6,7 @@ covers: [FR-021]
 depends_on: [SPEC-0006]
 surface:
   - bin/orcker/
-status: draft
+status: approved
 attempts: 0
 ---
 
