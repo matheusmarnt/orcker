@@ -7,7 +7,7 @@ depends_on: [SPEC-0047]
 surface:
   - .github/
   - docs/
-status: approved
+status: in_progress
 attempts: 0
 ---
 
