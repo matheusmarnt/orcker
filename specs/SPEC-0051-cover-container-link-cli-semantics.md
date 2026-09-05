@@ -6,8 +6,8 @@ covers: [FR-021]
 depends_on: [SPEC-0006]
 surface:
   - bin/orcker/
-status: approved
-attempts: 0
+status: accepted
+attempts: 1
 ---
 
 ## Context
@@ -44,11 +44,11 @@ relinked idempotently and served the golden thread. But the next refactor of
 
 ## Acceptance checklist
 
-- [ ] AC1 (R1) four cases pass -> test:
+- [x] AC1 (R1) four cases pass -> test:
       `orcker::tests::resolve_link_project_*`
-- [ ] AC2 (R2) link then relink over IPC -> test in `bin/orcker/tests/cli_e2e.rs`
-- [ ] AC3 (R3) `git diff` touches no existing `resolve_link` test
-- [ ] AC4 `scripts/gate.sh specs/SPEC-0051-*.md` passes
+- [x] AC2 (R2) link then relink over IPC -> test in `bin/orcker/tests/cli_e2e.rs`
+- [x] AC3 (R3) `git diff` touches no existing `resolve_link` test
+- [x] AC4 `scripts/gate.sh specs/SPEC-0051-*.md` passes
 
 ## Out of scope
 

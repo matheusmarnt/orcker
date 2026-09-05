@@ -371,6 +371,69 @@ mod tests {
         drop(keep_alive);
     }
 
+    /// SPEC-0051 R2: drives `Command::Link` the way `main` does
+    /// (`orcker::request_for`, not the `link()` helper above, which calls the
+    /// legacy `resolve_link` directly), against a real daemon. Asserts a first
+    /// link creates the project, and a second, identical link is a no-op
+    /// relink that leaves the on-disk config unchanged.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn link_command_creates_then_idempotently_relinks_a_project() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dirs = make_dirs(tmp.path());
+        let cfg_path = dirs.config.join("orcker.toml");
+
+        let project_dir = tmp.path().join("app");
+        std::fs::create_dir_all(&project_dir).unwrap();
+
+        let daemon =
+            orckerd::startup::bring_up_with_dirs(dirs.clone(), valid_config(), cfg_path.clone())
+                .await
+                .expect("bring_up_with_dirs");
+        let sock = dirs.runtime.join("orcker.sock");
+
+        let (shutdown_tx, shutdown_rx) = watch::channel(false);
+        let state = daemon.state.clone();
+        let ipc_task = tokio::spawn(orckerd::ipc_server::run(
+            daemon.ipc_listener,
+            state,
+            shutdown_rx,
+        ));
+        let keep_alive = (
+            daemon.lock,
+            daemon.dns_bound,
+            daemon.http_listener,
+            daemon.https_listener,
+        );
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        let cmd = Command::Link {
+            path: Some(project_dir.clone()),
+            name: None,
+            port: None,
+        };
+        let req = orcker::request_for(&cmd).expect("request_for");
+
+        match transport::exchange_at(&sock, &req).await.expect("exchange") {
+            Response::Project { created, .. } => assert!(created, "first link must create"),
+            other => panic!("expected Project, got {other:?}"),
+        }
+        let after_first = std::fs::read_to_string(&cfg_path).expect("config written");
+
+        match transport::exchange_at(&sock, &req).await.expect("exchange") {
+            Response::Project { created, .. } => assert!(!created, "relink must not create"),
+            other => panic!("expected Project, got {other:?}"),
+        }
+        let after_second = std::fs::read_to_string(&cfg_path).expect("config still there");
+        assert_eq!(
+            after_first, after_second,
+            "an idempotent relink must not change the persisted config"
+        );
+
+        shutdown_tx.send_replace(true);
+        let _ = tokio::time::timeout(Duration::from_secs(5), ipc_task).await;
+        drop(keep_alive);
+    }
+
     /// Drives the real `orcker mcp` session loop against a real daemon over the
     /// real socket: an agent's tool call must come back as live daemon data, and
     /// the GUI's toggle must be what gates it.
