@@ -7,8 +7,8 @@ depends_on: [SPEC-0045, SPEC-0047]
 surface:
   - docs/
   - .claude/
-status: in_progress
-attempts: 0
+status: accepted
+attempts: 1
 ---
 
 ## Context
@@ -60,25 +60,34 @@ for Portuguese prose.
 
 ## Test plan
 
-Record-only, no Rust. The discriminating check is a negative reproduction:
-apply `DT10` by hand to `specs/SPEC-0005-proxy-container-spike.md` as committed
-and confirm it fails on FR-003 AC1, then to `specs/SPEC-0006-link-loopback-port.md`
-and confirm it passes. A rule that does not fail the case that motivated it is
-decoration.
+Record-only, no Rust. The discriminating check is a negative reproduction, scoped
+to FR-003 (the FR the Context section discusses): apply `DT10` by hand to
+`specs/SPEC-0005-proxy-container-spike.md` as committed — `covers: [FR-003]` and
+its checklist never enumerates FR-003 AC1 — and confirm it **fails**. Then apply
+it to `specs/SPEC-0006-link-loopback-port.md` — `covers: [FR-021, FR-013]`, FR-003
+is not among them, so `DT10` imposes nothing about FR-003 there — and confirm it
+**passes** (vacuously, for FR-003 specifically; a full `DT10` audit of SPEC-0006's
+own `FR-021`/`FR-013` coverage is out of scope, see below). A rule that does not
+fail the case that motivated it is decoration.
 
 ## Acceptance checklist
 
-- [ ] AC1 (R1, R2) the contract requires the enumeration and derives `(partial)`
+- [x] AC1 (R1, R2) the contract requires the enumeration and derives `(partial)`
       -> evidence: `grep -n 'FR acceptance' docs/SDD.md`
-- [ ] AC2 (R3, R4) `DT10` exists in the 8.1 table and in the 8.3 decision block,
+- [x] AC2 (R3, R4) `DT10` exists in the 8.1 table and in the 8.3 decision block,
       routing to REWORK -> evidence: `grep -n 'DT10' docs/SDD.md`
-- [ ] AC3 negative reproduction: `DT10` applied to SPEC-0005 fails on FR-003
-      AC1; applied to SPEC-0006 passes. Both transcripts in the cycle log
-- [ ] AC4 (R5) drafting enforces it -> evidence:
+- [x] AC3 negative reproduction, scoped to FR-003: `DT10` applied to SPEC-0005
+      fails on FR-003 AC1; applied to SPEC-0006 passes vacuously (FR-003 is not
+      in SPEC-0006's `covers`). Both transcripts in the cycle log
+- [x] AC4 (R5) drafting enforces it -> evidence:
       `grep -n 'covers' .claude/agents/spec-writer.md .claude/commands/spec-new.md`
-- [ ] AC5 no accepted spec is edited -> evidence: `git diff --name-only` lists no
+- [x] AC5 no accepted spec is edited -> evidence: `git diff --name-only` lists no
       `specs/SPEC-00*.md` other than this one
-- [ ] AC6 `scripts/gate.sh specs/SPEC-0054-*.md` passes
+- [x] AC6 `scripts/gate.sh specs/SPEC-0054-*.md` passes
+
+FR acceptance: FR-001 has AC1/AC2/AC3 (`docs/PRD.md`); AC2 and AC3 closed by
+SPEC-0001. AC1 (`cargo fmt`/`clippy`/`test` green) is this cycle's own gate,
+closed by AC6 above.
 
 ## Out of scope
 

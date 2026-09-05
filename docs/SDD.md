@@ -93,6 +93,10 @@ Every AC is objective and machine- or evidence-verifiable, and maps to ≥1 test
 - [ ] AC2 <statement> → evidence: `<command + expected output>`
 - [ ] ACn `scripts/gate.sh` passes
 
+FR acceptance: for every FR in `covers:`, every one of that FR's ACs (as written
+in `docs/PRD.md`) either is closed by an item above, or is named here with the
+spec expected to close it, e.g. `FR-003 AC1 — open, closed by SPEC-0006`.
+
 ## Out of scope
 Explicit exclusions (prevents scope creep and guides the supervisor).
 
@@ -100,7 +104,7 @@ Explicit exclusions (prevents scope creep and guides the supervisor).
 Files to read first (keep minimal), known pitfalls, upstream (Yerd) references.
 ```
 
-**Regras de qualidade da spec:** `covers` nunca vazio (rastreabilidade obrigatória); requisitos R# fechados (o implementador não decide produto — dúvida de produto → RFC, não improviso); `surface` mínima; ACs mapeados 1-para-1 com testes/evidências.
+**Regras de qualidade da spec:** `covers` nunca vazio (rastreabilidade obrigatória); requisitos R# fechados (o implementador não decide produto — dúvida de produto → RFC, não improviso); `surface` mínima; ACs mapeados 1-para-1 com testes/evidências; para cada FR em `covers:`, toda AC dessa FR (SPEC-0054 R1) é fechada por um item do checklist ou listada na nota *FR acceptance* dizendo qual AC segue aberta e qual spec deve fechá-la — `(partial)` em `specs/ROADMAP.md` (SPEC-0054 R2) é a consequência derivada dessa nota, nunca uma anotação aplicada à mão.
 
 ## 5. Ciclo de vida da spec
 
@@ -224,10 +228,11 @@ O coração do processo. O supervisor (subagente definido em §9.3) só pode **l
 | DT7 | Gate/lints/testes existentes não enfraquecidos (regra 3 do §6) | diff em `scripts/`, `[workspace.lints]`, arquivos de teste fora da surface |
 | DT8 | Documentação de itens públicos presente (`missing_docs` limpo — já coberto por DT1, listado como item auditável) | saída do clippy |
 | DT9 | Commit de aprovação (`draft -> approved`) presente no histórico da branch e anterior ao commit de implementação | `git log` na branch + `git show --stat` do commit: diff só na linha `status:` da spec e na linha dela no `ROADMAP.md` |
+| DT10 | Para cada FR em `covers:`, toda AC dessa FR aparece no checklist da spec ou na nota *FR acceptance* | ler a spec e `docs/PRD.md` — sem ferramenta nova |
 
 **Qualquer DT reprovado ⇒ `REWORK` imediato citando o item — o supervisor não gasta julgamento em código que falha na camada determinística.**
 
-Única exceção: `DT9` reprovado ⇒ `ESCALATE`, nunca `REWORK` — o agente não pode produzir a própria aprovação, só o humano pode (§8.3).
+Única exceção: `DT9` reprovado ⇒ `ESCALATE`, nunca `REWORK` — o agente não pode produzir a própria aprovação, só o humano pode (§8.3). `DT10` reprovado ⇒ `REWORK`: ao contrário de `DT9`, o próprio agente corrige enumerando o que faltou.
 
 ### 8.2 Camada de julgamento (raciocínio do supervisor)
 
@@ -246,7 +251,7 @@ O coração do processo. O supervisor (subagente definido em §9.3) só pode **l
 
 ```
 todos DT pass ∧ todos JG pass                     → APPROVE  (libera S8: commit + accepted)
-qualquer DT fail exceto DT9                       → REWORK   (lista objetiva, itens DT#)
+qualquer DT fail exceto DT9                       → REWORK   (lista objetiva, itens DT#, DT10 inclusive)
 qualquer JG fail                                  → REWORK   (lista acionável, itens JG# + R#/AC# afetados)
 DT9 fail (aprovação humana ausente do registro) OU
 ambiguidade de produto OU spec inconsistente OU
@@ -270,6 +275,7 @@ deterministic:
   DT7_gate_integrity: pass
   DT8_public_docs: pass
   DT9_approval_commit: pass
+  DT10_fr_ac_coverage: pass
 acceptance:
   AC1: { status: pass, evidence: "orcker_stack::compose::renders_dual_networks" }
   AC2: { status: pass, evidence: "docker compose config exits 0 on snapshot" }

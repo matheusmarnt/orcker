@@ -7,7 +7,8 @@ Draft a spec covering $ARGUMENTS.
 
 1. Invoke the `spec-writer` subagent with the requirement ids. It reads `docs/PRD.md`
    and `specs/_TEMPLATE.md` and writes `specs/SPEC-XXXX-<slug>.md` with the next free
-   number and `status: draft`.
+   number and `status: draft`, enumerating every AC of each FR in `covers` (SDD
+   section 8.1, `DT10`) either in the checklist or in the `FR acceptance` note.
 2. Add the row to the right phase table in `specs/ROADMAP.md` (spec, status, covers,
    depends_on), keeping the table and the front matter in sync.
 3. Report the path and stop. `draft -> approved` is the human's sign-off (SDD

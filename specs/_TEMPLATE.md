@@ -39,6 +39,10 @@ Every AC is objective and machine- or evidence-verifiable, and maps to >= 1 test
 - [ ] AC2 <statement> -> evidence: `<command + expected output>`
 - [ ] ACn `scripts/gate.sh specs/SPEC-0000-*.md` passes
 
+FR acceptance: for every FR in `covers:`, every one of that FR's ACs (as written
+in `docs/PRD.md`) either is closed by an item above, or is named here with the
+spec expected to close it, e.g. `FR-003 AC1 - open, closed by SPEC-0006`.
+
 ## Out of scope
 
 Explicit exclusions (prevents scope creep and guides the supervisor).
