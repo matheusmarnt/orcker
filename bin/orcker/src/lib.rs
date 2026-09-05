@@ -83,15 +83,7 @@ pub async fn run(cli: Cli) -> ExitCode {
         _ => {}
     }
 
-    let req = match &cli.command {
-        Command::Link { path, name, port } => {
-            resolve_link_project(path.as_deref(), name.as_deref(), *port)
-        }
-        _ => map::to_request(&cli.command)
-            .map(canonicalize_unpark)
-            .and_then(canonicalize_park_path),
-    };
-    let req = match req {
+    let req = match request_for(&cli.command) {
         Ok(r) => r,
         Err(e) => {
             eprintln!("orcker: {e}");
@@ -136,6 +128,28 @@ pub async fn run(cli: Cli) -> ExitCode {
             eprintln!("orcker: {e}");
             ExitCode::from(74)
         }
+    }
+}
+
+/// Map a parsed command to its wire request, including the cwd-dependent
+/// `Command::Link` arm that [`map::to_request`] cannot express (it needs
+/// [`resolve_link_project`], which reads the current directory and so isn't
+/// pure). Public so `tests/cli_e2e.rs` can drive `Command::Link` exactly as
+/// [`run`] does, rather than re-typing the dispatch or calling a resolver
+/// helper directly (SPEC-0051 R2).
+///
+/// # Errors
+///
+/// Whatever [`resolve_link_project`] or [`map::to_request`] (plus its
+/// path-canonicalising follow-ups) returns.
+pub fn request_for(cmd: &Command) -> Result<orcker_ipc::Request, ClientError> {
+    match cmd {
+        Command::Link { path, name, port } => {
+            resolve_link_project(path.as_deref(), name.as_deref(), *port)
+        }
+        _ => map::to_request(cmd)
+            .map(canonicalize_unpark)
+            .and_then(canonicalize_park_path),
     }
 }
 
@@ -1243,6 +1257,45 @@ mod tests {
             panic!("expected Link");
         };
         assert_eq!(name, "parent");
+    }
+
+    // ─── resolve_link_project ───────────────────────────────────────
+
+    #[test]
+    fn resolve_link_project_absolutises_relative_path() {
+        let req = resolve_link_project(Some(Path::new("rel/app")), None, None).unwrap();
+        let Request::LinkProject { path, name, port } = req else {
+            panic!("expected LinkProject");
+        };
+        assert!(path.is_absolute());
+        assert!(path.ends_with("rel/app"));
+        assert_eq!(name, None);
+        assert_eq!(port, None);
+    }
+
+    #[test]
+    fn resolve_link_project_omitted_path_uses_cwd() {
+        let req = resolve_link_project(None, None, None).unwrap();
+        let Request::LinkProject { path, .. } = req else {
+            panic!("expected LinkProject");
+        };
+        assert_eq!(path, std::env::current_dir().unwrap());
+    }
+
+    #[test]
+    fn resolve_link_project_rejects_invalid_name() {
+        let err = resolve_link_project(None, Some("bad name"), None).unwrap_err();
+        assert!(matches!(err, ClientError::Usage(_)), "got: {err:?}");
+    }
+
+    #[test]
+    fn resolve_link_project_passes_name_and_port_through() {
+        let req = resolve_link_project(Some(Path::new("app")), Some("app"), Some(8080)).unwrap();
+        let Request::LinkProject { name, port, .. } = req else {
+            panic!("expected LinkProject");
+        };
+        assert_eq!(name.as_deref(), Some("app"));
+        assert_eq!(port, Some(8080));
     }
 
     // ─── normalize_lexically ────────────────────────────────────────
