@@ -156,6 +156,34 @@ Deviations, clarifications and trade-offs recorded by implementation cycles
   `docs/reference/`, this entry and SPEC-0042's R1/R2 are what change.
 
 
+## 2026-09-05 · SPEC-0030 — fixes all three stale `orckerd` commands, not only the two the Context named
+
+- Decision: R1's approved Context named `orckerd -- -v` (two occurrences,
+  `building.md:181,230`). Round-1 self-review found and fixed only those two,
+  with a literal-string acceptance check (`grep -c 'orckerd -- -v'`). The
+  supervisor's round-1 REWORK caught a third, `orckerd -- --config
+  ~/orcker-dev.toml -v` (`building.md:207`, pre-fix), the same defect class
+  (`--config` also lives on `ServeArgs`, unreachable without naming `serve`).
+  Round 2 fixed it and replaced the two literal-string ACs with a pattern,
+  `grep -cP 'orckerd -- (?!serve)'`, that catches the whole class rather than
+  the two instances the Context happened to name.
+- Why: R1 itself says "every ... occurrence" and "each command block ...
+  actually runs" - a check scoped to the Context's own examples cannot prove
+  that, and did not. This spec also supersedes
+  `specs/SPEC-0056-fix-stale-daemon-serve-subcommand-in-docs.md`, retracted as
+  a duplicate (`739a3ac`) once SPEC-0030 was recognised as covering the same
+  `building.md:230` line SPEC-0046's `DECISIONS.md` entry had queued it for.
+- Impact: `docs/developer/building.md` (3 command lines, 2 corrected sentences).
+  Round 1 also introduced a factually wrong sentence ("`serve` is not the
+  default subcommand"), refuted by `bin/orckerd/src/main.rs:20`
+  (`unwrap_or_else(|| Command::Serve(ServeArgs::default()))`); corrected in
+  round 2 to state the real mechanism - `serve` is the default when no
+  subcommand is given, but its own flags need it named explicitly, since
+  `Cli`'s parser has no `-v`/`--config` fields to route a bare flag into the
+  default variant. Nothing in `scripts/gate.sh` runs AC1's pattern going
+  forward, so a fourth stale invocation added later is not caught
+  automatically.
+
 ## 2026-08-20 · bootstrap (pre-cycle, no spec)
 
 - Decision: the project version becomes `0.0.0` and stays there until the MVP gate.

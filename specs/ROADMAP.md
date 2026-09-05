@@ -63,7 +63,7 @@ Never a merge, never a bulk sync. Numbered above the reserved Phase-1 range.
 |---|------|--------|--------|------------|
 | 28 | SPEC-0028-cherry-pick-networkmanager-reload-fix | draft | FR-030 | SPEC-0001 |
 | 29 | SPEC-0029-replace-binary-brand-icons | draft | FR-001 | SPEC-0001, SPEC-0036 |
-| 30 | SPEC-0030-fix-stale-daemon-run-command-in-docs | draft | FR-001 | SPEC-0001 |
+| 30 | SPEC-0030-fix-stale-daemon-run-command-in-docs | accepted | FR-001 | SPEC-0001 |
 | 31 | SPEC-0031-repoint-release-and-cdn-automation | draft | FR-001 | SPEC-0001 |
 | 32 | SPEC-0032-pin-gate-sort-collation | accepted | FR-001 | SPEC-0001 |
 | 34 | SPEC-0034-ipc-version-skew-handshake | draft | FR-002 | SPEC-0002 |

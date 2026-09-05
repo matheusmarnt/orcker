@@ -175,10 +175,13 @@ cargo build -p orckerd -p orcker
 ### Step 3 - run your build in the foreground
 
 Run the daemon you just built directly from the workspace. `serve` is the
-default subcommand, and `-v` turns up logging so you can watch it come up:
+default subcommand when none is given, but its own flags - `-v`, `--config` -
+still need `serve` named explicitly, since `orckerd`'s top-level parser
+doesn't route a bare flag into the default subcommand. `-v` turns up logging
+so you can watch it come up:
 
 ```sh
-cargo run -p orckerd -- -v
+cargo run -p orckerd -- serve -v
 ```
 
 On a rootless host it binds the fallback ports (`http=8080`, `https=8443`) and
@@ -199,11 +202,11 @@ cd apps/orcker-gui && npm run tauri dev
 
 ### Pointing at a different config file
 
-`orckerd` takes `--config` (`-c`) to override **just** the `orcker.toml` location,
+`serve` takes `--config` (`-c`) to override **just** the `orcker.toml` location,
 which is handy for testing config changes without touching your real one:
 
 ```sh
-cargo run -p orckerd -- --config ~/orcker-dev.toml -v
+cargo run -p orckerd -- serve --config ~/orcker-dev.toml -v
 ```
 
 ::: warning `--config` does not isolate the instance
@@ -227,7 +230,7 @@ export XDG_DATA_HOME=/tmp/orcker-dev/data
 export XDG_STATE_HOME=/tmp/orcker-dev/state
 export XDG_CACHE_HOME=/tmp/orcker-dev/cache
 export XDG_RUNTIME_DIR=/tmp/orcker-dev/run   # different socket → no lock clash
-cargo run -p orckerd -- -v
+cargo run -p orckerd -- serve -v
 ```
 
 Any `orcker` CLI (or `npm run tauri dev` GUI) launched with the *same* environment
