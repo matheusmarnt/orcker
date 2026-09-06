@@ -6,8 +6,8 @@ covers: [FR-022]
 depends_on: [SPEC-0003, SPEC-0004]
 surface:
   - .github/
-status: in_progress
-attempts: 0
+status: accepted
+attempts: 1
 ---
 
 ## Context
