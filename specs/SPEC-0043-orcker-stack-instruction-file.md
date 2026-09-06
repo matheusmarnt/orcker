@@ -6,7 +6,7 @@ covers: [FR-022]
 depends_on: [SPEC-0003, SPEC-0004]
 surface:
   - .github/
-status: draft
+status: approved
 attempts: 0
 ---
 
