@@ -41,3 +41,56 @@ daemon's own literal, and `derive(Default)` does not compile because
 `dns_addr: SocketAddr` has no `Default`. SPEC-0020 (doctor Docker checks) is the
 first queued spec that will hit this, because `orcker_doctor::diagnose` takes a
 `&StatusReport`.
+
+## Requirements
+
+- R1. `.github/instructions/orcker-stack.instructions.md` exists, `applyTo:
+      "crates/orcker-stack/**/*.rs"`, mirroring `orcker-core.instructions.md`
+      (layer, owns, must-not, conventions, tests/invariants, review checklist).
+      It states the crate is strictly pure (no I/O, no async, no `orcker-*`
+      dependency) and that the rendered compose file must never publish on
+      `0.0.0.0`, set `privileged: true`, or mount the Docker socket.
+- R2. `.github/instructions/orcker-engine.instructions.md` exists, `applyTo:
+      "crates/orcker-engine/**/*.rs"`, same shape, and names the two specifics
+      its neighbours do not have: `bollard` may appear in this crate only and
+      with no TLS feature enabled (`specs/DECISIONS.md`, 2026-08-31), and
+      `MIN_ENGINE_VERSION` / `MIN_COMPOSE_VERSION` in `src/pure/mod.rs` are the
+      single source of the supported floor, pinned by `minimum_version_policy`.
+- R3. `.github/instructions/orcker-ipc.instructions.md` gains the `StatusReport`
+      trap under its *Contract rules*: the struct is not `#[non_exhaustive]` and
+      is built with a full struct literal at nine sites across five crates, so a
+      spec intending to extend it must declare all of them in `surface:` up
+      front. The one production site (`bin/orckerd/src/ipc_server.rs`) is
+      distinguished from the eight test fixtures.
+- R4. The same note records the two non-fixes so the next cycle does not
+      re-derive them: `#[non_exhaustive]` would forbid the daemon's own literal,
+      and `derive(Default)` does not compile because `dns_addr: SocketAddr` has
+      no `Default`. It names SPEC-0020 as the first queued spec that will hit
+      this, because `orcker_doctor::diagnose` takes a `&StatusReport`.
+
+## Acceptance checklist
+
+- [ ] AC1 (R1) → evidence: `test -f .github/instructions/orcker-stack.instructions.md`
+      exits 0 and `grep -c '0\.0\.0\.0\|privileged\|docker\.sock'` on it prints 3 or more
+- [ ] AC2 (R2) → evidence: `grep -n 'bollard\|MIN_ENGINE_VERSION\|MIN_COMPOSE_VERSION\|minimum_version_policy'
+      .github/instructions/orcker-engine.instructions.md` prints all four
+- [ ] AC3 (R3) the nine sites are enumerated and match the tree → evidence: the
+      file lists them, and `git grep -nE 'StatusReport \{' -- '*.rs'` in the cycle
+      log shows the same nine construction sites across five crates
+- [ ] AC4 (R4) both non-fixes and SPEC-0020 are named → evidence:
+      `grep -n 'non_exhaustive\|Default\|SPEC-0020' .github/instructions/orcker-ipc.instructions.md`
+- [ ] AC5 `scripts/gate.sh specs/SPEC-0043-orcker-stack-instruction-file.md` passes
+
+FR acceptance: FR-022 has AC1/AC2/AC3 (`docs/PRD.md`). AC2 (`docker compose
+config` accepts the render) closed by SPEC-0003 AC5. AC1 (snapshots over
+`{postgres,mysql} × {reference,minimal} × {fino,source}`) — open, only
+`postgres × reference` exists; closed by SPEC-0007 and SPEC-0008. AC3 (host
+UID/GID applied at build) — open, closed by SPEC-0007. This spec documents the
+crate that renders those templates and closes none of FR-022's ACs on its own.
+
+## Out of scope
+
+`orcker-catalog` (the crate has not landed). The other crates without an
+instruction file (`orcker-depcheck`, `orcker-release-manifest`,
+`orcker-service-ctl`, `orcker-update`, `orcker-mail`, `orcker-tunnel`). The IPC
+struct-literal *precheck command*, which is SPEC-0050's R1. Any `.rs` change.
