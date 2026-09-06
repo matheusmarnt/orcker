@@ -1,0 +1,2 @@
+225:| DT4 | Evidência de RED registrada no log do ciclo para os testes novos | ler log do ciclo; amostragem opcional via revert local |
+272:  DT4_red_evidence: pass

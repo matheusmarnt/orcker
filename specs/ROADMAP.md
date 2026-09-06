@@ -81,7 +81,8 @@ Never a merge, never a bulk sync. Numbered above the reserved Phase-1 range.
 | 49 | SPEC-0049-engine-detection-test-gaps | accepted | FR-010 | SPEC-0004 |
 | 50 | SPEC-0050-ipc-variant-literal-precheck | accepted | FR-002 | SPEC-0004, SPEC-0006 |
 | 51 | SPEC-0051-cover-container-link-cli-semantics | accepted | FR-021 | SPEC-0006 |
-| 52 | SPEC-0052-evidence-blocks-must-be-captured | draft | FR-001 | SPEC-0045, SPEC-0047 |
+| 52 | SPEC-0052-evidence-blocks-must-be-captured | accepted | FR-001 | SPEC-0045, SPEC-0047 |
 | 53 | SPEC-0053-validate-container-project-ports | accepted | FR-013, FR-021 | SPEC-0006 |
 | 54 | SPEC-0054-fr-acceptance-must-be-enumerated | accepted | FR-001 | SPEC-0045, SPEC-0047 |
 | 55 | SPEC-0055-validate-reason-display-list-is-partial | accepted | FR-001 | SPEC-0053 |
+| 57 | SPEC-0057-mirror-dt4-evidence-check-into-supervisor-agent | draft | FR-001 | SPEC-0052 |

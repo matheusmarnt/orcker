@@ -151,6 +151,28 @@ flowchart TD
 3. Proibido fazer o gate passar enfraquecendo-o: qualquer edição em `scripts/gate.sh`, lints do workspace, testes de wire-stability ou testes existentes **fora da surface** é reprovação automática (e edição de teste existente dentro da surface exige justificativa na spec).
 4. Evidência de RED (S3) registrada no log do ciclo — sem ela, o supervisor trata os testes como suspeitos de tautologia.
 5. Nenhuma dependência nova em `Cargo.toml`/`package.json` que não esteja declarada na seção *Design & contracts* da spec.
+6. **Evidence is captured, not typed.** Pipe the command through `tee` into
+   `specs/logs/<spec-id>-evidence/<name>.txt`, or paste that captured file back
+   into the cycle log verbatim. Never hand-edit a value inside an evidence
+   block — SPEC-0005 left a retracted latency number standing in exactly that
+   way.
+7. **A changed output means a deleted block.** When a fix changes what a
+   command prints, delete the stale evidence block *before* re-running the
+   command. The word "re-run" must never be asserted over a block that was not
+   itself replaced: SPEC-0006 round 2 was a REWORK for precisely this — the run
+   had genuinely happened, but the transcript still held the pre-fix paste.
+8. **Every block names its provenance.** The commit it was produced from, or,
+   for an uncommitted tree, the binary's build time — so a reviewer can
+   falsify the claim without re-deriving it from source, the way SPEC-0047's
+   `TRACEABILITY.md` column shift went unseen by a check that only counted
+   fields instead of reading them. Evidence block skeleton:
+
+   ```
+   captured: <commit-sha | build-time> · command: <command>
+   file: specs/logs/<spec-id>-evidence/<name>.txt
+
+   <captured output, byte-for-byte>
+   ```
 
 ## 7. Gate determinístico
 
@@ -222,7 +244,7 @@ O coração do processo. O supervisor (subagente definido em §9.3) só pode **l
 | DT1 | `scripts/gate.sh <spec>` exit 0 (fmt, clippy `-D warnings`, suíte completa, GUI quando tocada) | executar o script |
 | DT2 | Diff ⊆ `surface` declarada | `surface-check.sh` |
 | DT3 | Todo AC da spec mapeado a teste existente ou evidência executável (nome do teste presente no diff/suíte) | conferir checklist ↔ `cargo test -- --list` / diff |
-| DT4 | Evidência de RED registrada no log do ciclo para os testes novos | ler log do ciclo; amostragem opcional via revert local |
+| DT4 | Evidência de RED registrada no log do ciclo para os testes novos. Mirror check: reject an evidence block whose content contradicts the tree, and treat a "re-run" claim over unchanged output as this specific failure (SPEC-0006 round 2) | ler log do ciclo; amostragem opcional via revert local; re-derive at least one evidence block from the tree |
 | DT5 | IPC: testes de wire-stability intocados e verdes; mudanças de protocolo apenas aditivas | diff em `orcker-ipc` + testes |
 | DT6 | Zero dependências novas não declaradas na spec | diff de `Cargo.toml`/`Cargo.lock`/`package.json` |
 | DT7 | Gate/lints/testes existentes não enfraquecidos (regra 3 do §6) | diff em `scripts/`, `[workspace.lints]`, arquivos de teste fora da surface |

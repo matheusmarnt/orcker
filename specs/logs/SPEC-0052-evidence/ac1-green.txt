@@ -1,0 +1,4 @@
+154:6. **Evidence is captured, not typed.** Pipe the command through `tee` into
+160:   command prints, delete the stale evidence block *before* re-running the
+161:   command. The word "re-run" must never be asserted over a block that was not
+247:| DT4 | Evidência de RED registrada no log do ciclo para os testes novos. Mirror check: reject an evidence block whose content contradicts the tree, and treat a "re-run" claim over unchanged output as this specific failure (SPEC-0006 round 2) | ler log do ciclo; amostragem opcional via revert local; re-derive at least one evidence block from the tree |
