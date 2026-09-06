@@ -34,6 +34,27 @@ behind `transport` (the only part allowed to touch `tokio`).
 - Introduce/raise the protocol version constant on any breaking change, with a
   handshake before the first incompatible change.
 
+## Precheck before adding a field to an existing variant
+
+Before adding a field to an existing `Request`/`Response` variant, or to a
+struct one carries, run `git grep -nE '(Request|Response)::<Variant> \{' --
+'*.rs'` (substitute the real variant name) and confirm every hit is inside the
+spec's declared `surface:`. A `{ .. }` pattern is safe; any hit that names
+fields is not, since it breaks the same way a literal does. A hit outside the
+surface means the field is not available there yet: either declare those
+files in `surface:` up front, or use a new variant instead.
+
+Escape hatch: a separate request merged at render time, as `orcker status`
+does with `Request::Status` + `Request::EngineStatus`
+(`bin/orcker/src/lib.rs`, `bin/orcker/src/map.rs`) and `orcker sites` does
+with `Request::ListSites` + `Request::ListProjects` (`bin/orcker/src/lib.rs`).
+
+Two cycles paid for skipping this: SPEC-0004 wanted a field on `StatusReport`
+(see the trap below) and SPEC-0006 wanted a `projects` field on
+`Response::Sites`, blocked by a literal in `crates/orcker-mcp/tests/render.rs`
+and resolved only after the code was written, by splitting into a separate
+`Response::Projects`.
+
 ## The `StatusReport` trap
 
 `StatusReport` is **not** `#[non_exhaustive]` and is built with a full struct
