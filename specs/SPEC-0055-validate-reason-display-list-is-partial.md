@@ -6,8 +6,8 @@ covers: [FR-001]
 depends_on: [SPEC-0053]
 surface:
   - crates/orcker-config/
-status: in_progress
-attempts: 0
+status: accepted
+attempts: 1
 ---
 
 ## Context
@@ -29,6 +29,10 @@ of the test in the first place.
 
 ## Acceptance checklist
 
-- [ ] AC1 (R1) removing a variant from the enumeration is a compile error, not a
+- [x] AC1 (R1) removing a variant from the enumeration is a compile error, not a
       silently narrower test
-- [ ] AC2 `scripts/gate.sh specs/SPEC-0055-*.md` passes
+- [x] AC2 `scripts/gate.sh specs/SPEC-0055-*.md` passes
+
+FR acceptance: FR-001 has AC1/AC2/AC3 (`docs/PRD.md`); AC2 and AC3 closed by
+SPEC-0001. AC1 (`cargo fmt`/`clippy`/`test` green) is this cycle's own gate,
+closed by AC2 above.
