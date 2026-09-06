@@ -34,6 +34,26 @@ behind `transport` (the only part allowed to touch `tokio`).
 - Introduce/raise the protocol version constant on any breaking change, with a
   handshake before the first incompatible change.
 
+## The `StatusReport` trap
+
+`StatusReport` is **not** `#[non_exhaustive]` and is built with a full struct
+literal at nine sites across five crates: the one production site is
+`bin/orckerd/src/ipc_server.rs`; the other eight are test fixtures —
+`bin/orcker/src/map.rs`, `bin/orcker/src/mcp_cmd.rs`,
+`crates/orcker-doctor/src/lib.rs`, `crates/orcker-ipc/src/response.rs`,
+`crates/orcker-ipc/tests/roundtrip.rs`, `crates/orcker-ipc/tests/wire_stability.rs`
+(×2), and `crates/orcker-mcp/tests/render.rs`. Adding a field to it breaks
+every one of them at once. A spec that intends to extend `StatusReport` must
+declare all nine sites in its `surface:` up front — run
+`git grep -nE 'StatusReport \{' -- '*.rs'` before writing the design.
+
+Two apparent fixes do not work, so do not re-propose them:
+`#[non_exhaustive]` would forbid the daemon's own literal in
+`ipc_server.rs`, and `derive(Default)` does not compile because
+`dns_addr: SocketAddr` has no `Default`. SPEC-0020 (doctor Docker checks) is
+the first queued spec that will hit this, because `orcker_doctor::diagnose`
+takes a `&StatusReport`.
+
 ## Tests / invariants
 
 - `tests/frame_codec.rs` — partial, pipelined, oversized, and empty frames.

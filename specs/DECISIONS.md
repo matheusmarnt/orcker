@@ -643,3 +643,25 @@ Deviations, clarifications and trade-offs recorded by implementation cycles
   (draft, FR-001) is picked up. Anyone following that recipe verbatim hits
   `error: unexpected argument '-v' found` on the daemon-start step, independent
   of anything this spec changed.
+
+## 2026-09-05 · SPEC-0043 — Requirements and Acceptance checklist authored into an already-`approved` spec
+
+- Decision: author `## Requirements` (R1-R4) and `## Acceptance checklist`
+  (AC1-AC5) into `specs/SPEC-0043-orcker-stack-instruction-file.md` mid-cycle
+  (`da4aab3`), after `eea623a` had already flipped it `draft -> approved`
+  carrying only a `## Context`. The human chose this over implementing from
+  bare Context or parking the spec back to `draft`.
+- Why: `docs/SDD.md` section 4 requires both sections on every spec, and
+  without them the supervisor has no objective AC list to check against. The
+  amendment is derived strictly from the existing Context — which is
+  concrete enough (add two instruction files mirroring
+  `orcker-core.instructions.md`; amend a third with a named trap) — so no new
+  product decision was made, only the SDD-mandated structure the approval
+  commit itself omitted.
+- Impact: `specs/SPEC-0043-orcker-stack-instruction-file.md` now carries
+  Requirements and an Acceptance checklist that were not present in the
+  `eea623a` approval diff. Any other spec already `approved` with only a
+  `## Context` (none currently known in the queue) takes the same route:
+  amend-then-implement, spec-amendment commit ahead of the implementation
+  commit, recorded here rather than only in the per-spec cycle log, since a
+  cycle log is closed at S8 and this is a cross-cycle process gap.
