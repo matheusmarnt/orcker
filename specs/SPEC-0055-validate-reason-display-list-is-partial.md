@@ -6,7 +6,7 @@ covers: [FR-001]
 depends_on: [SPEC-0053]
 surface:
   - crates/orcker-config/
-status: approved
+status: in_progress
 attempts: 0
 ---
 
