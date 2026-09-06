@@ -311,46 +311,64 @@ mod tests {
 
     use super::*;
 
+    /// Every `ValidateErrorReason` variant, built by walking an exhaustive
+    /// `match` from the first variant to the last. The match has no
+    /// wildcard arm, so adding or removing a variant without updating a
+    /// step here is `E0004: non-exhaustive patterns`, not a silently
+    /// narrower list.
+    fn every_validate_error_reason() -> Vec<ValidateErrorReason> {
+        use ValidateErrorReason as R;
+        let mut all = vec![R::DuplicateLinkedSite];
+        let mut current = R::DuplicateLinkedSite;
+        loop {
+            current = match current {
+                R::DuplicateLinkedSite => R::HttpHttpsPortsEqual,
+                R::HttpHttpsPortsEqual => R::HttpPortZero,
+                R::HttpPortZero => R::HttpsPortZero,
+                R::HttpsPortZero => R::MailPortZero,
+                R::MailPortZero => R::DumpsPortZero,
+                R::DumpsPortZero => R::UnknownService,
+                R::UnknownService => R::ParkedPathEmpty,
+                R::ParkedPathEmpty => R::OverridePathEmpty,
+                R::OverridePathEmpty => R::InvalidPhpSetting,
+                R::InvalidPhpSetting => R::WebRootEscapes,
+                R::WebRootEscapes => R::InvalidUpdateChannel,
+                R::InvalidUpdateChannel => R::FallbackPortPrivileged,
+                R::FallbackPortPrivileged => R::FallbackPortsEqual,
+                R::FallbackPortsEqual => R::LanSetupPortPrivileged,
+                R::LanSetupPortPrivileged => R::TunnelEntryEmpty,
+                R::TunnelEntryEmpty => R::TunnelHostnameInvalid,
+                R::TunnelHostnameInvalid => R::TunnelKeyInvalid,
+                R::TunnelKeyInvalid => R::TunnelMultipleNamed,
+                R::TunnelMultipleNamed => R::TunnelDuplicateHostname,
+                R::TunnelDuplicateHostname => R::GroupNameEmpty,
+                R::GroupNameEmpty => R::GroupNameReserved,
+                R::GroupNameReserved => R::GroupDuplicate,
+                R::GroupDuplicate => R::GroupMemberDangling,
+                R::GroupMemberDangling => R::InvalidPhpExtension,
+                R::InvalidPhpExtension => R::DuplicateExtensionName,
+                R::DuplicateExtensionName => R::DomainAddedDuplicate,
+                R::DomainAddedDuplicate => R::DomainAddedSuppressedOverlap,
+                R::DomainAddedSuppressedOverlap => R::DomainPrimaryWildcard,
+                R::DomainPrimaryWildcard => R::ProxyNameCollision,
+                R::ProxyNameCollision => R::ProxyRuleDuplicatePrefix,
+                R::ProxyRuleDuplicatePrefix => R::ProxyTargetLoop,
+                R::ProxyTargetLoop => R::ProxyRuleUnknownSite,
+                R::ProxyRuleUnknownSite => R::RouteRuleDuplicatePrefix,
+                R::RouteRuleDuplicatePrefix => R::RouteRuleUnknownSite,
+                R::RouteRuleUnknownSite => R::ProjectNameCollision,
+                R::ProjectNameCollision => R::ProjectPortCollision,
+                R::ProjectPortCollision => R::ProjectPortZero,
+                R::ProjectPortZero => break,
+            };
+            all.push(current);
+        }
+        all
+    }
+
     #[test]
     fn display_validate_each_variant_non_empty() {
-        for r in [
-            ValidateErrorReason::DuplicateLinkedSite,
-            ValidateErrorReason::HttpHttpsPortsEqual,
-            ValidateErrorReason::HttpPortZero,
-            ValidateErrorReason::HttpsPortZero,
-            ValidateErrorReason::MailPortZero,
-            ValidateErrorReason::DumpsPortZero,
-            ValidateErrorReason::UnknownService,
-            ValidateErrorReason::ParkedPathEmpty,
-            ValidateErrorReason::OverridePathEmpty,
-            ValidateErrorReason::InvalidPhpSetting,
-            ValidateErrorReason::WebRootEscapes,
-            ValidateErrorReason::InvalidUpdateChannel,
-            ValidateErrorReason::FallbackPortPrivileged,
-            ValidateErrorReason::FallbackPortsEqual,
-            ValidateErrorReason::LanSetupPortPrivileged,
-            ValidateErrorReason::TunnelEntryEmpty,
-            ValidateErrorReason::TunnelHostnameInvalid,
-            ValidateErrorReason::TunnelKeyInvalid,
-            ValidateErrorReason::TunnelMultipleNamed,
-            ValidateErrorReason::TunnelDuplicateHostname,
-            ValidateErrorReason::GroupNameEmpty,
-            ValidateErrorReason::GroupNameReserved,
-            ValidateErrorReason::GroupDuplicate,
-            ValidateErrorReason::GroupMemberDangling,
-            ValidateErrorReason::InvalidPhpExtension,
-            ValidateErrorReason::DuplicateExtensionName,
-            ValidateErrorReason::DomainAddedDuplicate,
-            ValidateErrorReason::DomainAddedSuppressedOverlap,
-            ValidateErrorReason::DomainPrimaryWildcard,
-            ValidateErrorReason::ProxyNameCollision,
-            ValidateErrorReason::ProxyRuleDuplicatePrefix,
-            ValidateErrorReason::ProxyTargetLoop,
-            ValidateErrorReason::ProxyRuleUnknownSite,
-            ValidateErrorReason::ProjectNameCollision,
-            ValidateErrorReason::ProjectPortCollision,
-            ValidateErrorReason::ProjectPortZero,
-        ] {
+        for r in every_validate_error_reason() {
             assert!(!r.to_string().is_empty());
             let _ = format!("{r:?}");
         }
