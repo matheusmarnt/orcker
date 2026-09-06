@@ -6,8 +6,8 @@ covers: [FR-001]
 depends_on: [SPEC-0045, SPEC-0047]
 surface:
   - docs/
-status: in_progress
-attempts: 0
+status: accepted
+attempts: 3
 ---
 
 ## Context
@@ -49,14 +49,18 @@ run it claims to describe.**
 
 ## Acceptance checklist
 
-- [ ] AC1 (R1, R2) the two rules exist -> evidence:
+- [x] AC1 (R1, R2) the two rules exist -> evidence:
       `grep -n 'tee\|re-run' docs/SDD.md`
-- [ ] AC2 (R3) the provenance rule exists and the cycle-log template shows it
-- [ ] AC3 (R4) DT4's wording covers a contradicted transcript -> evidence:
+- [x] AC2 (R3) the provenance rule exists and the cycle-log template shows it
+- [x] AC3 (R4) DT4's wording covers a contradicted transcript -> evidence:
       `grep -n 'DT4' docs/SDD.md`
-- [ ] AC4 the three prior instances (SPEC-0005, SPEC-0006, SPEC-0047) are cited
+- [x] AC4 the three prior instances (SPEC-0005, SPEC-0006, SPEC-0047) are cited
       so the rule reads as evidence rather than ceremony
-- [ ] AC5 `scripts/gate.sh specs/SPEC-0052-*.md` passes
+- [x] AC5 `scripts/gate.sh specs/SPEC-0052-*.md` passes
+
+FR acceptance: FR-001 has AC1/AC2/AC3 (`docs/PRD.md`); AC2 and AC3 closed by
+SPEC-0001. AC1 (`cargo fmt`/`clippy`/`test` green) is this cycle's own gate,
+closed by AC5 above.
 
 ## Out of scope
 

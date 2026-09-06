@@ -1,0 +1,2 @@
+247:| DT4 | Evidência de RED registrada no log do ciclo para os testes novos. Mirror check: reject an evidence block whose content contradicts the tree, and treat a "re-run" claim over unchanged output as this specific failure (SPEC-0006 round 2) | ler log do ciclo; amostragem opcional via revert local; re-derive at least one evidence block from the tree |
+294:  DT4_red_evidence: pass

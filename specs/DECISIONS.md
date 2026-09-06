@@ -10,6 +10,31 @@ Deviations, clarifications and trade-offs recorded by implementation cycles
 - Impact: <files/specs/requirements affected; follow-up spec id if any>
 ```
 
+## 2026-09-06 · SPEC-0052 — human APPROVE at attempts=3, after three process-only REWORK rounds
+
+- Decision: the cycle escalated per `docs/SDD.md` section 8.3's `attempts = 3`
+  rule rather than run a fourth supervisor pass, and the human chose to approve
+  as-is instead of re-specifying, splitting, or aborting.
+- Why: all three REWORK rounds were process-record defects, never a failure of
+  R1-R4's actual rule text (AC1-AC4 passed independently every round, including
+  the supervisor's own byte-for-byte re-derivation of each evidence block from
+  the tree): round 1 misnamed the DT9 approval commit and left `DT10`/AC5
+  unaddressed; round 2 caught the AC5 fix itself being a hand-typed transcript
+  (this spec's exact target defect, in the log authoring the rule) plus a
+  follow-up spec id colliding with a retracted one; round 3 found the spec's
+  own `attempts` frontmatter still read `0`, contradicting the log's own text.
+  With substance fully verified three times over, the human judged a fourth
+  identical supervisor pass would re-confirm the same green result rather than
+  surface anything new, and approved directly per SDD 8.3's explicit human-only
+  decision at `attempts = 3`.
+- Impact: `docs/SDD.md` sections 6 and 8.1 (R1-R4); `specs/logs/SPEC-0052.md`
+  keeps the full three-round record, including the near-miss where the AC5
+  round-2 fix itself started to repeat the hand-typed-transcript defect and was
+  caught before it landed. Follow-up spec `specs/SPEC-0057-mirror-dt4-evidence-
+  check-into-supervisor-agent.md` (draft) mirrors DT4's mirror check into
+  `.claude/agents/supervisor.md`, whose own DT4 copy stays pre-SPEC-0052 until
+  that lands — R4 is written but not yet enforced at runtime.
+
 ## 2026-09-05 · SPEC-0054 — AC3's positive control narrowed to FR-003, not all of SPEC-0006's coverage
 
 - Decision: AC3's negative reproduction originally claimed a full `DT10` audit of
