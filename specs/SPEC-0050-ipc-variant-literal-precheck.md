@@ -6,7 +6,7 @@ covers: [FR-002]
 depends_on: [SPEC-0004, SPEC-0006]
 surface:
   - .github/
-status: in_progress
+status: accepted
 attempts: 0
 ---
 
@@ -53,6 +53,12 @@ the shape, written down where the next cycle will read it.
 - [ ] AC2 (R2, R3) both escape hatch and both precedents are named ->
       evidence: `grep -n 'StatusReport\|Response::Sites' .github/instructions/orcker-ipc.instructions.md`
 - [ ] AC3 `scripts/gate.sh specs/SPEC-0050-*.md` passes
+
+FR acceptance: FR-002 has AC1/AC2 (`docs/PRD.md`), both already closed by
+SPEC-0002 (workspace compiles/tests green without the native-runtime crates;
+no binary starts native PHP/DB processes). This cycle adds no new FR
+acceptance criteria; AC3 above re-exercises AC1 through the gate's
+`cargo test --workspace` run, it does not close it independently.
 
 ## Out of scope
 
