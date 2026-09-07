@@ -7,7 +7,7 @@ depends_on: [SPEC-0002]
 surface:
   - crates/orcker-core/
   - crates/orcker-config/
-status: approved
+status: in_progress
 attempts: 0
 ---
 
