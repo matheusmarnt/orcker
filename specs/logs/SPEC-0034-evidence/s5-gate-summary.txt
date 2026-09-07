@@ -1,0 +1,11 @@
+EXIT=0
+1:[gate 1/6] rustfmt
+2:[gate 2/6] clippy (deny warnings)
+4:[gate 3/6] tests
+2534:[gate 4/6] gui (only when touched)
+2535:[gate 5/6] no new clippy escape hatches
+2536:[gate 6/6] surface check
+2538:[gate] OK
+--- test result lines ---
+ok-suites: 84
+FAILED-count: 0

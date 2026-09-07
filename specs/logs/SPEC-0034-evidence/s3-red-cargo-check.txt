@@ -1,0 +1,47 @@
+    Checking orcker-core v0.0.0 (/home/matheusmariano/personal-projects/orcker/orcker/crates/orcker-core)
+    Checking orcker-release-manifest v0.0.0 (/home/matheusmariano/personal-projects/orcker/orcker/crates/orcker-release-manifest)
+    Checking orcker-depcheck v0.0.0 (/home/matheusmariano/personal-projects/orcker/orcker/crates/orcker-depcheck)
+    Checking orcker-ipc v0.0.0 (/home/matheusmariano/personal-projects/orcker/orcker/crates/orcker-ipc)
+    Checking orcker-platform v0.0.0 (/home/matheusmariano/personal-projects/orcker/orcker/crates/orcker-platform)
+    Checking orcker-config v0.0.0 (/home/matheusmariano/personal-projects/orcker/orcker/crates/orcker-config)
+    Checking orcker-dns v0.0.0 (/home/matheusmariano/personal-projects/orcker/orcker/crates/orcker-dns)
+    Checking orcker-proxy v0.0.0 (/home/matheusmariano/personal-projects/orcker/orcker/crates/orcker-proxy)
+    Checking orcker-mail v0.0.0 (/home/matheusmariano/personal-projects/orcker/orcker/crates/orcker-mail)
+    Checking orcker-engine v0.0.0 (/home/matheusmariano/personal-projects/orcker/orcker/crates/orcker-engine)
+    Checking orcker-doctor v0.0.0 (/home/matheusmariano/personal-projects/orcker/orcker/crates/orcker-doctor)
+    Checking orcker-mcp v0.0.0 (/home/matheusmariano/personal-projects/orcker/orcker/crates/orcker-mcp)
+    Checking orcker v0.0.0 (/home/matheusmariano/personal-projects/orcker/orcker/bin/orcker)
+error[E0599]: no variant named `Hello` found for enum `orcker_ipc::Request`
+    --> crates/orcker-ipc/tests/wire_stability.rs:2194:45
+     |
+2194 |     let s = serde_json::to_string(&Request::Hello { version: 2 }).unwrap();
+     |                                             ^^^^^ variant not found in `orcker_ipc::Request`
+
+error[E0599]: no variant named `Hello` found for enum `orcker_ipc::Request`
+    --> crates/orcker-ipc/tests/wire_stability.rs:2197:31
+     |
+2197 |     assert_eq!(back, Request::Hello { version: 2 });
+     |                               ^^^^^ variant not found in `orcker_ipc::Request`
+
+error[E0599]: no variant named `Welcome` found for enum `Response`
+    --> crates/orcker-ipc/tests/wire_stability.rs:2202:23
+     |
+2202 |     let r = Response::Welcome { version: 2 };
+     |                       ^^^^^^^ variant not found in `Response`
+
+    Checking orckerd v0.0.0 (/home/matheusmariano/personal-projects/orcker/orcker/bin/orckerd)
+error[E0599]: no variant, associated function, or constant named `VersionMismatch` found for enum `ErrorCode` in the current scope
+    --> crates/orcker-ipc/tests/wire_stability.rs:2211:47
+     |
+2211 |     let s = serde_json::to_string(&ErrorCode::VersionMismatch).unwrap();
+     |                                               ^^^^^^^^^^^^^^^ variant, associated function, or constant not found in `ErrorCode`
+
+error[E0599]: no variant, associated function, or constant named `VersionMismatch` found for enum `ErrorCode` in the current scope
+    --> crates/orcker-ipc/tests/wire_stability.rs:2214:33
+     |
+2214 |     assert_eq!(back, ErrorCode::VersionMismatch);
+     |                                 ^^^^^^^^^^^^^^^ variant, associated function, or constant not found in `ErrorCode`
+
+For more information about this error, try `rustc --explain E0599`.
+error: could not compile `orcker-ipc` (test "wire_stability") due to 5 previous errors
+warning: build failed, waiting for other jobs to finish...

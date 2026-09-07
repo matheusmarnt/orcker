@@ -16,6 +16,7 @@ bin/orcker/src/mcp_cmd.rs:1
 bin/orcker/src/path_cmd.rs:1
 bin/orcker/src/uninstall.rs:1
 bin/orcker/tests/cli_e2e.rs:1
+bin/orcker/tests/transport_handshake.rs:1
 bin/orckerd/src/backend_resolver.rs:1
 bin/orckerd/src/cert_store.rs:1
 bin/orckerd/src/detect_cache.rs:1

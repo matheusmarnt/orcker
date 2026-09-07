@@ -39,12 +39,22 @@ pub fn default_sock() -> Result<std::path::PathBuf, ClientError> {
 /// Connect to the daemon at an explicit socket path and exchange one
 /// request/response. Factored out of [`exchange`] so integration tests can
 /// target a tempdir socket. Unix only.
+///
+/// Preflights every exchange with a [`Request::Hello`]/[`Response::Welcome`]
+/// handshake (SPEC-0034): a compatible daemon's `Welcome` is transparent -
+/// `req` goes out exactly as before - but anything else (a typed
+/// `VersionMismatch` error from an incompatible daemon) is returned
+/// immediately and `req` is never sent. Every caller already has an
+/// `Ok(Response::Error { message, .. })` arm, so this needs no new
+/// [`ClientError`] variant.
 #[cfg(unix)]
 pub async fn exchange_at(sock: &std::path::Path, req: &Request) -> Result<Response, ClientError> {
     use interprocess::local_socket::tokio::Stream as IpcStream;
     use interprocess::local_socket::traits::tokio::Stream as _;
     use interprocess::local_socket::{GenericFilePath, ToFsName};
-    use orcker_ipc::{read_message, write_message, FrameDecoder, DEFAULT_MAX_FRAME};
+    use orcker_ipc::{
+        read_message, write_message, FrameDecoder, DEFAULT_MAX_FRAME, PROTOCOL_VERSION,
+    };
 
     let name = sock
         .to_fs_name::<GenericFilePath>()
@@ -56,8 +66,27 @@ pub async fn exchange_at(sock: &std::path::Path, req: &Request) -> Result<Respon
     let (reader, writer) = stream.split();
     let mut reader = reader;
     let mut writer = writer;
-    write_message(&mut writer, req, DEFAULT_MAX_FRAME).await?;
     let mut decoder = FrameDecoder::new();
+
+    write_message(
+        &mut writer,
+        &Request::Hello {
+            version: PROTOCOL_VERSION,
+        },
+        DEFAULT_MAX_FRAME,
+    )
+    .await?;
+    match read_message::<_, Response>(&mut reader, &mut decoder).await? {
+        Some(Response::Welcome { .. }) => {}
+        Some(other) => return Ok(other),
+        None => {
+            return Err(ClientError::ConnectionClosed(
+                "daemon closed the connection during the version handshake".to_owned(),
+            ))
+        }
+    }
+
+    write_message(&mut writer, req, DEFAULT_MAX_FRAME).await?;
     match read_message::<_, Response>(&mut reader, &mut decoder).await? {
         Some(resp) => Ok(resp),
         None => Err(ClientError::ConnectionClosed(

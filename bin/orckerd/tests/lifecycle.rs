@@ -343,6 +343,132 @@ mod tests {
         assert!(exit_result.is_ok(), "daemon exit was Err: {exit_result:?}");
     }
 
+    /// A raw frame whose `type` tag names no `Request` variant - simulating a
+    /// client speaking a protocol this daemon build does not know - gets a
+    /// typed `VersionMismatch` error, not a silently closed connection. There
+    /// is no `Request` value for "unknown variant", so this writes the frame
+    /// by hand instead of going through `write_message`.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn unknown_request_type_gets_typed_error_not_decode_failure() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dirs = make_dirs(tmp.path());
+        let cfg = default_config();
+        let cfg_path = dirs.config.join("orcker.toml");
+
+        let daemon = orckerd::startup::bring_up_with_dirs(dirs.clone(), cfg, cfg_path.clone())
+            .await
+            .expect("bring_up_with_dirs");
+
+        let (shutdown_tx, shutdown_rx) = watch::channel(false);
+        let daemon_task = tokio::spawn(async move { drive_subsystems(daemon, shutdown_rx).await });
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        let ipc_sock = dirs.runtime.join("orcker.sock");
+
+        let name = ipc_sock.as_path().to_fs_name::<GenericFilePath>().unwrap();
+        let stream = IpcStream::connect(name).await.expect("connect IPC socket");
+        let (reader, writer) = stream.split();
+        let mut reader = reader;
+        let mut writer = writer;
+
+        let frame = orcker_ipc::encode_frame(
+            br#"{"type":"__spec_0034_unknown_future_variant__"}"#,
+            DEFAULT_MAX_FRAME,
+        )
+        .expect("encode raw frame");
+        {
+            use tokio::io::AsyncWriteExt as _;
+            writer.write_all(&frame).await.expect("write raw frame");
+        }
+
+        let mut decoder = FrameDecoder::new();
+        let resp: Response = read_message(&mut reader, &mut decoder)
+            .await
+            .expect("read")
+            .expect("a typed response, not a silently closed connection");
+        assert!(
+            matches!(
+                resp,
+                Response::Error {
+                    code: orcker_ipc::ErrorCode::VersionMismatch,
+                    ..
+                }
+            ),
+            "expected a typed VersionMismatch error, got {resp:?}"
+        );
+
+        // The connection must still be usable afterwards - an unrecognized
+        // frame is not a transport fault, so the loop must keep serving it.
+        write_message(&mut writer, &Request::Ping, DEFAULT_MAX_FRAME)
+            .await
+            .expect("write Ping after the unknown frame");
+        let resp2: Response = read_message(&mut reader, &mut decoder)
+            .await
+            .expect("read")
+            .expect("response");
+        assert!(matches!(resp2, Response::Pong), "got {resp2:?}");
+
+        shutdown_tx.send_replace(true);
+        let _ = tokio::time::timeout(Duration::from_secs(10), daemon_task).await;
+    }
+
+    /// `Hello` is the CLI's connect-time preflight: a matching version gets
+    /// `Welcome`; a mismatched one gets the same typed error as an
+    /// unrecognized request, and the connection stays usable either way.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn hello_welcome_handshake_round_trip() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dirs = make_dirs(tmp.path());
+        let cfg = default_config();
+        let cfg_path = dirs.config.join("orcker.toml");
+
+        let daemon = orckerd::startup::bring_up_with_dirs(dirs.clone(), cfg, cfg_path.clone())
+            .await
+            .expect("bring_up_with_dirs");
+
+        let (shutdown_tx, shutdown_rx) = watch::channel(false);
+        let daemon_task = tokio::spawn(async move { drive_subsystems(daemon, shutdown_rx).await });
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        let ipc_sock = dirs.runtime.join("orcker.sock");
+
+        let resp = round_trip(
+            &ipc_sock,
+            &Request::Hello {
+                version: orcker_ipc::PROTOCOL_VERSION,
+            },
+        )
+        .await;
+        assert_eq!(
+            resp,
+            Response::Welcome {
+                version: orcker_ipc::PROTOCOL_VERSION
+            },
+            "got {resp:?}"
+        );
+
+        let resp = round_trip(
+            &ipc_sock,
+            &Request::Hello {
+                version: orcker_ipc::PROTOCOL_VERSION + 1,
+            },
+        )
+        .await;
+        assert!(
+            matches!(
+                resp,
+                Response::Error {
+                    code: orcker_ipc::ErrorCode::VersionMismatch,
+                    ..
+                }
+            ),
+            "expected VersionMismatch, got {resp:?}"
+        );
+
+        shutdown_tx.send_replace(true);
+        let _ = tokio::time::timeout(Duration::from_secs(10), daemon_task).await;
+    }
+
     async fn drive_subsystems(
         daemon: orckerd::startup::Daemon,
         shutdown_rx: watch::Receiver<bool>,

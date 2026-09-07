@@ -15,11 +15,14 @@
 //!
 //! ## Version compatibility
 //!
-//! [`PROTOCOL_VERSION`] is **informational**: it never travels on the
-//! wire, so nothing reads it at runtime. Until SPEC-0034 adds a
-//! `Hello`/`Welcome` handshake, a client speaking a newer protocol
-//! against an older daemon surfaces as [`IpcError::Decode`] when an
-//! unknown `type` tag arrives.
+//! [`PROTOCOL_VERSION`] travels on the wire via a connect-time handshake: a
+//! client sends [`Request::Hello`] with its own version, and the daemon
+//! replies [`Response::Welcome`] (compatible) or [`Response::Error`] with
+//! [`ErrorCode::VersionMismatch`] (not). The same typed error also covers a
+//! request the daemon cannot decode at all - an unrecognized `type` tag,
+//! e.g. from a client speaking a protocol this daemon build predates -
+//! instead of the connection silently closing, which is what happened
+//! before this handshake existed.
 
 mod create;
 mod engine;
@@ -39,8 +42,8 @@ mod transport;
 /// `2` marks the fork's one authorized contract reset: SPEC-0002 removed the
 /// native-runtime requests rather than deprecating them additively, which is
 /// safe only because no released daemon speaks version `1` under this name.
-/// The constant does not travel on the wire yet, so the bump has no runtime
-/// effect; SPEC-0034 puts it on the wire and this doc line goes with it.
+/// SPEC-0034 put this constant on the wire: [`Request::Hello`] carries it on
+/// connect and the daemon compares it against its own copy.
 pub const PROTOCOL_VERSION: u32 = 2;
 
 pub use create::{JobId, JobState};
