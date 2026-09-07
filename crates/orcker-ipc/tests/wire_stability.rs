@@ -2188,3 +2188,28 @@ fn response_project_relink_byte_shape() {
     let back: Response = serde_json::from_str(&s).unwrap();
     assert_eq!(back, r);
 }
+
+#[test]
+fn request_hello_byte_shape() {
+    let s = serde_json::to_string(&Request::Hello { version: 2 }).unwrap();
+    assert_eq!(s, r#"{"type":"hello","version":2}"#);
+    let back: Request = serde_json::from_str(&s).unwrap();
+    assert_eq!(back, Request::Hello { version: 2 });
+}
+
+#[test]
+fn response_welcome_byte_shape() {
+    let r = Response::Welcome { version: 2 };
+    let s = serde_json::to_string(&r).unwrap();
+    assert_eq!(s, r#"{"type":"welcome","version":2}"#);
+    let back: Response = serde_json::from_str(&s).unwrap();
+    assert_eq!(back, r);
+}
+
+#[test]
+fn error_code_version_mismatch_byte_shape() {
+    let s = serde_json::to_string(&ErrorCode::VersionMismatch).unwrap();
+    assert_eq!(s, r#""version_mismatch""#);
+    let back: ErrorCode = serde_json::from_str(&s).unwrap();
+    assert_eq!(back, ErrorCode::VersionMismatch);
+}

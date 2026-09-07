@@ -299,6 +299,13 @@ pub enum Response {
         /// Per-site routing rules.
         rules: Vec<RouteRuleEntry>,
     },
+    /// Reply to a compatible [`crate::Request::Hello`]. An incompatible one
+    /// gets [`Response::Error`] with [`ErrorCode::VersionMismatch`] instead.
+    Welcome {
+        /// The daemon's [`crate::PROTOCOL_VERSION`], for the client to
+        /// compare against its own.
+        version: u32,
+    },
 }
 
 /// One entry in [`Response::Sites`]: the site plus WordPress-detection
@@ -455,10 +462,13 @@ pub struct RouteRuleEntry {
 }
 /// Machine-readable error category for [`Response::Error`].
 ///
-/// Fail-closed on unknown variants from a newer daemon (no
-/// `#[serde(other)]` catch-all) - an unknown code surfaces as
-/// [`crate::IpcError::Decode`], which is the broader "version mismatch
-/// signal" until a `Hello`/`Welcome` handshake lands.
+/// Still fail-closed on unknown *codes* from a newer daemon (no
+/// `#[serde(other)]` catch-all here either) - an old client that can't
+/// decode a new `ErrorCode` variant still hits [`crate::IpcError::Decode`].
+/// [`Self::VersionMismatch`] instead covers the case the `Hello`/`Welcome`
+/// handshake exists for: a *request* the daemon can't decode at all (an
+/// unrecognized `type` tag, e.g. from a newer client) now gets this typed
+/// code rather than the connection silently closing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
@@ -511,6 +521,13 @@ pub enum ErrorCode {
     /// Catch-all for daemon-side failures that don't fit a typed code.
     /// Expand this enum rather than overloading `Internal`.
     Internal,
+    /// The client and daemon disagree about the wire contract: either
+    /// [`crate::Request::Hello`] advertised a [`crate::PROTOCOL_VERSION`]
+    /// the daemon does not match, or the daemon could not decode a request
+    /// at all (an unrecognized `type` tag, e.g. from a client speaking a
+    /// protocol this daemon build predates). The message names the versions
+    /// when both are known.
+    VersionMismatch,
 }
 
 #[cfg(test)]
@@ -556,6 +573,7 @@ mod variant_name_pinning {
             Response::BrowserTrust { .. } => {}
             Response::Proxies { .. } => {}
             Response::Routes { .. } => {}
+            Response::Welcome { .. } => {}
         }
     }
 
@@ -576,6 +594,7 @@ mod variant_name_pinning {
             ErrorCode::LanNotReady => {}
             ErrorCode::LegacyRestricted => {}
             ErrorCode::Internal => {}
+            ErrorCode::VersionMismatch => {}
         }
     }
 
@@ -809,6 +828,7 @@ mod variant_name_pinning {
                 target: "api/index.php".into(),
             }],
         });
+        pin_response(Response::Welcome { version: 2 });
         for c in [
             ErrorCode::NotFound,
             ErrorCode::AlreadyExists,
@@ -823,6 +843,7 @@ mod variant_name_pinning {
             ErrorCode::LanNotReady,
             ErrorCode::LegacyRestricted,
             ErrorCode::Internal,
+            ErrorCode::VersionMismatch,
         ] {
             pin_code(c);
         }

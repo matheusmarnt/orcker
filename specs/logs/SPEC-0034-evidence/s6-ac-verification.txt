@@ -1,0 +1,11 @@
+=== AC2: wire_stability.rs diff must be additions-only ===
+ crates/orcker-ipc/tests/wire_stability.rs | 25 +++++++++++++++++++++++++
+ 1 file changed, 25 insertions(+)
+
+=== AC3: old 'informational' / 'never travels' phrasing must be gone from lib.rs ===
+(exit 1: 1 = no match = phrase removed)
+
+=== AC1 + handshake tests, isolated run ===
+test tests::hello_welcome_handshake_round_trip ... ok
+test tests::unknown_request_type_gets_typed_error_not_decode_failure ... ok
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.12s

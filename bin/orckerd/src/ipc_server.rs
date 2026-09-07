@@ -11,7 +11,7 @@ use tokio::sync::watch;
 
 use orcker_ipc::{
     read_message, write_message, ErrorCode, FrameDecoder, IpcError, Request, Response,
-    DEFAULT_MAX_FRAME,
+    DEFAULT_MAX_FRAME, PROTOCOL_VERSION,
 };
 
 use crate::error::DaemonError;
@@ -52,6 +52,28 @@ async fn handle_client(stream: IpcStream, state: Arc<DaemonState>) {
         let req = match read_message::<_, Request>(&mut reader, &mut decoder).await {
             Ok(Some(r)) => r,
             Ok(None) => return,
+            // The frame itself decoded fine (the length-prefix boundary is
+            // intact); only the JSON `type` tag is unrecognized - typically a
+            // client speaking a protocol this daemon build predates. That is
+            // a version-skew signal, not a transport fault, so reply with a
+            // typed error and keep serving the connection instead of
+            // dropping it silently.
+            Err(IpcError::Decode(_)) => {
+                tracing::debug!("ipc decode error: unrecognized request, replying VersionMismatch");
+                let resp = Response::Error {
+                    code: ErrorCode::VersionMismatch,
+                    message: format!(
+                        "request not recognized by this daemon (protocol version {PROTOCOL_VERSION}) \
+                         - client and daemon may be running different Orcker versions; restart the \
+                         daemon after an upgrade"
+                    ),
+                };
+                if let Err(e) = write_message(&mut writer, &resp, DEFAULT_MAX_FRAME).await {
+                    tracing::debug!(error = %e, "ipc write error");
+                    return;
+                }
+                continue;
+            }
             Err(e) => {
                 if !matches!(e, IpcError::UnexpectedEof { .. }) {
                     tracing::debug!(error = %e, "ipc decode error");
@@ -60,6 +82,21 @@ async fn handle_client(stream: IpcStream, state: Arc<DaemonState>) {
             }
         };
         let resp = match req {
+            Request::Hello { version } => {
+                if version == PROTOCOL_VERSION {
+                    Response::Welcome {
+                        version: PROTOCOL_VERSION,
+                    }
+                } else {
+                    Response::Error {
+                        code: ErrorCode::VersionMismatch,
+                        message: format!(
+                            "client protocol version {version} does not match daemon protocol \
+                             version {PROTOCOL_VERSION}; restart the daemon after an Orcker upgrade"
+                        ),
+                    }
+                }
+            }
             Request::InstallToolStreamed { tool } => {
                 install_tool_streamed(tool, state.clone()).await
             }

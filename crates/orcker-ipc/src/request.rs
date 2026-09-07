@@ -470,6 +470,14 @@ pub enum Request {
     },
     /// Enumerate every site's path-prefix routing rules.
     ListRoutes,
+    /// Connect-time preflight: announce the client's [`crate::PROTOCOL_VERSION`]
+    /// so the daemon can reply [`super::Response::Welcome`] (compatible) or
+    /// [`super::Response::Error`] with [`super::ErrorCode::VersionMismatch`]
+    /// (not) before any other request is sent.
+    Hello {
+        /// The client's [`crate::PROTOCOL_VERSION`].
+        version: u32,
+    },
 }
 
 #[cfg(test)]
@@ -561,6 +569,7 @@ mod variant_name_pinning {
             Request::AddRouteRule { .. } => {}
             Request::RemoveRouteRule { .. } => {}
             Request::ListRoutes => {}
+            Request::Hello { .. } => {}
         }
     }
 
@@ -729,5 +738,6 @@ mod variant_name_pinning {
         pin(Request::SetMcpEnabled { enabled: true });
         pin(Request::SetLanEnabled { enabled: true });
         pin(Request::MintRemoteSetupCode);
+        pin(Request::Hello { version: 2 });
     }
 }

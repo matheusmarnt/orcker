@@ -8,8 +8,8 @@ surface:
   - crates/orcker-ipc/
   - bin/orckerd/
   - bin/orcker/
-status: in_progress
-attempts: 0
+status: accepted
+attempts: 1
 ---
 
 ## Context
@@ -36,8 +36,16 @@ this spec does not exist yet.
 
 ## Acceptance checklist
 
-- [ ] AC1 A test feeds the daemon an unknown `type` tag and asserts the typed
+- [x] AC1 A test feeds the daemon an unknown `type` tag and asserts the typed
       error, not a decode failure
-- [ ] AC2 `tests/wire_stability.rs` diff is additions only
-- [ ] AC3 The `PROTOCOL_VERSION` doc comment stops saying the constant is
+- [x] AC2 `tests/wire_stability.rs` diff is additions only
+- [x] AC3 The `PROTOCOL_VERSION` doc comment stops saying the constant is
       informational
+
+FR acceptance: FR-002 has AC1/AC2 (`docs/PRD.md`), both already closed by
+SPEC-0002 (workspace compiles/tests green without the native-runtime crates;
+no binary starts native PHP/DB processes). This cycle adds no new FR
+acceptance criteria; AC1-AC3 above close R1-R3 of this spec, not FR-002's
+PRD ACs. The gate's `cargo test --workspace` run (S5) incidentally
+re-exercises FR-002 AC1 as a side effect of running the whole suite; it does
+not close it independently.
