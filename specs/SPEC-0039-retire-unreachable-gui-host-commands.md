@@ -12,29 +12,36 @@ attempts: 0
 
 ## Context
 
-SPEC-0036's AC4 cross-check found the mirror image of the bug that spec fixed:
-`daemon_installed` and `get_site_ide_overrides` are registered in
-`generate_handler![]` but invoked by nothing in `src/`. Neither is in
+SPEC-0036's AC4 cross-check found `daemon_installed` registered in
+`generate_handler![]` but invoked by nothing in `src/`. It is not in
 SPEC-0002's removed set, so this pre-dates that spec.
 
-**`job_cancel` joins them, and that one is SPEC-0036's doing.** Its only client
+**`job_cancel` joins it, and that one is SPEC-0036's doing.** Its only client
 wrapper, `jobCancel`, was reached solely from the two site-creation wizards that
 spec deleted, so the wrapper went with them and the handler is now unreachable.
 Recorded here rather than left for the next reader to rediscover. Note the
 sibling `job_status` is **not** in this class: it is still invoked, by
 `pollJobToEnd` inside `client.ts`.
 
+**`get_site_ide_overrides` was flagged alongside them at draft time but is not
+dead.** `SiteDetailsSidebar.vue` calls it live (`getSiteIdeOverrides()`,
+alongside `getPreferredIde()`) to feed the per-site IDE picker, which also
+still calls `setSiteIdeOverride()`. The cross-check's premise was wrong for
+this one command; it is out of scope here.
+
 ## Requirements
 
-- R1. Establish for each whether it is dead or a caller was lost, then remove it
-  or restore the caller.
+- R1. `daemon_installed` and `job_cancel` are dead (no `src/` caller for
+  either) - remove both the command and its `generate_handler![]` registration.
 - R2. Extend `tests/commandContract.test.ts` with the reverse direction, so a
   registered-but-uninvoked command fails the way a dangling one already does.
 - R3. Decide the fate of `SiteCard.vue`'s WPA chip, deferred out of SPEC-0036.
   It is honest since that spec (it opens the plain WP Admin link and says so),
   but it is still gated on `v-if="site.wp_auto_login"` - a flag nothing in the
   GUI can set now that `set_wordpress_auto_login` is gone, so the control is
-  unreachable on any new site. Either gate it on `site.is_wordpress` (a WP Admin
-  link is useful for every WordPress site) or remove it. Which sites offer the
-  link is a product call: check `docs/PRD.md` FR-020 before choosing, and
-  escalate rather than improvise if it is not settled there.
+  unreachable on any new site. Decided: gate it on `site.is_wordpress` instead
+  - a WP Admin link is useful for every WordPress site, and `openWpAdmin()`
+  already opens the plain (non-auto-login) login screen regardless of
+  `wp_auto_login`. `docs/PRD.md` FR-020, cited when this spec was drafted, is
+  `orcker new` and does not cover this; no FR does. Escalated and decided with
+  the human rather than improvised, per this spec's own instruction.
