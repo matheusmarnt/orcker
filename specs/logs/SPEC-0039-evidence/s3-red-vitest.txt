@@ -1,0 +1,57 @@
+captured: uncommitted working tree on feat/SPEC-0039-retire-unreachable-gui-host-commands
+(base commit af4fbc9, docs(specs): correct SPEC-0039 dead-command and FR-020 premises)
+2026-09-07 · command: npm run test -- run commandContract SiteCard.spec
+(run from apps/orcker-gui, after the commandContract.test.ts and SiteCard.spec.ts
+edits, before any src-tauri/SiteCard.vue production change)
+
+ RUN  v2.1.9 /home/matheusmariano/personal-projects/orcker/orcker/apps/orcker-gui
+
+ ❯ tests/commandContract.test.ts (4 tests | 1 failed) 41ms
+   × Tauri command contract > registers no command the GUI never invokes 17ms
+     → registered Tauri command with no GUI call site - remove it or restore the caller: expected [ 'job_cancel', …(2) ] to deeply equal []
+ ❯ src/components/SiteCard.spec.ts (6 tests | 3 failed) 83ms
+   × SiteCard WP Admin chip > opens the plain wp-admin link in unbound mode 46ms
+     → WPA chip not rendered
+   × SiteCard WP Admin chip > opens the plain wp-admin link when bound 7ms
+     → WPA chip not rendered
+   × SiteCard WP Admin chip > shows the WPA chip on a WordPress site even with auto-login off 11ms
+     → expected undefined to be defined
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/components/SiteCard.spec.ts > SiteCard WP Admin chip > opens the plain wp-admin link in unbound mode
+Error: WPA chip not rendered
+ ❯ clickWpaChip src/components/SiteCard.spec.ts:46:20
+
+ FAIL  src/components/SiteCard.spec.ts > SiteCard WP Admin chip > opens the plain wp-admin link when bound
+Error: WPA chip not rendered
+ ❯ clickWpaChip src/components/SiteCard.spec.ts:46:20
+
+ FAIL  src/components/SiteCard.spec.ts > SiteCard WP Admin chip > shows the WPA chip on a WordPress site even with auto-login off
+AssertionError: expected undefined to be defined
+ ❯ src/components/SiteCard.spec.ts:77:71
+
+ FAIL  tests/commandContract.test.ts > Tauri command contract > registers no command the GUI never invokes
+AssertionError: registered Tauri command with no GUI call site - remove it or restore the caller: expected [ 'job_cancel', 'daemon_installed' ] to deeply equal []
+
+- Expected
++ Received
+
+- Array []
++ Array [
++   "job_cancel",
++   "daemon_installed",
++ ]
+
+ ❯ tests/commandContract.test.ts:89:7
+
+ Test Files  2 failed (2)
+      Tests  4 failed | 6 passed (10)
+   Start at  21:53:27
+   Duration  1.51s
+
+NOTE: this is the run taken *after* fixing a regex bug in registeredCommands()'s
+sibling invokedCommands() helper (nested-generic call<Record<string, string>>(...)
+sites were not detected, which would have wrongly flagged the live
+`get_site_ide_overrides` too - see S2/S4 notes). The RED set above is exactly the
+two genuinely dead commands this spec's R1 targets, nothing else.

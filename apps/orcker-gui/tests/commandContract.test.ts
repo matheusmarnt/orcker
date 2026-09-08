@@ -45,7 +45,9 @@ function invokedCommands(): Map<string, string> {
   const found = new Map<string, string>();
   for (const file of sourceFiles(SRC)) {
     const text = readFileSync(file, "utf8");
-    for (const m of text.matchAll(/(?:invoke|call)\s*(?:<[^>]*>)?\s*\(\s*"([a-z_0-9]+)"/g)) {
+    // `[^(]*` (not `[^>]*`) so a nested generic like `call<Record<string, string>>(...)`
+    // is still consumed in full - the naive form stops at the first `>` and misses the call.
+    for (const m of text.matchAll(/(?:invoke|call)\s*(?:<[^(]*>)?\s*\(\s*"([a-z_0-9]+)"/g)) {
       const line = text.slice(0, m.index).split("\n").length;
       if (!found.has(m[1])) found.set(m[1], `${file.slice(ROOT.length + 1)}:${line}`);
     }
@@ -75,5 +77,15 @@ describe("Tauri command contract", () => {
     const invoked = invokedCommands();
     const orphans = dangling.known_dangling.filter((name) => !invoked.has(name));
     expect(orphans, "no longer invoked - drop them from dangling-commands.json").toEqual([]);
+  });
+
+  it("registers no command the GUI never invokes", () => {
+    const registered = registeredCommands();
+    const invoked = invokedCommands();
+    const unreachable = [...registered].filter((name) => !invoked.has(name));
+    expect(
+      unreachable,
+      "registered Tauri command with no GUI call site - remove it or restore the caller",
+    ).toEqual([]);
   });
 });

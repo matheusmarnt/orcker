@@ -623,11 +623,6 @@ pub async fn job_status(job_id: String, cursor: u64) -> Result<Response, GuiErro
     finish(exchange(&Request::JobStatus { job_id, cursor }).await?)
 }
 
-#[tauri::command]
-pub async fn job_cancel(job_id: String) -> Result<Response, GuiError> {
-    finish(exchange(&Request::JobCancel { job_id }).await?)
-}
-
 // ── host helpers ───────────────────────────────────────────────────────────
 
 fn validated_project_directory(path: String) -> Result<PathBuf, GuiError> {

@@ -133,7 +133,7 @@ function extraDomainCount(s: SiteEntry): number {
         WP
       </span>
       <button
-        v-if="site.wp_auto_login"
+        v-if="site.is_wordpress"
         type="button"
         class="inline-flex items-center rounded-md bg-warning/10 px-1.5 py-0.5 text-[11px] font-medium text-warning transition-opacity hover:opacity-70"
         title="Open WP Admin - the ordinary WordPress login screen, not signed in"

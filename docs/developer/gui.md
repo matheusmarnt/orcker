@@ -145,7 +145,7 @@ Three commands are **host-only helpers** with no daemon IPC:
 | `host_platform` | `&'static str` (`std::env::consts::OS`) | `"linux"` / `"macos"` / `"windows"` to gate platform UI |
 | `elevate` / `unelevate` | `()` | run `orcker elevate <target>` / `orcker unelevate <target>` under OS elevation (see below) |
 
-The Settings page (route `/general`) adds further host-only commands (no daemon IPC) for daemon lifecycle and autostart - `daemon_installed`, `start_daemon`, `stop_daemon`, `cli_path_status`, `install_cli_to_path`, `remove_cli_from_path`, `open_login_items`, `get_autostart`, `set_autostart_daemon`, `set_autostart_gui`, `set_gui_minimized`, `daemon_self_repair_busy` - implemented in `daemon.rs` (resolve the bundled binaries, start/stop, install the `orcker` CLI on PATH) and `autostart.rs` (per-user service + run-at-login; macOS uses `smappservice.rs`). The daemon is **bundled** in the app, so there's no download/install command.
+The Settings page (route `/general`) adds further host-only commands (no daemon IPC) for daemon lifecycle and autostart - `start_daemon`, `stop_daemon`, `cli_path_status`, `install_cli_to_path`, `remove_cli_from_path`, `open_login_items`, `get_autostart`, `set_autostart_daemon`, `set_autostart_gui`, `set_gui_minimized`, `daemon_self_repair_busy` - implemented in `daemon.rs` (resolve the bundled binaries, start/stop, install the `orcker` CLI on PATH) and `autostart.rs` (per-user service + run-at-login; macOS uses `smappservice.rs`). The daemon is **bundled** in the app, so there's no download/install command.
 
 On macOS, `autostart.rs` also self-repairs the daemon's SMAppService registration
 on every launch (`ensure_daemon_registration`, run from a background thread in

@@ -1,0 +1,35 @@
+captured: uncommitted working tree on feat/SPEC-0039-retire-unreachable-gui-host-commands
+(base commit af4fbc9) · 2026-09-07, after implementing R1/R3 (daemon_installed
+and job_cancel removed from daemon.rs/commands.rs/main.rs; SiteCard.vue's WPA
+chip gated on site.is_wordpress)
+
+=== command: npm run test -- run commandContract SiteCard.spec (apps/orcker-gui) ===
+
+ RUN  v2.1.9 /home/matheusmariano/personal-projects/orcker/orcker/apps/orcker-gui
+
+ ✓ tests/commandContract.test.ts (4 tests) 33ms
+ ✓ src/components/SiteCard.spec.ts (6 tests) 102ms
+
+ Test Files  2 passed (2)
+      Tests  10 passed (10)
+
+=== command: npm run test (full suite, apps/orcker-gui) ===
+
+ Test Files  34 passed (34)
+      Tests  326 passed (326)
+   Duration  13.64s
+
+=== command: npm run build (apps/orcker-gui: vue-tsc --noEmit && vite build) ===
+
+vue-tsc --noEmit: no errors
+✓ 2314 modules transformed.
+✓ built in 7.68s
+
+=== command: cargo test -p orcker-gui ===
+
+running 48 tests
+test result: ok. 48 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+=== command: cargo build -p orcker-gui ===
+
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 29.79s

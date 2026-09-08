@@ -1,0 +1,2627 @@
+[gate 1/6] rustfmt
+[gate 2/6] clippy (deny warnings)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.68s
+[gate 3/6] tests
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.55s
+     Running unittests src/lib.rs (target/debug/deps/orcker-38d691183b3a9fd5)
+
+running 120 tests
+test apply::tests::gui_owns_daemon_flag_only_true_for_one ... ok
+test apply::tests::sibling_minisig_appends_minisig_extension ... ok
+test apply::tests::sibling_minisig_handles_bare_filename ... ok
+test apply::tests::reverify_errors_when_artifact_missing ... ok
+test apply::tests::reverify_errors_when_signature_missing ... ok
+test apply::tests::unique_suffix_is_per_call_distinct ... ok
+test elevate::unix_impl::tests::ports_maps_to_setcap_on_local_orckerd ... ok
+test elevate::unix_impl::tests::resolver_maps_to_install_resolver_with_addr ... ok
+test elevate::unix_impl::tests::resolver_install_rejects_unbound_dns_with_actionable_port ... ok
+test elevate::unix_impl::tests::resolver_status_failure_is_scoped_to_resolver_install ... ok
+test apply::tests::swap_bundle_into_empty_target_works ... ok
+test elevate::unix_impl::tests::targets_none_expands_to_all_three_in_order ... ok
+test elevate::unix_impl::tests::trust_install_maps_to_install_ca ... ok
+test apply::tests::swap_bundle_rolls_back_when_rename_in_fails ... ok
+test elevate::unix_impl::tests::user_socket_candidates_prefers_xdg_runtime_dir_override ... ok
+test elevate::unix_impl::tests::user_socket_candidates_without_xdg_override_is_unchanged ... ok
+test error::tests::both_daemon_down_shapes_are_recognised ... ok
+test elevate::unix_impl::tests::trust_uninstall_maps_to_uninstall_ca ... ok
+test error::tests::connection_closed_reads_the_same_as_an_absent_daemon ... ok
+test map::tests::bare_update_stable_flag_overrides_channel ... ok
+test map::tests::a_failed_engine_status_exchange_names_its_own_cause ... ok
+test map::tests::channel_from_flags_table ... ok
+test map::tests::domain_add_remove_primary_reset_map_to_requests ... ok
+test map::tests::domain_and_proxy_commands_accept_a_dotted_proxy_name ... ok
+test map::tests::domain_list_is_handled_locally ... ok
+test map::tests::fmt_bytes_is_human_readable ... ok
+test apply::tests::swap_bundle_replaces_target_and_preserves_via_backup ... ok
+test map::tests::fmt_port_distinguishes_fallback_from_redirect ... ok
+test map::tests::format_proxies_lists_domains_only_for_a_customized_proxy ... ok
+test map::tests::format_proxies_marks_nothing_when_the_primary_is_the_apex ... ok
+test map::tests::local_only_commands_are_usage_errors ... ok
+test map::tests::json_rendering_is_valid_and_codes_match ... ok
+test map::tests::malformed_names_and_dotted_rule_targets_are_usage_errors ... ok
+test map::tests::maps_every_mail_action ... ok
+test map::tests::maps_lan_and_remote_setup_commands ... ok
+test map::tests::maps_each_command_to_its_request ... ok
+test map::tests::maps_proxy_command ... ok
+test map::tests::maps_status_and_doctor_commands ... ok
+test map::tests::maps_route_command ... ok
+test map::tests::rejects_a_bad_site_name_before_connect ... ok
+test map::tests::render_domains_marks_primary_and_shadow ... ok
+test map::tests::remote_setup_render_pins_the_script_hash_in_one_line ... ok
+test map::tests::render_domains_synthesizes_default_domain ... ok
+test map::tests::render_domains_unknown_site_filter_errors ... ok
+test map::tests::renders_doctor_fix_report ... ok
+test map::tests::renders_doctor_and_sets_exit_code_on_fail ... ok
+test map::tests::renders_human_responses_and_exit_codes ... ok
+test map::tests::renders_mail_detail_body_variants ... ok
+test map::tests::renders_mail_list ... ok
+test map::tests::renders_parked_folders ... ok
+test map::tests::renders_route_list_with_and_without_a_filter ... ok
+test map::tests::renders_update_status_cached_and_ahead_of_stable ... ok
+test map::tests::renders_status_human_block ... ok
+test map::tests::root_rejects_bad_name ... ok
+test map::tests::renders_update_status_with_all_rows ... ok
+test map::tests::route_command_rejects_a_relative_prefix ... ok
+test map::tests::status_degraded_dns_shows_not_resolving ... ok
+test map::tests::status_degraded_web_ports_shows_not_serving ... ok
+test map::tests::status_human_output_carries_the_docker_section ... ok
+test map::tests::status_shows_stale_redirect_lines ... ok
+test map::tests::status_shows_unknown_for_empty_daemon_version ... ok
+test map::tests::validate_domain_accepts_and_rejects ... ok
+test map::tests::status_json_output_carries_the_docker_section ... ok
+test map::tests::status_without_a_docker_section_still_renders ... ok
+test map::tests::status_json_reports_a_too_old_compose_with_its_minimum ... ok
+test map::tests::status_with_the_engine_down_reports_and_exits_zero ... ok
+test mcp_cmd::tests::availability_is_only_known_from_a_real_status_answer ... ok
+test mcp_cmd::tests::a_failing_tool_exchange_renders_as_a_failed_tool_result ... ok
+test mcp_cmd::tests::a_failed_repoll_leaves_the_session_unknown_and_says_so ... ok
+test mcp_cmd::tests::a_still_disabled_call_gets_guidance_and_reaches_no_tool ... ok
+test mcp_cmd::tests::an_unknown_session_that_finds_the_toggle_off_stops_blaming_the_daemon ... ok
+test mcp_cmd::tests::enabling_mid_session_lets_the_blocked_call_through ... ok
+test mcp_cmd::tests::the_closed_text_covers_both_causes_a_client_cannot_distinguish ... ok
+test mcp_cmd::tests::invalid_utf8_is_a_parse_error_not_a_torn_down_session ... ok
+test mcp_cmd::tests::pings_and_notifications_never_touch_the_daemon ... ok
+test mcp_cmd::tests::transport_failures_get_distinct_agent_facing_text ... ok
+test mcp_cmd::tests::an_enabled_session_never_repolls_the_gate ... ok
+test mcp_cmd::tests::tool_calls_and_gate_repolls_get_different_deadlines ... ok
+test path_cmd::unix::tests::remove_block_for_user_bash_touches_only_files_with_the_block ... ok
+test path_cmd::unix::tests::remove_block_for_user_missing_rc_file_is_skipped ... ok
+test path_cmd::unix::tests::remove_block_for_user_no_block_present_returns_empty ... ok
+test path_cmd::unix::tests::remove_block_for_user_removes_zsh_block_and_reports_file ... ok
+test path_cmd::unix::tests::remove_block_for_user_follows_symlinked_rc ... ok
+test tests::absolutise_joins_relative_onto_cwd ... ok
+test tests::absolutise_returns_absolute_path_unchanged ... ok
+test path_cmd::unix::tests::remove_block_for_user_unknown_shell_is_noop ... ok
+test tests::canonicalize_park_path_canonicalises_absolute_path ... ok
+test tests::canonicalize_park_path_missing_dir_is_usage_error ... ok
+test tests::canonicalize_park_path_passes_through_other_requests ... ok
+test mcp_cmd::tests::happy_path_session_answers_each_request_in_order ... ok
+test tests::canonicalize_unpark_leaves_missing_path_untouched ... ok
+test tests::canonicalize_unpark_passes_through_other_requests ... ok
+test tests::canonicalize_park_path_resolves_dot_against_cwd ... ok
+test tests::daemon_down_response_is_single_fail_diagnosis ... ok
+test tests::looks_like_path_classifies_bare_words_vs_paths ... ok
+test tests::canonicalize_unpark_resolves_existing_path ... ok
+test tests::resolve_link_bare_word_uses_cwd_as_path ... ok
+test tests::resolve_link_empty_string_name_errors ... ok
+test tests::normalize_lexically_cases ... ok
+test tests::resolve_link_explicit_name_and_path_unchanged ... ok
+test tests::resolve_link_no_args_uses_cwd_and_derives_name ... ok
+test tests::resolve_link_project_omitted_path_uses_cwd ... ok
+test tests::resolve_link_project_passes_name_and_port_through ... ok
+test tests::resolve_link_rejects_invalid_explicit_name ... ok
+test tests::resolve_link_root_path_has_no_file_name_errors ... ok
+test tests::resolve_link_project_absolutises_relative_path ... ok
+test tests::resolve_link_project_rejects_invalid_name ... ok
+test tests::resolve_link_single_path_arg_derives_name ... ok
+test tests::resolve_link_trailing_parentdir_derives_name ... ok
+test uninstall::unix_impl::tests::dedup_preserves_order_and_drops_repeats ... ok
+test tests::resolve_link_trailing_curdir_derives_name ... ok
+test uninstall::unix_impl::tests::dirs_to_delete_dedups_and_includes_both_runtime_candidates ... ok
+test tests::resolve_link_undecipherable_name_errors ... ok
+test uninstall::unix_impl::tests::shell_basename_takes_file_name ... ok
+test uninstall::unix_impl::tests::system_dirs_are_recognised ... ok
+test uninstall::unix_impl::tests::manual_ca_removal_hint_is_os_appropriate ... ok
+test mcp_cmd::tests::malformed_and_oversized_input_keep_the_session_alive ... ok
+test apply::tests::reverify_succeeds_with_valid_minisig_sibling ... ok
+test mcp_cmd::tests::resync_works_on_a_chunked_reader ... ok
+test mcp_cmd::tests::the_line_cap_is_inclusive ... ok
+
+test result: ok. 120 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+
+     Running unittests src/main.rs (target/debug/deps/orcker-94fe19e083c9e2f2)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/cli_e2e.rs (target/debug/deps/cli_e2e-dce8483fa5d0ff62)
+
+running 3 tests
+test tests::link_command_creates_then_idempotently_relinks_a_project ... ok
+test tests::mcp_session_serves_tools_gated_by_the_daemons_toggle ... ok
+test tests::cli_commands_round_trip_against_daemon ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.44s
+
+     Running tests/transport_handshake.rs (target/debug/deps/transport_handshake-39104a0cf7687500)
+
+running 2 tests
+test tests::mismatched_hello_short_circuits_without_sending_the_real_request ... ok
+test tests::compatible_hello_is_transparent_to_the_real_exchange ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+
+     Running unittests src/lib.rs (target/debug/deps/orcker_config-0a47050239e72aa6)
+
+running 178 tests
+test error::tests::display_config_error_core_wraps_inner ... ok
+test error::tests::display_config_error_io_includes_path_and_source ... ok
+test error::tests::display_config_error_migration_includes_reason ... ok
+test error::tests::construct_every_config_error_variant ... ok
+test error::tests::display_config_error_unsupported_version ... ok
+test error::tests::display_config_error_parse_carries_input ... ok
+test error::tests::display_config_error_validate_includes_reason ... ok
+test error::tests::display_migration_each_variant_non_empty ... ok
+test error::tests::display_validate_each_variant_non_empty ... ok
+test migrate::tests::current_version_pinned ... ok
+test migrate::tests::read_version_rejects_non_table_root_via_constructed_value ... ok
+test migrate::tests::read_version_accepts_canonical ... ok
+test migrate::tests::read_version_rejects_missing_key ... ok
+test migrate::tests::read_version_rejects_non_integer ... ok
+test migrate::tests::read_version_rejects_negative ... ok
+test migrate::tests::v10_to_v11_is_a_bare_version_bump ... ok
+test migrate::tests::v11_to_v12_is_a_bare_version_bump ... ok
+test migrate::tests::v12_to_v13_is_a_bare_version_bump ... ok
+test migrate::tests::v13_to_v14_is_a_bare_version_bump ... ok
+test migrate::tests::v14_to_v15_bumps_version_with_no_services_section ... ok
+test migrate::tests::steps_cover_every_version_below_current ... ok
+test migrate::tests::up_walks_v0_all_the_way_to_current ... ok
+test migrate::tests::up_migrates_v1_to_current_via_steps_index_one ... ok
+test migrate::tests::v15_to_v16_is_a_bare_version_bump ... ok
+test migrate::tests::v16_to_v17_is_a_bare_version_bump ... ok
+test migrate::tests::v17_to_v18_is_a_bare_version_bump ... ok
+test migrate::tests::v18_to_v19_is_a_bare_version_bump ... ok
+test migrate::tests::v19_to_v20_is_a_bare_version_bump ... ok
+test migrate::tests::v14_to_v15_enables_existing_single_instance_engines ... ok
+test migrate::tests::v20_to_v21_is_a_bare_version_bump ... ok
+test migrate::tests::v21_to_v22_is_a_bare_version_bump ... ok
+test migrate::tests::v3_to_v4_is_a_bare_version_bump ... ok
+test migrate::tests::v22_to_v23_is_a_bare_version_bump ... ok
+test migrate::tests::v4_to_v5_is_a_bare_version_bump ... ok
+test migrate::tests::v5_to_v6_is_a_bare_version_bump ... ok
+test migrate::tests::v2_to_v3_rewrites_enabled_array_into_service_tables ... ok
+test migrate::tests::v6_to_v7_is_a_bare_version_bump ... ok
+test orcker_yml::tests::new_validates_and_renders ... ok
+test migrate::tests::v8_to_v9_is_a_bare_version_bump ... ok
+test orcker_yml::tests::invalid_values_are_rejected ... ok
+test migrate::tests::v9_to_v10_is_a_bare_version_bump ... ok
+test orcker_yml::tests::v1_roundtrip_and_forward_compat ... ok
+test parse::tests::domains_absent_table_is_empty_and_migrates ... ok
+test parse::tests::default_config_emits_no_proxy_tables ... ok
+test parse::tests::default_config_omits_dumps_table ... ok
+test parse::tests::domains_rejects_bad_subpart_as_core_error ... ok
+test parse::tests::engine_wire_default_enabled_is_true_when_absent ... ok
+test parse::tests::domains_proxy_rejects_structural_violations ... ok
+test parse::tests::domains_rejects_structural_violations ... ok
+test parse::tests::domains_proxy_deltas_parse_and_round_trip_with_a_dotted_key ... ok
+test parse::tests::domains_section_parses_subparts_and_round_trips ... ok
+test parse::tests::explicit_enabled_is_preserved_across_roundtrip ... ok
+test parse::tests::dumps_section_round_trips_through_toml ... ok
+test parse::tests::is_plausible_hostname_checks ... ok
+test parse::tests::groups_absent_table_is_empty_and_migrates ... ok
+test parse::tests::lan_enabled_absent_defaults_off_and_migrates ... ok
+test parse::tests::invalid_service_overrides_are_dropped_leniently ... ok
+test parse::tests::invalid_version_settings_and_directives_entries_are_dropped_leniently ... ok
+test parse::tests::fully_invalid_version_tables_vanish_and_bad_version_key_errors ... ok
+test parse::tests::mcp_enabled_absent_defaults_off_and_migrates ... ok
+test parse::tests::lan_setup_port_privileged_is_rejected ... ok
+test parse::tests::front_controller_override_round_trips_both_values ... ok
+test parse::tests::groups_section_parses_and_round_trips ... ok
+test parse::tests::parse_accepts_inline_array_of_tables_for_linked_by_value_equality ... ok
+test parse::tests::lan_enabled_true_parses_and_round_trips ... ok
+test parse::tests::mcp_enabled_true_parses_and_round_trips ... ok
+test parse::tests::parse_propagates_invalid_override_php_version ... ok
+test parse::tests::parse_propagates_invalid_tld ... ok
+test parse::tests::parse_propagates_invalid_site_name ... ok
+test parse::tests::parse_propagates_php_version_minor_out_of_range ... ok
+test parse::tests::parse_propagates_php_version_non_numeric_overflow ... ok
+test parse::tests::parse_rejects_future_version ... ok
+test parse::tests::parse_rejects_bad_route_rule_target ... ok
+test parse::tests::parse_default_toml_round_trips ... ok
+test parse::tests::parse_overrides_round_trip ... ok
+test parse::tests::parse_rejects_missing_version ... ok
+test parse::tests::parse_rejects_negative_version ... ok
+test parse::tests::parse_absent_update_channel_defaults_to_stable ... ok
+test parse::tests::parse_rejects_non_integer_version ... ok
+test parse::tests::parse_rejects_php_as_bare_scalar ... ok
+test parse::tests::parse_rejects_unknown_key_under_override ... ok
+test parse::tests::parse_rejects_unknown_top_level_key ... ok
+test parse::tests::parse_rejects_unknown_key_under_parked ... ok
+test parse::tests::parse_rejects_unknown_key_under_services ... ok
+test parse::tests::parse_rejects_unknown_key_under_ports ... ok
+test parse::tests::parse_treats_absent_overrides_block_as_empty ... ok
+test parse::tests::parse_strips_trailing_dot_from_tld_silently ... ok
+test parse::tests::parse_rejects_unknown_key_under_linked_site ... ok
+test parse::tests::parse_treats_absent_services_block_as_empty ... ok
+test parse::tests::parse_treats_absent_parked_block_as_empty ... ok
+test parse::tests::php_extensions_round_trip_and_default_name ... ok
+test parse::tests::parse_rejects_unknown_key_under_php ... ok
+test parse::tests::reserved_service_overrides_are_dropped_in_either_spelling ... ok
+test parse::tests::reverb_wire_default_enabled_is_false_when_absent ... ok
+test parse::tests::pool_section_loads_but_is_silently_dropped ... ok
+test parse::tests::removing_last_proxy_rule_returns_to_byte_identical_default ... ok
+test parse::tests::removing_last_route_rule_returns_to_byte_identical_default ... ok
+test parse::tests::php_settings_round_trip_through_toml ... ok
+test parse::tests::symlink_protection_absent_defaults_on_and_migrates ... ok
+test parse::tests::tunnel_rejects_duplicate_site_hostnames ... ok
+test parse::tests::tunnel_rejects_more_than_one_named_tunnel ... ok
+test parse::tests::tunnel_section_parses_and_validates ... ok
+test parse::tests::tunnel_rejects_non_hostname_and_empty_entries ... ok
+test parse::tests::v3_config_without_dumps_migrates_to_default_dumps ... ok
+test parse::tests::tunnel_rejects_unsafe_keys_and_uuids ... ok
+test parse::tests::validate_accepts_1024_fallback_boundary ... ok
+test parse::tests::validate_accepts_case_insensitive_group_membership ... ok
+test parse::tests::validate_accepts_default ... ok
+test parse::tests::validate_accepts_each_known_update_channel ... ok
+test parse::tests::validate_accepts_each_known_single_service ... ok
+test parse::tests::proxies_and_rules_round_trip ... ok
+test parse::tests::symlink_protection_false_parses_and_round_trips ... ok
+test parse::tests::v12_override_without_front_controller_migrates_to_none ... ok
+test parse::tests::validate_rejects_case_insensitive_duplicate_group ... ok
+test parse::tests::validate_rejects_dangling_group_membership ... ok
+test parse::tests::validate_projects_matrix ... ok
+test parse::tests::validate_rejects_duplicate_extension_name_within_version ... ok
+test parse::tests::validate_rejects_duplicate_linked_name ... ok
+test parse::tests::validate_accepts_per_site_wire_id ... ok
+test parse::tests::validate_accepts_valid_groups ... ok
+test parse::tests::update_channel_round_trips ... ok
+test parse::tests::validate_rejects_empty_group_name ... ok
+test parse::tests::validate_rejects_duplicate_route_rule_prefix ... ok
+test parse::tests::validate_rejects_duplicate_rule_prefix ... ok
+test parse::tests::validate_rejects_empty_parked_path ... ok
+test parse::tests::validate_rejects_equal_fallback_ports ... ok
+test parse::tests::route_rules_round_trip ... ok
+test parse::tests::validate_rejects_http_zero ... ok
+test parse::tests::validate_rejects_https_zero ... ok
+test parse::tests::validate_rejects_per_site_type_without_suffix ... ok
+test parse::tests::validate_rejects_invalid_extension_path ... ok
+test parse::tests::validate_rejects_privileged_fallback_port ... ok
+test parse::tests::validate_rejects_proxy_name_collision_with_linked ... ok
+test parse::tests::validate_rejects_proxy_rule_miscased_linked_site ... ok
+test parse::tests::validate_rejects_single_type_with_suffix ... ok
+test parse::tests::validate_rejects_empty_override_path ... ok
+test parse::tests::validate_rejects_site_field_mismatching_key ... ok
+test parse::tests::validate_rejects_reserved_group_name ... ok
+test parse::tests::validate_rejects_equal_http_https ... ok
+test parse::tests::validate_rejects_tld_target ... ok
+test parse::tests::validate_rejects_proxy_rule_dangling_linked_site ... ok
+test parse::tests::validate_rejects_unknown_service ... ok
+test parse::tests::validate_rejects_unknown_route_rule_site ... ok
+test parse::tests::validate_rejects_unknown_update_channel ... ok
+test parse::tests::validate_rejects_unsupported_and_bad_php_setting ... ok
+test parse::tests::validate_rejects_zero_mail_port ... ok
+test ports::tests::unlinking_frees_the_port ... ok
+test schema::tests::default_config_carries_current_version ... ok
+test parse::tests::v23_config_migrates_to_v24_changing_only_the_version_line ... ok
+test parse::tests::validate_returns_first_failure_in_documented_order ... ok
+test schema::tests::default_groups_empty ... ok
+test parse::tests::validate_rejects_zero_dumps_port ... ok
+test schema::tests::default_parked_and_services_empty ... ok
+test schema::tests::default_ports_is_well_known ... ok
+test schema::tests::default_overrides_empty ... ok
+test schema::tests::default_php_section_is_8_3 ... ok
+test schema::tests::default_service_instance_is_enabled_and_unpinned ... ok
+test schema::tests::unprivileged_ports_match_documented_fallback ... ok
+test serialize::tests::default_config_emits_no_groups_table ... ok
+test serialize::tests::default_config_emits_no_domains_table ... ok
+test serialize::tests::default_config_emits_no_mail_table ... ok
+test serialize::tests::default_config_emits_no_php_extensions_table ... ok
+test serialize::tests::all_empty_proxy_domain_delta_is_pruned ... ok
+test serialize::tests::all_empty_domain_delta_omits_table_and_is_not_round_tripped ... ok
+test serialize::tests::default_config_emits_no_tunnel_table ... ok
+test serialize::tests::default_to_toml_starts_with_version_line ... ok
+test parse::tests::version_settings_and_directives_round_trip ... ok
+test ports::tests::allocation_roundtrip ... ok
+test serialize::tests::linked_deltas_without_proxy_deltas_emit_no_proxy_sub_table ... ok
+test serialize::tests::default_to_toml_parses_back_to_default ... ok
+test serialize::tests::empty_members_groups_omits_members_table ... ok
+test serialize::tests::non_default_groups_section_round_trips ... ok
+test serialize::tests::non_default_tunnel_section_round_trips ... ok
+test serialize::tests::non_default_mail_section_round_trips ... ok
+test serialize::tests::php_extensions_emit_array_of_tables_and_round_trip ... ok
+test serialize::tests::populated_domains_section_round_trips ... ok
+test serialize::tests::removing_last_extension_returns_to_byte_identical_default ... ok
+test serialize::tests::populated_proxy_domain_delta_round_trips_with_a_quoted_dotted_key ... ok
+
+test result: ok. 178 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/io.rs (target/debug/deps/io-469acf9f1005642f)
+
+running 8 tests
+test load_missing_file_returns_io_error_with_requested_path ... ok
+test load_invalid_toml_returns_parse_error ... ok
+test save_create_dir_all_failure_returns_io_error_with_requested_path ... ok
+test save_into_readonly_parent_returns_io_error ... ok
+test save_persist_onto_directory_returns_io_error_with_requested_path ... ok
+test save_creates_parent_dirs ... ok
+test save_overwrites_existing_with_new_content ... ok
+test save_then_load_round_trip ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/io_parentless.rs (target/debug/deps/io_parentless-5bf744d7cc4a1244)
+
+running 1 test
+test save_treats_parentless_path_as_cwd ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/roundtrip.rs (target/debug/deps/roundtrip-3417e9a6618cfa24)
+
+running 5 tests
+test default_to_toml_then_from_toml_pins_php_version_default ... ok
+test populated_round_trip_passes_validate ... ok
+test service_overrides_round_trip ... ok
+test default_round_trip ... ok
+test populated_round_trip ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/toml_byte_shape.rs (target/debug/deps/toml_byte_shape-1eed76bc45e05510)
+
+running 31 tests
+test cleared_php_settings_emit_no_subtable ... ok
+test default_config_emits_lan_setup_port_scalar_before_tables ... ok
+test default_config_emits_lan_enabled_scalar_before_tables ... ok
+test default_config_emits_mcp_enabled_scalar_before_tables ... ok
+test default_config_contains_each_section_header ... ok
+test default_config_emits_no_mail_table ... ok
+test default_config_emits_no_groups_table ... ok
+test default_config_emits_no_route_rules_table ... ok
+test default_config_emits_no_version_settings_or_directives_tables ... ok
+test default_config_emits_seeded_php_settings_subtable ... ok
+test default_config_emits_symlink_protection_scalar_before_tables ... ok
+test default_config_starts_with_version_line ... ok
+test empty_overrides_emit_no_table ... ok
+test default_config_emits_dns_port_scalar_before_tables ... ok
+test populated_config_uses_double_bracket_linked_form ... ok
+test dns_port_zero_round_trips ... ok
+test lan_enabled_true_round_trips ... ok
+test parked_paths_emitted_in_lex_order ... ok
+test override_with_only_php_omits_secure_key ... ok
+test empty_parked_emits_empty_array_and_services_omitted ... ok
+test populated_groups_section_emits_after_defaults_and_round_trips ... ok
+test mcp_enabled_true_round_trips ... ok
+test populated_config_uses_double_bracket_override_form ... ok
+test populated_php_settings_emit_subtable_after_default_and_round_trip ... ok
+test service_overrides_emit_a_sub_table_only_when_set ... ok
+test populated_route_rules_section_emits_after_defaults_and_round_trips ... ok
+test populated_version_settings_and_directives_emit_between_settings_and_extensions ... ok
+test services_tables_emitted_in_lex_order_and_round_trip ... ok
+test service_instance_wire_shape_is_per_service_table ... ok
+test structural_round_trip_matches_input ... ok
+test symlink_protection_false_round_trips ... ok
+
+test result: ok. 31 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests src/lib.rs (target/debug/deps/orcker_core-39ba75e969655ae3)
+
+running 219 tests
+test detect::tests::cakephp_webroot ... ok
+test detect::tests::codeigniter4_public ... ok
+test detect::tests::drupal_composer_web ... ok
+test detect::tests::drupal_legacy_tarball_root ... ok
+test detect::tests::empty_project_is_unresolved_root ... ok
+test detect::tests::generic_public_without_framework_markers ... ok
+test detect::tests::generic_prefers_public_over_web ... ok
+test detect::tests::laravel_marker_without_public_yet_is_unresolved ... ok
+test detect::tests::laravel_precedence_beats_generic_web ... ok
+test detect::tests::laravel_via_artisan_marker ... ok
+test detect::tests::laravel_via_composer ... ok
+test detect::tests::magento_pub ... ok
+test detect::tests::plain_php_root_index ... ok
+test detect::tests::symfony_modern_public ... ok
+test detect::tests::wordpress_root ... ok
+test detect::tests::yii2_web ... ok
+test domain::tests::choose_primary_falls_back_to_first_exact_when_apex_absent ... ok
+test domain::tests::choose_primary_prefers_stored_exact ... ok
+test domain::tests::choose_primary_rejects_wildcard_stored_falls_back_to_apex ... ok
+test domain::tests::effective_adds_in_order_deduped ... ok
+test domain::tests::effective_default_is_apex_only ... ok
+test domain::tests::effective_suppresses_apex ... ok
+test domain::tests::effective_zero_exact_restores_apex ... ok
+test domain::tests::is_wildcard_and_fqdn ... ok
+test domain::tests::parse_fqdn_rejects_wrong_or_bare_tld ... ok
+test domain::tests::parse_fqdn_strips_tld_and_trailing_dot ... ok
+test domain::tests::parse_rejects_fqdn_over_name_cap_even_when_subpart_fits ... ok
+test domain::tests::parse_subpart_accepts_valid ... ok
+test domain::tests::parse_subpart_lowercases ... ok
+test error::tests::construct_every_error_variant ... ok
+test domain::tests::parse_fqdn_supports_multi_label_tld ... ok
+test domain::tests::parse_subpart_rejects_each_reason ... ok
+test error::tests::display_duplicate_site_contains_name ... ok
+test error::tests::display_site_not_found_contains_name ... ok
+test error::tests::error_is_send_sync_clone_eq ... ok
+test host::tests::normalise_borrows_when_already_normal ... ok
+test error::tests::display_invalid_php_contains_input_and_reason ... ok
+test host::tests::normalise_lowercases_ascii_only ... ok
+test host::tests::normalise_port_strip_digits_only ... ok
+test host::tests::normalise_port_strip_rejects_junk ... ok
+test host::tests::normalise_rejects_empty ... ok
+test host::tests::normalise_rejects_ipv6_bracketed ... ok
+test host::tests::normalise_rejects_leading_dot ... ok
+test host::tests::normalise_rejects_non_ascii ... ok
+test host::tests::normalise_rejects_only_port ... ok
+test host::tests::normalise_strips_one_trailing_dot ... ok
+test host::tests::normalise_tolerates_trailing_colon ... ok
+test net::tests::rejects_public_and_cgnat_100_64_slash_10 ... ok
+test net::tests::accepts_rfc1918_link_local_and_loopback ... ok
+test php::tests::display_emits_dotted ... ok
+test php::tests::is_legacy_splits_at_first_supported_minor ... ok
+test php::tests::ordering_pinned ... ok
+test php::tests::parse_accepts_canonical ... ok
+test php::tests::parse_accepts_php_prefix_case_insensitive ... ok
+test php::tests::parse_classifies_combining_accent_as_unsupported_prefix ... ok
+test php::tests::parse_classifies_each_reason_pinned ... ok
+test php::tests::parse_classifies_overflow_uniform ... ok
+test php::tests::parse_does_not_panic_on_multibyte ... ok
+test php::tests::parse_rejects_non_ascii_leading_byte ... ok
+test php::tests::parse_rejects_php_with_extra_letters ... ok
+test php::tests::round_trip_canonicalises ... ok
+test php::tests::serde_rejects_json_int ... ok
+test php::tests::serde_rejects_json_number ... ok
+test php::tests::serde_visitor_expecting_hit ... ok
+test php::tests::serde_wire_shape_string ... ok
+test php_directives::tests::error_display_non_empty ... ok
+test php_directives::tests::every_reserved_name_has_a_hint ... ok
+test php_directives::tests::invalid_names_are_rejected ... ok
+test php_directives::tests::invalid_values_are_rejected ... ok
+test php_directives::tests::pool_prefix_is_reserved ... ok
+test php_directives::tests::pool_reservation_is_a_prefix_not_a_bare_name_or_substring ... ok
+test php_directives::tests::render_skips_invalid_and_reserved_entries ... ok
+test php_directives::tests::render_skips_pool_settings ... ok
+test php_directives::tests::valid_names_pass ... ok
+test php_directives::tests::valid_values_pass ... ok
+test php_extensions::tests::default_name_derivation ... ok
+test php_extensions::tests::error_display_non_empty ... ok
+test php_extensions::tests::name_rejections ... ok
+test php_extensions::tests::path_rejections ... ok
+test php_extensions::tests::valid_name_and_path_pass ... ok
+test php_settings::tests::byte_sizes ... ok
+test php_settings::tests::cli_subset_and_ini_render ... ok
+test php_settings::tests::default_settings_cover_all_and_are_valid ... ok
+test php_settings::tests::error_reporting_accepts_constants_and_ints ... ok
+test php_settings::tests::flags_validate_and_canonicalise ... ok
+test php_settings::tests::injection_attempts_are_rejected ... ok
+test php_settings::tests::integers ... ok
+test php_settings::tests::merge_effective_override_precedence_and_filtering ... ok
+test php_settings::tests::render_cli_ini_with_ext_appends_after_settings_and_skips_unsafe ... ok
+test php_settings::tests::render_cli_ini_with_ext_double_quotes_paths ... ok
+test php_settings::tests::render_cover_ini_appends_after_an_existing_pcov_directive ... ok
+test php_settings::tests::render_cover_ini_appends_pcov_directives ... ok
+test php_settings::tests::render_cover_ini_inserts_separator_when_base_lacks_trailing_newline ... ok
+test php_settings::tests::render_cover_ini_rejects_an_unsafe_pcov_path ... ok
+test php_settings::tests::sanitize_ca_bundle_path_accepts_clean_paths_and_rejects_ini_metachars ... ok
+test php_settings::tests::supported_set_and_directives ... ok
+test php_settings::tests::unsupported_name_is_rejected ... ok
+test ports::tests::allocation_matrix ... ok
+test project::tests::name_is_validated_and_lowercased ... ok
+test project::tests::proxy_site_carries_the_name_upstream_and_secure_flag ... ok
+test project::tests::upstream_is_the_allocated_loopback_port ... ok
+test proxy::tests::display_round_trips_through_parse ... ok
+test proxy::tests::match_rule_picks_longest_prefix ... ok
+test proxy::tests::is_local_classifies_hosts ... ok
+test proxy::tests::parses_explicit_port ... ok
+test proxy::tests::parses_http_default_port ... ok
+test proxy::tests::parses_https_default_port ... ok
+test proxy::tests::parses_bracketed_ipv6 ... ok
+test proxy::tests::parses_bracketed_ipv6_default_port ... ok
+test proxy::tests::proxysite_name_error_says_proxy_not_site ... ok
+test proxy::tests::proxysite_secure_toggles ... ok
+test proxy::tests::proxysite_validates_name ... ok
+test proxy::tests::validate_proxy_name_rejects_with_reason ... ok
+test proxy::tests::rejects_bad_targets ... ok
+test proxy::tests::rejects_bad_prefixes ... ok
+test proxy::tests::root_rule_is_catch_all ... ok
+test proxy::tests::rule_normalizes_and_matches ... ok
+test proxy::tests::validate_proxy_name_accepts ... ok
+test route_rule::tests::accepts_plain_relative_targets ... ok
+test route_rule::tests::matches_path_is_boundary_correct ... ok
+test route_rule::tests::normalizes_trailing_slash_and_keeps_root ... ok
+test route_rule::tests::rejects_bad_prefixes_with_reasons ... ok
+test route_rule::tests::rejects_bad_targets_with_reasons ... ok
+test route_rule::tests::root_rule_is_catch_all ... ok
+test router::tests::apex_shadowed_by_reports_claimant ... ok
+test router::tests::domain_owner_reports_proxy_name ... ok
+test router::tests::exact_and_wildcard_same_base_coexist ... ok
+test router::tests::dotted_proxy_name_routes_its_apex ... ok
+test router::tests::from_sites_returns_first_duplicate_name_in_error ... ok
+test router::tests::insert_proxy_rejects_name_and_apex_collisions ... ok
+test router::tests::exact_site_domain_beats_proxy_wildcard ... ok
+test router::tests::insert_rejects_duplicate_name ... ok
+test router::tests::insert_rejects_cross_namespace_claims ... ok
+test router::tests::insert_rejects_duplicate_domain ... ok
+test router::tests::get_mut_allows_field_update_without_rename ... ok
+test router::tests::iter_yields_sites_in_name_order ... ok
+test router::tests::linked_and_parked_route_alike ... ok
+test router::tests::multi_label_tld_resolution ... ok
+test router::tests::new_creates_empty_router ... ok
+test router::tests::primary_and_effective_accessors ... ok
+test router::tests::proxy_rules_set_get_and_clear ... ok
+test router::tests::proxy_with_domains_routes_exact_and_wildcard ... ok
+test router::tests::remove_proxy_clears_apex_index ... ok
+test router::tests::remove_errors_when_missing ... ok
+test router::tests::remove_clears_domain_indices ... ok
+test router::tests::remove_proxy_clears_every_domain_key ... ok
+test router::tests::removing_a_site_clears_its_route_rules ... ok
+test router::tests::resolve_apex_only_default ... ok
+test router::tests::resolve_nested_wildcard_and_independent_sites ... ok
+test router::tests::resolve_route_distinguishes_php_and_proxy ... ok
+test router::tests::routerconfig_default_is_test ... ok
+test router::tests::route_rules_set_get_and_clear ... ok
+test router::tests::routerconfig_new_validates ... ok
+test router::tests::resolve_wildcard_single_label_and_precedence ... ok
+test router::tests::routerconfig_deserialize_rejects_unknown_field ... ok
+test router::tests::routerconfig_serde_round_trip_toml ... ok
+test router::tests::routerconfig_serialize_omits_dotted_tld ... ok
+test router::tests::routerconfig_with_tld_caches_dotted_tld ... ok
+test service_directives::tests::error_display_non_empty ... ok
+test service_directives::tests::dialect_is_known_for_config_backed_services_only ... ok
+test service_directives::tests::file_ext_is_cnf_only_for_the_mysql_family ... ok
+test service_directives::tests::invalid_names_are_rejected ... ok
+test service_directives::tests::invalid_values_are_rejected_in_every_dialect ... ok
+test service_directives::tests::local_stub_is_all_comments_apart_from_the_mysql_group ... ok
+test service_directives::tests::quotes_are_rejected_except_in_postgres_values ... ok
+test service_directives::tests::mycnf_reservations_ignore_dash_underscore_spelling ... ok
+test service_directives::tests::render_managed_of_an_empty_map_is_header_only ... ok
+test service_directives::tests::render_managed_skips_invalid_and_reserved_entries ... ok
+test service_directives::tests::reservations_ignore_letter_case_in_every_dialect ... ok
+test service_directives::tests::render_managed_uses_the_dialect_line_form ... ok
+test service_directives::tests::scan_local_accepts_a_clean_file ... ok
+test service_directives::tests::every_reserved_name_has_a_hint ... ok
+test service_directives::tests::render_managed_single_quotes_are_doubled_for_postgres ... ok
+test service_directives::tests::scan_local_flags_reserved_directives_with_their_hint ... ok
+test service_directives::tests::settable_names_are_not_reserved ... ok
+test site::tests::accessors_return_expected_values ... ok
+test site::tests::constructor_defaults_secure_false ... ok
+test site::tests::deserialize_absent_web_subpath_defaults_empty ... ok
+test site::tests::deserialize_absent_wp_auto_login_defaults_false_and_no_user ... ok
+test site::tests::deserialize_lowercases_name ... ok
+test service_directives::tests::scan_local_flags_lines_that_are_not_directives ... ok
+test service_directives::tests::valid_names_pass ... ok
+test site::tests::deserialize_rejects_invalid_name ... ok
+test site::tests::deserialize_rejects_unknown_field ... ok
+test site::tests::front_controller_defaults_to_auto ... ok
+test site::tests::linked_constructs ... ok
+test service_directives::tests::valid_values_pass_in_every_dialect ... ok
+test site::tests::name_ordering_pin ... ok
+test site::tests::name_rejects_each_reason ... ok
+test site::tests::name_is_lowercased ... ok
+test site::tests::normalize_site_name_result_is_always_valid ... ok
+test site::tests::normalize_site_name_keeps_valid_names_and_slugifies_the_rest ... ok
+test site::tests::parked_constructs ... ok
+test site::tests::serde_full_site_roundtrip_omits_wp_auto_login_fields_by_default ... ok
+test site::tests::serde_full_site_roundtrip ... ok
+test site::tests::serde_wire_shape_sitekind ... ok
+test site::tests::serde_roundtrip_with_web_subpath ... ok
+test site::tests::served_root_empty_subpath_is_document_root ... ok
+test site::tests::served_root_joins_relative_subpath ... ok
+test site::tests::setters_mutate_only_intended_field ... ok
+test site::tests::slugify_site_name_boundary_separator_has_no_trailing_hyphen ... ok
+test site::tests::slugify_site_name_caps_at_63_bytes_without_trailing_hyphen ... ok
+test site::tests::slugify_site_name_cases ... ok
+test site::tests::serde_front_controller_roundtrip_and_omitted_when_auto ... ok
+test site::tests::uses_front_controller_default_and_override ... ok
+test site::tests::web_subpath_default_is_empty ... ok
+test site::tests::served_root_is_defensive_against_escapes ... ok
+test site::tests::wp_auto_login_defaults_false_and_no_user ... ok
+test tld::tests::default_is_test_and_matches_new ... ok
+test site::tests::slugify_site_name_result_is_always_valid ... ok
+test site::tests::serde_roundtrip_with_wp_auto_login ... ok
+test tld::tests::display_round_trip ... ok
+test tld::tests::new_accepts_valid ... ok
+test tld::tests::new_rejects_each_reason ... ok
+test tld::tests::new_strips_one_trailing_dot ... ok
+test tld::tests::serde_rejects_invalid_on_deserialize ... ok
+test tld::tests::serde_wire_shape_string ... ok
+test ports::tests::allocation_never_leaves_the_range ... ok
+test ports::tests::exhausted_range_is_a_typed_error ... ok
+
+test result: ok. 219 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/serde_roundtrip.rs (target/debug/deps/serde_roundtrip-e432974010ee2c21)
+
+running 2 tests
+test json_round_trip_ipc_set_php ... ok
+test toml_round_trip_config_shape ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/wire_stability.rs (target/debug/deps/wire_stability-7138127254cc5ed0)
+
+running 4 tests
+test canonical_site_byte_shape_frozen ... ok
+test php_version_serialises_as_dotted_string ... ok
+test site_kind_serialises_as_snake_case_string ... ok
+test router_config_default_byte_shape_frozen ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/orcker_depcheck-b66b50cefec52d19)
+
+running 7 tests
+test tests::assert_at_most_one_version_passes_for_single_and_absent ... ok
+test tests::assert_none_of_fails_when_a_forbidden_crate_is_reachable - should panic ... ok
+test tests::assert_at_most_one_version_fails_on_a_split - should panic ... ok
+test tests::reachable_panics_when_root_absent - should panic ... ok
+test tests::reachable_reports_both_versions_of_a_diamond_duplicate ... ok
+test tests::reachable_follows_normal_edges_transitively ... ok
+test tests::reachable_skips_dev_and_build_edges ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/orcker_dns-23dc21099c458e93)
+
+running 16 tests
+test answer::tests::answer_match_is_exhaustive ... ok
+test error::tests::bind_proto_display ... ok
+test error::tests::dns_error_display_pins_per_variant ... ok
+test responder::tests::answer_table ... ok
+test server::tests::apex_a_query_yields_nodata ... ok
+test server::tests::lan_mode_aaaa_degrades_to_nodata ... ok
+test server::tests::aaaa_query_in_zone_yields_loopback6 ... ok
+test server::tests::lan_mode_loopback_source_still_gets_loopback ... ok
+test server::tests::a_query_in_zone_yields_authoritative_loopback4 ... ok
+test server::tests::lan_mode_non_loopback_source_gets_lan_ip ... ok
+test server::tests::lan_mode_loopback_source_without_discovered_ip_still_gets_loopback ... ok
+test server::tests::non_address_qtype_in_zone_yields_nodata ... ok
+test server::tests::out_of_zone_query_yields_refused_non_authoritative ... ok
+test server::tests::multi_label_tld_in_zone_yields_loopback4 ... ok
+test server::tests::lan_mode_refuses_non_private_source ... ok
+test server::tests::lan_mode_remote_source_without_discovered_ip_yields_nodata ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/pure_responder_no_io.rs (target/debug/deps/pure_responder_no_io-88a388718c9d819f)
+
+running 1 test
+test pure_modules_have_no_io_substrings ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/server_smoke.rs (target/debug/deps/server_smoke-56beddb8ac07df26)
+
+running 2 tests
+test serves_default_tld ... ok
+test serves_multi_label_tld ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/orcker_doctor-d1deecb0c0322936)
+
+running 27 tests
+test tests::active_port_redirect_suppresses_fallback_warning ... ok
+test tests::browser_trusted_or_unknown_is_silent ... ok
+test tests::browser_trust_details_are_platform_aware ... ok
+test tests::bin_dir_not_on_path_warns_only_on_some_true ... ok
+test tests::browser_tool_missing_warns_with_install_hint ... ok
+test tests::ca_and_resolver_false_warns ... ok
+test tests::browser_untrusted_warns ... ok
+test tests::ca_and_resolver_unknown_is_silent ... ok
+test tests::dns_unbound_surfaces_even_when_web_unbound ... ok
+test tests::dns_unbound_warns_independently_of_web ... ok
+test tests::foreign_web_listener_warns_and_suppresses_fallback ... ok
+test tests::foreign_web_listener_warns_even_without_fallback ... ok
+test tests::healthy_report_is_all_good_only ... ok
+test tests::lan_identity_anchor_warns_only_lan_stale ... ok
+test tests::lan_stale_is_gated_on_lan_enabled ... ok
+test tests::matching_redirect_targets_stay_silent ... ok
+test tests::no_sites_is_informational ... ok
+test tests::port_fallback_remedy_is_platform_aware_in_lan_mode ... ok
+test tests::port_fallback_warning_uses_elevate_ports_remedy ... ok
+test tests::privileged_fallback_warns_but_high_ports_do_not ... ok
+test tests::problems_suppress_all_good ... ok
+test tests::resolver_backup_surfaces_as_ok_finding_with_no_remedy ... ok
+test tests::shadowed_domain_renders_proxy_labels_verbatim ... ok
+test tests::shadowed_domain_warns_once_per_losing_site ... ok
+test tests::stale_loopback_target_warns_and_suppresses_port_fallback ... ok
+test tests::symlink_protection_off_surfaces_as_ok_finding_with_no_remedy ... ok
+test tests::web_unbound_fails_and_supersedes_fallback ... ok
+
+test result: ok. 27 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/orcker_engine-d232c75087b0b6d0)
+
+running 3 tests
+test pure::tests::compose_version_parsing ... ok
+test pure::tests::socket_resolution_matrix ... ok
+test pure::tests::minimum_version_policy ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/assemble.rs (target/debug/deps/assemble-974aafb4331e7879)
+
+running 5 tests
+test compose_absent_is_its_own_problem ... ok
+test unsupported_platform_reports_unsupported ... ok
+test falls_through_to_the_desktop_socket ... ok
+test engine_down_reports_a_problem_with_a_hint ... ok
+test healthy_environment_has_no_problems ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/debug/deps/orcker_gui-d3f6df53768ec057)
+
+running 48 tests
+test autostart::tests::decide_conflicts_when_gui_is_older ... ok
+test autostart::tests::an_unchanged_update_skips_the_write ... ok
+test autostart::tests::daemon_self_repair_busy_round_trips_the_flag ... ok
+test autostart::tests::decide_is_up_to_date_on_equal ... ok
+test autostart::tests::decide_reconciles_on_advance_or_unknown ... ok
+test autostart::tests::a_failed_write_leaves_the_previous_settings_intact ... ok
+test autostart::tests::gui_settings_round_trips_stored_editor_preferences ... ok
+test autostart::tests::gui_settings_without_editor_fields_deserializes_to_auto_detect ... ok
+test autostart::tests::gui_settings_without_tray_icon_variant_field_deserializes_to_auto ... ok
+test autostart::tests::gui_settings_without_title_bar_style_field_deserializes_to_auto ... ok
+test autostart::tests::prune_site_overrides_drops_only_unknown_sites ... ok
+test autostart::tests::reg_action_covers_version_and_phantom ... ok
+test autostart::tests::reg_plan_installs_when_unregistered ... ok
+test autostart::tests::reg_plan_starts_when_current_unknown_or_conflicting ... ok
+test autostart::tests::reg_plan_upgrades_on_version_advance ... ok
+test autostart::tests::title_bar_style_wire_values ... ok
+test commands::tests::base64_decode_matches_known_vectors ... ok
+test commands::tests::base64_decode_rejects_invalid_input ... ok
+test commands::tests::code_str_renders_snake_case_for_every_known_variant ... ok
+test commands::tests::finish_maps_daemon_error_to_gui_error ... ok
+test commands::tests::finish_passes_success_through ... ok
+test commands::tests::ide_options_preserve_wire_and_display_names ... ok
+test commands::tests::launch_ide_dispatches_to_the_requested_detected_editor ... ok
+test commands::tests::launch_ide_propagates_a_launcher_failure ... ok
+test commands::tests::launch_ide_rejects_an_undetected_id_with_its_display_name ... ok
+test autostart::tests::settings_write_round_trips_and_leaves_no_temporary_file ... ok
+test commands::tests::resolve_site_root_matches_by_name_only ... ok
+test commands::tests::open_root_maps_an_opener_failure_to_a_typed_gui_error ... ok
+test commands::tests::safe_attachment_filename_strips_path_and_unsafe_chars ... ok
+test commands::tests::validated_project_directory_rejects_non_directories ... ok
+test daemon::tests::no_version_skew_hint_when_logs_clean ... ok
+test commands::tests::validated_project_directory_accepts_directories ... ok
+test daemon::tests::version_skew_log_yields_reregister_hint ... ok
+test commands::tests::write_mail_attachment_file_uses_unique_names_on_collision ... ok
+test logging::tests::bounded_tail_drops_partial_first_line ... ok
+test logging::tests::bounded_tail_keeps_boundary_aligned_first_line ... ok
+test logging::tests::keeps_lines_within_age ... ok
+test logging::tests::resets_when_stale ... ok
+test logging::tests::truncates_existing_file_on_create ... ok
+test tray::tests::recolor_opaque_to_black_sets_opaque_pixels_black ... ok
+test tray::tests::recolor_opaque_to_white_sets_opaque_pixels_white ... ok
+test tray::tests::tray_icon_variant_wire_names_are_kebab_case ... ok
+test tray::tests::menu_icon_dark_recolors_opaque_pixels_white ... ok
+test tray::tests::y_glyph_rgba_light_is_white ... ok
+test tray::tests::menu_icon_dark_preserves_alpha_channel ... ok
+test tray::tests::y_glyph_rgba_dark_is_black ... ok
+test tray::tests::menu_icon_light_leaves_pixels_unchanged ... ok
+test autostart::tests::concurrent_updates_keep_every_change_and_leave_a_parseable_file ... ok
+
+test result: ok. 48 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running unittests src/main.rs (target/debug/deps/orcker_helper-0ffb6ca2e613c010)
+
+running 53 tests
+test cli::tests::install_resolver_bad_addr_rejected_as_usage ... ok
+test cli::tests::install_ca_bad_fingerprint_rejected ... ok
+test cli::tests::install_resolver_parses ... ok
+test cli::tests::install_ca_parses ... ok
+test cli::tests::setcap_parses ... ok
+test cli::tests::skip_priv_check_defaults_false ... ok
+test cli::tests::skip_priv_check_recognised_in_debug ... ok
+test cli::tests::unknown_flag_rejected_as_usage ... ok
+test error::tests::argv_data_conversion_from_argv_parse_error ... ok
+test error::tests::argv_data_maps_to_65 ... ok
+test error::tests::argv_usage_maps_to_64 ... ok
+test error::tests::command_not_found_maps_to_69 ... ok
+test error::tests::command_other_maps_to_75 ... ok
+test error::tests::fingerprint_mismatch_maps_to_65 ... ok
+test error::tests::io_maps_to_74 ... ok
+test error::tests::not_privileged_maps_to_77 ... ok
+test error::tests::validation_maps_to_65 ... ok
+test error::tests::unsupported_maps_to_78 ... ok
+test error::tests::wire_drift_maps_to_70 ... ok
+test cli::tests::unknown_subcommand_rejected_as_usage ... ok
+test ops::ca::tests::anchor_filename_uses_first_16_hex ... ok
+test ops::ca::tests::linux_post_install_cmd_arch ... ok
+test ops::ca::tests::linux_post_install_cmd_debian ... ok
+test ops::ca::tests::cert_is_orcker_owned_false_for_unparseable ... ok
+test ops::ca::tests::linux_post_install_cmd_rhel ... ok
+test ops::resolver::tests::drop_in_path_shape ... ok
+test error::tests::validation_reason_displays_carry_input ... ok
+test ops::ca::tests::linux_post_install_cmd_unknown_returns_none ... ok
+test ops::resolver::tests::networkmanager_paths_have_expected_shape ... ok
+test ops::tests::run_command_returns_not_found_for_missing_tool ... ok
+test ops::ca::tests::cert_is_orcker_owned_true_for_orcker_ca ... ok
+test ops::ca::tests::cert_is_orcker_owned_false_for_other_ca ... ok
+test privilege::tests::effective_uid_parses_status_format ... ok
+test privilege::tests::is_privileged_returns_a_bool ... ok
+test ops::tests::run_command_propagates_nonzero_exit ... ok
+test validate::tests::require_basename_orckerd_accepts ... ok
+test validate::tests::require_basename_orckerd_rejects_other ... ok
+test validate::tests::require_existing_file_rejects_directory ... ok
+test validate::tests::require_existing_file_rejects_missing ... ok
+test validate::tests::require_existing_file_rejects_relative ... ok
+test ops::tests::run_command_succeeds_for_true ... ok
+test validate::tests::require_existing_file_accepts_real_file ... ok
+test validate::tests::require_pem_matches_fingerprint_io_error_on_missing ... ok
+test validate::tests::require_pem_matches_fingerprint_happy_path ... ok
+test validate::tests::require_valid_tld_accepts_test ... ok
+test validate::tests::require_pem_matches_fingerprint_mismatch ... ok
+test validate::tests::require_pem_matches_fingerprint_rejects_multi_cert_pem ... ok
+test validate::tests::require_pem_matches_fingerprint_rejects_zero_cert_pem ... ok
+test validate::tests::require_valid_tld_rejects_traversal ... ok
+test ops::tests::atomic_write_writes_and_sets_mode_owner_only ... ok
+test ops::tests::atomic_write_creates_parent_dirs ... ok
+test ops::tests::atomic_write_writes_and_sets_mode_world_readable ... ok
+test ops::tests::atomic_write_replaces_existing_file ... ok
+
+test result: ok. 53 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/argv_contract.rs (target/debug/deps/argv_contract-0717634d7ebaf0a4)
+
+running 1 test
+test every_variant_round_trips_via_from_argv ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/no_runtime_deps.rs (target/debug/deps/no_runtime_deps-cc071dde5232f43c)
+
+running 1 test
+test no_forbidden_crates_in_runtime_graph ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.54s
+
+     Running unittests src/lib.rs (target/debug/deps/orcker_ipc-3d657b67d8f58541)
+
+running 21 tests
+test error::tests::frame_error_to_kind_is_exhaustive ... ok
+test error::tests::frame_error_display_unchanged_by_thiserror ... ok
+test error::tests::io_maps_to_kind ... ok
+test error::tests::ipc_error_message_equals_display ... ok
+test error::tests::unexpected_eof_maps_to_kind ... ok
+test error::tests::ipc_error_kind_display_matches_thiserror_format ... ok
+test frame::tests::check_payload_length_at_cap_succeeds ... ok
+test frame::tests::check_payload_length_one_over_cap_fails ... ok
+test frame::tests::check_payload_length_one_byte_against_zero_cap_fails ... ok
+test frame::tests::check_payload_length_u32_overflow_on_64bit ... ok
+test frame::tests::check_payload_length_zero_and_zero ... ok
+test frame::tests::check_payload_length_zero_under_cap ... ok
+test request::variant_name_pinning::touch_every_variant ... ok
+test tests::protocol_version_pinned ... ok
+test response::variant_name_pinning::touch_every_variant ... ok
+test transport::tests::read_returns_none_at_clean_eof ... ok
+test transport::tests::read_errors_with_unexpected_eof_mid_frame ... ok
+test transport::tests::read_blocks_for_partial_frame_then_completes ... ok
+test transport::tests::write_then_read_one_message_over_duplex ... ok
+test transport::tests::write_message_survives_partial_writes_on_small_duplex ... ok
+test transport::tests::write_to_closed_reader_surfaces_as_io_error ... ok
+
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/frame_codec.rs (target/debug/deps/frame_codec-3bab9ca25cc175b8)
+
+running 16 tests
+test decoder_rejects_one_byte_over_boundary ... ok
+test decoder_handles_extra_trailing_bytes ... ok
+test decoder_rejects_oversized_length ... ok
+test decoder_yields_first_then_rejects_oversized_second ... ok
+test decoder_stays_poisoned_after_oversized ... ok
+test decoder_yields_multiple_frames_pipelined ... ok
+test decoder_yields_none_on_partial_body ... ok
+test decoder_yields_none_on_partial_header ... ok
+test default_max_frame_constant_value ... ok
+test encode_at_zero_max_with_empty_payload_succeeds ... ok
+test empty_payload_roundtrip ... ok
+test encode_rejects_one_byte_against_zero_max ... ok
+test encode_rejects_payload_larger_than_max ... ok
+test encode_succeeds_at_exact_max_boundary ... ok
+test encode_then_decode_single_frame_roundtrip ... ok
+test slow_loris_byte_at_a_time_full_message_roundtrip ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/roundtrip.rs (target/debug/deps/roundtrip-7fefa07a02dfe282)
+
+running 7 tests
+test decode_rejects_unknown_type_tag ... ok
+test decode_accepts_unknown_envelope_field ... ok
+test decode_rejects_missing_required_field ... ok
+test decode_rejects_unknown_error_code ... ok
+test decode_tolerates_unknown_field_inside_wire_site_entry ... ok
+test encode_then_decode_request_roundtrip ... ok
+test encode_then_decode_response_roundtrip ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/wire_stability.rs (target/debug/deps/wire_stability-7f1ec94135c55abd)
+
+running 139 tests
+test cloudflared_source_each_variant_byte_shape ... ok
+test diagnosis_code_each_variant_byte_shape ... ok
+test browser_trust_enum_byte_shape ... ok
+test channel_each_variant_byte_shape ... ok
+test engine_unit_variants_byte_shape ... ok
+test engine_problem_code_each_tag_byte_shape ... ok
+test error_code_port_range_exhausted_byte_shape ... ok
+test error_code_version_mismatch_byte_shape ... ok
+test error_code_each_variant_byte_shape ... ok
+test project_entry_minimal_byte_shape ... ok
+test project_entry_byte_shape ... ok
+test request_add_route_rule_byte_shape ... ok
+test request_add_domain_byte_shape ... ok
+test request_cached_update_status_byte_shape ... ok
+test request_check_update_byte_shape ... ok
+test request_cloudflared_login_byte_shape ... ok
+test request_create_named_tunnel_byte_shape ... ok
+test request_daemon_info_byte_shape ... ok
+test request_create_group_byte_shape ... ok
+test request_delete_group_byte_shape ... ok
+test request_clear_mails_byte_shape ... ok
+test request_diagnose_byte_shape ... ok
+test request_delete_named_tunnel_byte_shape ... ok
+test request_delete_mails_byte_shape ... ok
+test request_get_mail_byte_shape ... ok
+test request_doctor_fix_byte_shape ... ok
+test request_engine_status_byte_shape ... ok
+test request_install_cloudflared_streamed_byte_shape ... ok
+test request_hello_byte_shape ... ok
+test request_install_tool_byte_shape ... ok
+test request_install_tool_streamed_byte_shape ... ok
+test request_job_cancel_byte_shape ... ok
+test request_job_status_byte_shape ... ok
+test request_link_byte_shape ... ok
+test request_link_project_byte_shape ... ok
+test request_list_groups_byte_shape ... ok
+test request_link_project_with_name_and_port_byte_shape ... ok
+test request_list_mails_byte_shape ... ok
+test request_list_named_tunnels_byte_shape ... ok
+test request_list_parked_byte_shape ... ok
+test request_list_projects_byte_shape ... ok
+test request_list_routes_byte_shape ... ok
+test request_list_sites_byte_shape ... ok
+test request_list_tools_byte_shape ... ok
+test request_mint_remote_setup_code_byte_shape ... ok
+test request_mark_mails_read_byte_shape ... ok
+test request_park_byte_shape ... ok
+test request_ping_byte_shape ... ok
+test request_remove_domain_byte_shape ... ok
+test request_remove_route_rule_byte_shape ... ok
+test request_rename_group_byte_shape ... ok
+test request_reset_domains_byte_shape ... ok
+test request_restart_daemon_byte_shape ... ok
+test request_route_tunnel_dns_byte_shape ... ok
+test request_set_dns_port_byte_shape ... ok
+test request_set_fallback_ports_byte_shape ... ok
+test request_set_front_controller_byte_shape ... ok
+test request_set_lan_enabled_byte_shape ... ok
+test request_set_group_order_byte_shape ... ok
+test request_set_mail_enabled_byte_shape ... ok
+test request_set_mail_port_byte_shape ... ok
+test request_set_mcp_enabled_byte_shape ... ok
+test request_set_primary_domain_byte_shape ... ok
+test request_set_secure_byte_shape ... ok
+test request_set_site_group_byte_shape ... ok
+test request_set_site_tunnel_byte_shape ... ok
+test request_set_symlink_protection_byte_shape ... ok
+test request_set_update_channel_byte_shape ... ok
+test request_set_web_root_byte_shape ... ok
+test request_stage_update_byte_shape ... ok
+test request_start_named_tunnel_byte_shape ... ok
+test request_start_quick_tunnel_byte_shape ... ok
+test request_status_byte_shape ... ok
+test request_stop_named_tunnel_byte_shape ... ok
+test request_stop_tunnel_byte_shape ... ok
+test request_trust_browsers_byte_shape ... ok
+test request_tunnel_status_byte_shape ... ok
+test request_uninstall_tool_byte_shape ... ok
+test request_unlink_byte_shape ... ok
+test request_unpark_byte_shape ... ok
+test response_browser_trust_byte_shape ... ok
+test response_diagnoses_byte_shape ... ok
+test response_doctor_fix_byte_shape ... ok
+test response_engine_status_healthy_byte_shape ... ok
+test response_engine_status_degraded_byte_shape ... ok
+test response_groups_byte_shape ... ok
+test response_error_each_code_byte_shape ... ok
+test response_job_progress_byte_shape ... ok
+test response_job_started_byte_shape ... ok
+test response_mail_legacy_without_attachments_decodes_default ... ok
+test response_mail_byte_shape ... ok
+test response_info_byte_shape ... ok
+test response_mails_legacy_without_read_decodes_default ... ok
+test response_mails_byte_shape ... ok
+test response_named_tunnels_with_none_zone_skips_field ... ok
+test response_named_tunnels_with_zone_byte_shape ... ok
+test response_ok_byte_shape ... ok
+test response_groups_empty_byte_shape ... ok
+test response_parked_byte_shape ... ok
+test response_parked_empty_byte_shape ... ok
+test response_pong_byte_shape ... ok
+test response_mail_with_attachment_byte_shape ... ok
+test response_project_byte_shape ... ok
+test response_project_relink_byte_shape ... ok
+test response_projects_empty_byte_shape ... ok
+test response_projects_byte_shape ... ok
+test response_routes_byte_shape ... ok
+test response_proxies_byte_shape ... ok
+test response_remote_setup_byte_shape ... ok
+test response_sites_customized_domains_byte_shape ... ok
+test response_proxies_customized_domains_byte_shape ... ok
+test response_sites_shape_is_unchanged_by_projects ... ok
+test response_sites_one_byte_shape ... ok
+test response_sites_zero_byte_shape ... ok
+test response_sites_with_web_subpath_byte_shape ... ok
+test response_sites_wordpress_byte_shape ... ok
+test response_sites_two_byte_shape ... ok
+test response_sites_wp_auto_login_byte_shape ... ok
+test response_staged_byte_shape ... ok
+test response_tools_byte_shape ... ok
+test response_tools_external_byte_shape ... ok
+test response_tunnels_byte_shape ... ok
+test response_welcome_byte_shape ... ok
+test severity_each_variant_byte_shape ... ok
+test staged_artifact_each_variant_byte_shape ... ok
+test response_tunnels_named_and_empty_byte_shape ... ok
+test response_update_status_byte_shape ... ok
+test status_mail_legacy_without_unread_decodes_default ... ok
+test status_dns_unbound_appears_only_when_some ... ok
+test status_foreign_web_listener_appears_only_when_some ... ok
+test status_port_redirect_appears_only_when_some ... ok
+test status_mail_appears_only_when_some ... ok
+test status_redirect_targets_appear_only_when_some ... ok
+test status_resolver_backup_appears_only_when_some ... ok
+test tunnel_kind_each_variant_byte_shape ... ok
+test response_status_byte_shape ... ok
+test tunnel_run_state_each_variant_byte_shape ... ok
+test update_source_each_variant_byte_shape ... ok
+test status_shared_sites_appears_only_when_nonzero ... ok
+
+test result: ok. 139 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests src/lib.rs (target/debug/deps/orcker_mail-9bd09f91926a5bc4)
+
+running 31 tests
+test io::server::tests::captures_a_message_over_tcp ... ok
+test io::store::tests::mark_read_is_idempotent ... ok
+test io::store::tests::append_list_get_roundtrip ... ok
+test io::store::tests::append_starts_unread ... ok
+test io::store::tests::clear_empties_but_keeps_id_monotonic ... ok
+test io::store::tests::counts_reflects_marks ... ok
+test io::store::tests::mark_read_unknown_ids_ignored ... ok
+test pure::mime::tests::attachment_without_filename_falls_back_to_generic_label ... ok
+test pure::mime::tests::base64_encode_matches_known_vector ... ok
+test io::store::tests::next_id_skips_orphaned_eml_not_in_index ... ok
+test pure::mime::tests::detail_decodes_text_body_and_headers ... ok
+test pure::mime::tests::cid_image_is_rewritten_to_data_url ... ok
+test pure::mime::tests::multipart_mixed_attachment_is_collected ... ok
+test pure::mime::tests::quoted_printable_html_is_decoded ... ok
+test pure::mime::tests::summary_extracts_envelope ... ok
+test pure::retention::tests::over_cap_evicts_the_overflow ... ok
+test pure::retention::tests::under_cap_evicts_nothing ... ok
+test pure::smtp::tests::data_requires_recipient ... ok
+test pure::smtp::tests::extract_handles_missing_brackets ... ok
+test pure::smtp::tests::full_session_captures_envelope_and_body ... ok
+test pure::smtp::tests::greeting_is_220 ... ok
+test pure::smtp::tests::quit_closes ... ok
+test pure::smtp::tests::rset_clears_envelope ... ok
+test pure::smtp::tests::second_mail_from_resets_recipients ... ok
+test pure::smtp::tests::unknown_command_is_accepted_leniently ... ok
+test pure::smtp::tests::unstuff_removes_one_leading_dot ... ok
+test io::store::tests::mark_read_marks_only_given_ids_and_persists ... ok
+test io::store::tests::reopen_loads_existing_index ... ok
+test io::store::tests::delete_many_removes_only_the_given_ids ... ok
+test io::store::tests::retention_cap_evicts_oldest ... ok
+test io::store::tests::concurrent_appends_do_not_lose_updates ... ok
+
+test result: ok. 31 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running unittests src/lib.rs (target/debug/deps/orcker_mcp-5c0d215de315f3fc)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/no_runtime_deps.rs (target/debug/deps/no_runtime_deps-3fec138ab6256853)
+
+running 2 tests
+test does_not_enable_orcker_ipc_transport ... ok
+test declares_no_async_runtime_and_no_stringly_error_crate ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/protocol.rs (target/debug/deps/protocol-8c668bdd26ab8aea)
+
+running 25 tests
+test batch_array_is_an_invalid_request ... ok
+test a_waiting_client_is_never_left_without_a_reply ... ok
+test enabled_tool_call_goes_straight_to_the_daemon ... ok
+test double_initialize_is_answered_twice ... ok
+test gate_reply_tracks_the_current_reason_not_the_startup_one ... ok
+test argument_validation_errors_are_invalid_params ... ok
+test gated_tool_call_is_policy_blocked_with_guidance_and_a_retry ... ok
+test initialize_result_shape_is_camel_case_and_declares_tools ... ok
+test malformed_notifications_are_still_not_answered ... ok
+test initialize_offers_latest_for_unknown_or_absent_version ... ok
+test malformed_json_is_a_parse_error_with_null_id ... ok
+test parse_error_reply_is_a_null_id_protocol_error ... ok
+test initialize_instructions_differ_per_availability ... ok
+test notifications_are_never_answered ... ok
+test non_object_json_is_an_invalid_request ... ok
+test ping_is_answerable_before_and_after_initialize ... ok
+test set_availability_unblocks_a_previously_gated_session ... ok
+test initialize_echoes_every_supported_version ... ok
+test stray_response_is_ignored ... ok
+test tools_before_initialize_are_rejected ... ok
+test unknown_request_method_is_method_not_found ... ok
+test unknown_tool_is_invalid_params ... ok
+test validation_beats_the_gate ... ok
+test every_reply_is_a_single_line ... ok
+test tools_list_works_before_the_initialized_notification ... ok
+
+test result: ok. 25 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/render.rs (target/debug/deps/render-2c6f3fbc8f983937)
+
+running 11 tests
+test daemon_errors_render_as_failed_tool_results ... ok
+test job_status_errors_other_than_not_found_keep_the_plain_rendering ... ok
+test job_started_carries_the_polling_hint ... ok
+test not_found_from_other_tools_keeps_the_plain_rendering ... ok
+test ok_responses_render_as_their_wire_json ... ok
+test rendered_replies_are_single_line ... ok
+test status_is_trimmed_to_what_an_agent_can_act_on ... ok
+test status_reports_degraded_listeners ... ok
+test transport_failures_render_as_failed_tool_results ... ok
+test tool_results_carry_one_text_content_item ... ok
+test unknown_job_explains_that_jobs_are_ephemeral ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/tools.rs (target/debug/deps/tools-4bf3c89eb4836d8f)
+
+running 13 tests
+test paging_tools_default_their_cursors_to_zero ... ok
+test local_proxy_upstreams_are_accepted ... ok
+test proxy_tools_map_to_their_requests ... ok
+test ambiguous_local_spellings_fail_safe ... ok
+test read_tools_map_to_their_requests ... ok
+test catalog_names_are_pinned ... ok
+test every_tool_entry_is_well_formed ... ok
+test no_destructive_tools_are_exposed ... ok
+test proxy_upstreams_must_be_local ... ok
+test required_arguments_are_declared_in_the_schema ... ok
+test site_tools_map_to_their_requests ... ok
+test schema_property_names_match_the_builder ... ok
+test every_tool_builds_a_request ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests src/lib.rs (target/debug/deps/orcker_platform-803ea2021a439ed8)
+
+running 261 tests
+test artifact::tests::current_target_is_supported_on_every_ci_platform ... ok
+test artifact::tests::is_safe_member_rejects_traversal_and_absolute_paths ... ok
+test artifact::tests::target_from_maps_the_supported_pairs ... ok
+test artifact::tests::target_from_rejects_and_names_the_failing_half ... ok
+test artifact::tests::tokens_match_the_artifact_filename_spelling ... ok
+test detect::tests::missing_project_dir_yields_empty_signals ... ok
+test detect::tests::empty_dir_is_unresolved ... ok
+test detect::tests::composer_require_keys_are_lowercased ... ok
+test detect::tests::fs_source_trait_matches_free_fn ... ok
+test error::tests::construct_every_variant ... ok
+test error::tests::display_bind_carries_port_and_source ... ok
+test error::tests::display_bind_pair_includes_all_four_kinds ... ok
+test detect::tests::plain_php_fixture_resolves_root ... ok
+test error::tests::display_ide_not_installed_uses_the_display_name ... ok
+test detect::tests::malformed_composer_json_is_ignored ... ok
+test detect::tests::wordpress_fixture_resolves_root ... ok
+test error::tests::display_io_carries_path ... ok
+test detect::tests::laravel_fixture_resolves_public ... ok
+test error::tests::display_missing_home_dir ... ok
+test error::tests::display_missing_tool_with_hint ... ok
+test error::tests::display_missing_tool_without_hint ... ok
+test error::tests::display_resolver_carries_reason ... ok
+test error::tests::display_needs_helper_contains_operation ... ok
+test error::tests::display_trust_store_carries_reason ... ok
+test error::tests::display_unsupported_contains_operation ... ok
+test error::tests::op_tags_are_non_empty ... ok
+test error::tests::resolver_reason_all_variants_display ... ok
+test error::tests::trust_store_reason_anchor_dir_missing ... ok
+test error::tests::trust_store_reason_anchor_enumerate ... ok
+test error::tests::trust_store_reason_anchor_read_and_pem ... ok
+test error::tests::trust_store_reason_system_api ... ok
+test helper::tests::from_argv_empty_rejected ... ok
+test helper::tests::fingerprint_in_argv_is_lowercase_hex_64_chars ... ok
+test helper::tests::from_argv_install_ca_bad_fingerprint_short ... ok
+test helper::tests::from_argv_install_ca_bad_fingerprint_uppercase ... ok
+test helper::tests::from_argv_install_ca_missing_fingerprint ... ok
+test helper::tests::from_argv_install_ca_happy_path ... ok
+test helper::tests::from_argv_install_ca_missing_pem ... ok
+test helper::tests::from_argv_install_ca_unknown_flag ... ok
+test helper::tests::from_argv_install_resolver_bad_addr ... ok
+test helper::tests::from_argv_install_resolver_happy_path ... ok
+test helper::tests::from_argv_setcap_happy_path ... ok
+test helper::tests::from_argv_setcap_missing_value_after_flag ... ok
+test helper::tests::from_argv_uninstall_resolver_happy_path ... ok
+test helper::tests::from_argv_uninstall_ca_happy_path ... ok
+test helper::tests::from_argv_unknown_op_rejected ... ok
+test helper::tests::install_ca_argv_shape ... ok
+test helper::tests::install_port_redirect_argv_shape ... ok
+test helper::tests::install_port_redirect_roundtrips ... ok
+test helper::tests::install_resolver_argv_shape ... ok
+test helper::tests::ipv6_address_renders_via_display ... ok
+test helper::tests::setcap_argv_shape ... ok
+test helper::tests::roundtrip_install_ca ... ok
+test helper::tests::uninstall_ca_argv_shape ... ok
+test helper::tests::uninstall_port_redirect_argv_shape ... ok
+test helper::tests::roundtrip_every_variant ... ok
+test helper::tests::uninstall_port_redirect_roundtrips ... ok
+test helper::tests::uninstall_resolver_argv_shape ... ok
+test lan_ip::tests::fake_failing_yields_discovery_error ... ok
+test lan_ip::tests::active_returns_non_loopback_or_fails_closed ... ok
+test lan_ip::tests::fake_returns_configured_ip ... ok
+test nss_exec::tests::browser_trust_none_when_no_dbs ... ok
+test nss_exec::tests::browser_trust_tool_missing_when_db_exists_but_no_certutil ... ok
+test nss_exec::tests::browser_trust_untrusted_when_absent ... ok
+test nss_exec::tests::discover_finds_firefox_profile_with_cert9 ... ok
+test nss_exec::tests::install_creates_and_inits_absent_pki ... ok
+test nss_exec::tests::install_adds_to_existing_pki_with_delete_then_add ... ok
+test nss_exec::tests::install_missing_certutil_flags_it ... ok
+test nss_exec::tests::install_records_failure_exit ... ok
+test nss_exec::tests::macos_uses_library_firefox_and_no_pki ... ok
+test nss_exec::tests::resolve_certutil_falls_back_to_path_dirs ... ok
+test nss_exec::tests::resolve_certutil_finds_a_non_usr_bin_candidate ... ok
+test nss_exec::tests::resolve_certutil_none_when_nothing_exists ... ok
+test os::linux::tests::bind_pair_impl_lan_binds_wildcard ... ok
+test os::linux::tests::bind_pair_impl_lan_fallback_still_binds_wildcard ... ok
+test os::linux::tests::application_dirs_include_injected_xdg_roots ... ok
+test os::linux::tests::detection_scans_only_for_editors_missing_from_path ... ok
+test os::linux::tests::detection_skips_the_desktop_scan_when_every_editor_resolves_via_cli ... ok
+test os::linux::tests::desktop_entries_outside_the_wanted_set_are_ignored ... ok
+test os::linux::tests::drop_in_path_shape ... ok
+test os::linux::tests::desktop_entry_scan_finds_nested_application_entries ... ok
+test os::linux::tests::read_real_uid_returns_some_when_proc_present ... ok
+test os::linux::tests::executable_path_lookup_uses_injected_path_entries ... ok
+test nss_exec::tests::browser_trust_trusted_on_fingerprint_match ... ok
+test nss_exec::tests::browser_trust_untrusted_when_any_store_untrusted ... ok
+test os::linux::tests::desktop_entry_scan_follows_symlinked_entries ... ok
+test port_redirect::tests::contains_ci_basics ... ok
+test paths::for_user_tests::for_user_layout_matches_resolve_for_current_home ... ok
+test port_redirect::tests::foreign_server_is_rejected ... ok
+test os::unix::tests::executable_lookup_accepts_only_executable_files ... ok
+test port_redirect::tests::marker_matches_hyper_lowercase_header ... ok
+test port_redirect::tests::empty_or_truncated_head_is_rejected ... ok
+test pure::cert_identity::tests::none_for_non_certificate_bytes ... ok
+test port_redirect::tests::marker_matches_title_case_header ... ok
+test pure::cert_identity::tests::reads_the_orcker_ca_common_name ... ok
+test pure::cert_identity::tests::reads_a_different_common_name ... ok
+test pure::dns_probe::tests::query_encodes_probe_name_and_a_question ... ok
+test pure::dns_probe::tests::query_rejects_an_unencodable_label ... ok
+test pure::dns_probe::tests::response_accepts_a_successful_loopback_answer ... ok
+test pure::dns_probe::tests::response_rejects_error_rcode_foreign_id_and_wrong_address ... ok
+test pure::firefox::tests::empty_input_yields_empty_vec ... ok
+test pure::firefox::tests::handles_trailing_whitespace_in_keys_and_values ... ok
+test pure::firefox::tests::ignores_comments_and_blank_lines ... ok
+test pure::firefox::tests::last_profile_without_trailing_newline_still_parses ... ok
+test pure::firefox::tests::parses_minimal_relative_profile ... ok
+test pure::firefox::tests::ignores_install_and_general_sections ... ok
+test pure::firefox::tests::is_relative_defaults_false_when_missing ... ok
+test pure::firefox::tests::section_name_profilenondigit_is_ignored ... ok
+test pure::firefox::tests::parses_multiple_profiles ... ok
+test pure::firefox::tests::skips_profile_without_path ... ok
+test pure::ide_spec::tests::bare_code_name_matches_only_with_a_vs_code_exec_or_id ... ok
+test pure::ide_spec::tests::desktop_entries_match_known_ids_and_exec_commands ... ok
+test pure::ide_spec::tests::every_spec_is_reachable_by_id ... ok
+test pure::ide_spec::tests::desktop_entries_match_only_the_application_group ... ok
+test pure::ide_spec::tests::linux_cli_candidates_include_common_gui_launch_paths ... ok
+test pure::ide_spec::tests::macos_application_locations_include_supported_roots ... ok
+test pure::ide_spec::tests::mac_app_names_match_versioned_and_preview_bundles ... ok
+test pure::ide_spec::tests::macos_cli_candidates_include_common_gui_launch_paths ... ok
+test pure::ide_spec::tests::rank_order_is_the_documented_auto_detect_preference ... ok
+test pure::ide_spec::tests::ranks_and_ids_are_unique ... ok
+test pure::ide_spec::tests::vscodium_matches_its_names_ids_and_exec_commands ... ok
+test pure::networkmanager_dnsmasq::tests::dnsmasq_matches_equivalent_ipv6_spellings ... ok
+test pure::networkmanager_dnsmasq::tests::dnsmasq_rejects_malformed_or_stale_values ... ok
+test pure::networkmanager_dnsmasq::tests::dnsmasq_round_trip_and_comments ... ok
+test pure::networkmanager_dnsmasq::tests::networkmanager_round_trip_and_comments ... ok
+test pure::nss::tests::add_args_uses_c_flag_and_sql_prefix ... ok
+test pure::nss::tests::certutil_candidates_linux_is_usr_bin_only ... ok
+test pure::nss::tests::certutil_candidates_macos_cover_homebrew_kegs_and_macports_in_order ... ok
+test pure::nss::tests::delete_and_list_and_init_args ... ok
+test pure::nss::tests::firefox_profile_dirs_joins_relative_against_root ... ok
+test pure::nss::tests::no_snap_or_flatpak_apps_yields_native_only ... ok
+test pure::nss::tests::firefox_profile_dirs_keeps_absolute_paths ... ok
+test pure::nss::tests::firefox_roots_cover_native_snap_common_and_flatpak ... ok
+test pure::nss::tests::pki_candidates_cover_native_snap_both_roots_and_flatpak ... ok
+test pure::opener_spec::tests::generic_desktops_prefer_gio_then_xdg ... ok
+test pure::opener_spec::tests::kde_prefers_native_openers ... ok
+test pure::pem_match::tests::blob_without_certificate_blocks_returns_none ... ok
+test pure::pem_match::tests::empty_blob_list_returns_none ... ok
+test pure::pem_match::tests::cert_der_for_fingerprint_none_when_absent_or_unparseable ... ok
+test pure::pem_match::tests::cert_der_for_fingerprint_returns_matched_block_der ... ok
+test pure::pem_match::tests::finds_single_match_in_single_blob ... ok
+test pure::pem_match::tests::fingerprint_of_first_cert_returns_none_on_non_certificate_only ... ok
+test pure::pem_match::tests::fingerprint_of_first_cert_in_pem_works ... ok
+test pure::pem_match::tests::finds_match_in_second_blob ... ok
+test pure::pem_match::tests::malformed_pem_with_broken_header_returns_err ... ok
+test pure::pem_match::tests::ignores_non_certificate_blocks ... ok
+test pure::pf_anchor::tests::anchor_rules_have_on_lo0_and_both_ports ... ok
+test pure::pem_match::tests::returns_none_when_no_match ... ok
+test pure::pf_anchor::tests::insert_into_empty_file_prepends_rdr_anchor ... ok
+test pure::pem_match::tests::multi_block_file_reports_correct_index ... ok
+test pure::pf_anchor::tests::insert_places_rdr_anchor_after_last_translation_anchor ... ok
+test pure::pf_anchor::tests::insert_is_idempotent ... ok
+test pure::pf_anchor::tests::lan_insert_is_idempotent ... ok
+test pure::pf_anchor::tests::lan_plist_uses_distinct_label ... ok
+test pure::pf_anchor::tests::lan_rules_are_source_scoped_and_dest_scoped_no_iface ... ok
+test pure::pf_anchor::tests::parse_none_on_empty_or_garbage ... ok
+test pure::pf_anchor::tests::parse_ignores_comments_and_unrelated_rules ... ok
+test pure::pf_anchor::tests::parse_none_when_https_rule_missing ... ok
+test pure::pf_anchor::tests::parse_reads_identity_lan_rule ... ok
+test pure::pf_anchor::tests::loopback_and_lan_anchors_coexist_and_remove_independently ... ok
+test pure::pf_anchor::tests::parse_roundtrips_lan_anchor ... ok
+test pure::pf_anchor::tests::parse_roundtrips_loopback_anchor ... ok
+test pure::pf_anchor::tests::parse_roundtrips_non_default_rootless_pair ... ok
+test pure::pf_anchor::tests::plist_is_one_shot_runatload ... ok
+test pure::pf_anchor::tests::remove_is_idempotent_on_clean_file ... ok
+test pure::port_plan::tests::addr_not_available_falls_back ... ok
+test pure::port_plan::tests::both_ok_keeps_desired ... ok
+test pure::pf_anchor::tests::remove_reverses_insert ... ok
+test pure::port_plan::tests::both_retry_kinds_falls_back ... ok
+test pure::port_plan::tests::default_privileged_pair_collapses_to_fallback ... ok
+test pure::port_plan::tests::either_privileged_side_collapses_whole_pair ... ok
+test pure::port_plan::tests::ephemeral_zero_is_not_privileged ... ok
+test pure::port_plan::tests::fallback_any_failure_is_both_failed ... ok
+test pure::port_plan::tests::fallback_both_ok_keeps ... ok
+test pure::port_plan::tests::hard_kind_on_http_short_circuits ... ok
+test pure::port_plan::tests::hard_kind_on_https_when_http_ok ... ok
+test pure::port_plan::tests::http_hard_takes_precedence_over_https_hard ... ok
+test pure::port_plan::tests::http_permission_denied_falls_back ... ok
+test pure::port_plan::tests::https_addr_in_use_falls_back ... ok
+test pure::port_plan::tests::privileged_ceiling_is_exclusive ... ok
+test pure::port_plan::tests::retry_kind_classification ... ok
+test pure::port_plan::tests::retry_kind_on_http_lets_hard_kind_on_https_decide ... ok
+test pure::proc_metrics::tests::loadavg_garbage_is_none ... ok
+test pure::port_plan::tests::rootless_desired_passes_through ... ok
+test pure::proc_metrics::tests::loadavg_parses_three_floats ... ok
+test pure::proc_metrics::tests::loadavg_too_few_fields_is_none ... ok
+test pure::proc_metrics::tests::loadavg_trailing_newline_ok ... ok
+test pure::proc_metrics::tests::vmrss_garbage_value_is_none ... ok
+test pure::proc_metrics::tests::vmrss_missing_line_is_none ... ok
+test pure::proc_metrics::tests::vmrss_parses_kib_to_bytes ... ok
+test pure::proc_metrics::tests::vmrss_zero_is_zero_not_none ... ok
+test pure::ps_metrics::tests::rss_empty_is_none ... ok
+test pure::ps_metrics::tests::rss_garbage_is_none ... ok
+test pure::ps_metrics::tests::rss_no_padding_ok ... ok
+test pure::ps_metrics::tests::rss_parses_kib_to_bytes ... ok
+test pure::ps_metrics::tests::rss_zero_is_zero_not_none ... ok
+test pure::resolv_conf::tests::backend_selection_prefers_resolved ... ok
+test pure::resolv_conf::tests::backend_selection_requires_networkmanager_marker ... ok
+test pure::resolv_conf::tests::empty_text_and_no_runtime_dir_is_false ... ok
+test pure::resolv_conf::tests::marker_buried_past_8_lines_is_not_detected ... ok
+test pure::resolv_conf::tests::marker_in_first_lines_detects ... ok
+test pure::resolv_conf::tests::networkmanager_postcondition_requires_marker_and_loopback_nameserver ... ok
+test pure::resolv_conf::tests::plain_resolv_conf_without_marker_is_false ... ok
+test pure::resolv_conf::tests::runtime_dir_present_short_circuits_true ... ok
+test pure::resolved_drop_in::tests::compose_shape_matches_expected_lines ... ok
+test pure::resolved_drop_in::tests::matches_false_on_addr_mismatch ... ok
+test pure::resolved_drop_in::tests::matches_false_on_tld_mismatch ... ok
+test pure::resolved_drop_in::tests::matches_ignores_comments ... ok
+test pure::resolved_drop_in::tests::parse_handles_domains_without_tilde_prefix ... ok
+test pure::resolved_drop_in::tests::parse_ignores_keys_outside_resolve_section ... ok
+test pure::resolved_drop_in::tests::parse_missing_dns_returns_none ... ok
+test pure::resolved_drop_in::tests::parse_missing_domains_returns_none ... ok
+test pure::resolved_drop_in::tests::parse_roundtrips_compose ... ok
+test pure::resolved_drop_in::tests::parse_tolerates_comments_and_extra_keys ... ok
+test pure::resolver_file::tests::backup_filename_roundtrips_parse ... ok
+test pure::resolver_file::tests::compose_emits_two_lines_with_trailing_newline ... ok
+test pure::resolver_file::tests::latest_backup_empty_or_no_match_is_none ... ok
+test pure::resolver_file::tests::latest_backup_picks_numeric_max_not_lexicographic ... ok
+test pure::resolver_file::tests::matches_false_on_ip_mismatch ... ok
+test pure::resolver_file::tests::matches_false_on_port_mismatch ... ok
+test pure::resolver_file::tests::matches_ignores_comments ... ok
+test pure::resolver_file::tests::parse_backup_secs_handles_hyphenated_tld ... ok
+test pure::resolver_file::tests::parse_backup_secs_rejects_foreign_and_malformed ... ok
+test pure::resolver_file::tests::parse_invalid_nameserver_returns_none ... ok
+test pure::resolver_file::tests::parse_missing_nameserver_returns_none ... ok
+test pure::resolver_file::tests::parse_missing_port_defaults_to_53 ... ok
+test pure::resolver_file::tests::parse_roundtrips_compose ... ok
+test pure::resolver_file::tests::parse_tolerates_extra_whitespace_and_comments ... ok
+test pure::resolver_file::tests::restorable_accepts_valid_and_rejects_junk ... ok
+test pure::shell_profile::tests::a_user_line_mentioning_orcker_is_not_a_marker ... ok
+test pure::shell_profile::tests::body_escapes_shell_metacharacters_in_the_path ... ok
+test pure::shell_profile::tests::detect_shell_table ... ok
+test pure::shell_profile::tests::body_is_guarded_and_quotes_the_space ... ok
+test pure::shell_profile::tests::rc_relpaths_per_shell ... ok
+test pure::shell_profile::tests::remove_does_not_eat_a_nonblank_line_above_the_marker ... ok
+test pure::shell_profile::tests::remove_is_exact_inverse_of_append ... ok
+test pure::shell_profile::tests::remove_on_block_only_file_yields_empty ... ok
+test pure::shell_profile::tests::remove_without_block_is_noop ... ok
+test pure::shell_profile::tests::upsert_appends_with_single_blank_separator_no_trailing_newline ... ok
+test pure::shell_profile::tests::upsert_into_empty_file ... ok
+test pure::shell_profile::tests::upsert_is_idempotent ... ok
+test pure::system_roots::tests::linux_candidates_are_absolute_and_ordered ... ok
+test pure::shell_profile::tests::upsert_replaces_in_place_preserving_surroundings ... ok
+test pure::system_roots::tests::pick_returns_none_when_all_absent ... ok
+test pure::system_roots::tests::pick_returns_first_readable ... ok
+test pure::system_roots::tests::pick_skips_empty_and_whitespace_only ... ok
+test pure::terminal_spec::tests::absolute_paths_match_on_the_file_name ... ok
+test pure::terminal_spec::tests::debian_wrapper_scripts_match_the_terminal_they_wrap ... ok
+test pure::terminal_spec::tests::every_spec_resolves_to_its_own_flags ... ok
+test pure::terminal_spec::tests::known_programs_map_to_their_flags ... ok
+test trust_store::tests::fingerprint_as_bytes_borrow_matches_input ... ok
+test trust_store::tests::fingerprint_from_hex_rejects_malformed ... ok
+test trust_store::tests::fingerprint_hex_is_64_lowercase_chars ... ok
+test trust_store::tests::fingerprint_from_hex_round_trips_to_hex ... ok
+test trust_store::tests::from_pem_returns_none_without_certificate_block ... ok
+test trust_store::tests::nss_failure_variants ... ok
+test trust_store::tests::nss_outcome_default_construction ... ok
+test trust_store::tests::from_der_matches_sha256_and_from_pem_round_trips ... ok
+test os::unix::tests::immediate_success_and_failure_are_reported ... ok
+test os::unix::tests::a_long_running_child_returns_before_it_exits ... ok
+test os::unix::tests::failure_after_the_initial_poll_is_reported ... ok
+
+test result: ok. 261 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.21s
+
+     Running tests/helper_argv_shape.rs (target/debug/deps/helper_argv_shape-f373be0f447e6f04)
+
+running 12 tests
+test fingerprint_in_argv_is_64_lowercase_hex ... ok
+test first_argv_element_is_always_the_op_tag ... ok
+test install_ca_argv_frozen ... ok
+test install_port_redirect_argv_frozen ... ok
+test install_resolver_argv_frozen ... ok
+test install_lan_port_redirect_argv_frozen ... ok
+test setcap_argv_frozen ... ok
+test lan_port_redirect_round_trips_through_argv ... ok
+test uninstall_ca_argv_frozen ... ok
+test uninstall_lan_port_redirect_argv_frozen ... ok
+test uninstall_port_redirect_argv_frozen ... ok
+test uninstall_resolver_argv_frozen ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/linux_smoke.rs (target/debug/deps/linux_smoke-b967358be302568e)
+
+running 15 tests
+test install_system_returns_needs_helper ... ok
+test linux_runtime_and_state_are_distinct ... ok
+test linux_desktop_entry_matching_rejects_unrelated_applications ... ok
+test paths_resolve_returns_all_five_fields ... ok
+test port_binder_bind_pair_falls_back_when_desired_is_occupied ... ok
+test port_binder_bind_pair_zero_pair_returns_two_distinct_ports ... ok
+test port_binder_bind_zero_yields_nonzero_port ... ok
+test resolver_empty_tld_returns_resolver_error ... ok
+test resolver_install_returns_needs_helper ... ok
+test resolver_uninstall_returns_needs_helper ... ok
+test resolver_is_installed_returns_false_for_unknown_tld ... ok
+test uninstall_system_returns_needs_helper ... ok
+test system_root_bundle_reads_host_roots_without_error ... ok
+test is_present_system_returns_false_for_random_fingerprint ... ok
+test ide_launcher_smoke_returns_known_unique_rank_sorted_ides ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/macos_smoke.rs (target/debug/deps/macos_smoke-112e23b88779b8fc)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/no_runtime_deps.rs (target/debug/deps/no_runtime_deps-4dd99505993b6d89)
+
+running 1 test
+test no_forbidden_crates_in_runtime_graph ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.51s
+
+     Running tests/unsupported.rs (target/debug/deps/unsupported-b3064654f591a48e)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/orcker_proxy-708422827acbab62)
+
+running 187 tests
+test backend::tests::display_per_variant ... ok
+test client_tls::tests::config_for_picks_local_vs_public ... ok
+test error::tests::display_pins_per_variant ... ok
+test client_tls::tests::no_verify_config_builds ... ok
+test forward::fcgi::tests::can_have_content_length_matches_hypers_rule ... ok
+test forward::fcgi::tests::can_have_body_matches_hypers_rule ... ok
+test forward::fcgi::tests::path_and_query_of_extracts_or_defaults_to_slash ... ok
+test forward::fcgi::tests::restore_head_content_length_fills_in_the_length_for_head ... ok
+test forward::fcgi::tests::restore_head_content_length_leaves_a_php_supplied_length_alone ... ok
+test forward::fcgi::tests::synthesise_response_empty_head_builds ... ok
+test forward::fcgi::tests::synthesise_response_carries_status_and_headers ... ok
+test forward::fcgi::tests::restore_head_content_length_skips_everything_else ... ok
+test forward::fcgi::tests::synthesise_response_skips_invalid_header_name ... ok
+test forward::fcgi::tests::unreachable_franken_returns_error ... ok
+test forward::fcgi::tests::synthesise_response_strips_x_accel_buffering ... ok
+test forward::fcgi::tests::synthesise_response_strips_hop_by_hop_headers ... ok
+test forward::fcgi::tests::upgrade_not_supported_is_501_plaintext ... ok
+test forward::fcgi::tests::write_record_empty_content_is_terminator ... ok
+test forward::fcgi::tests::write_record_frames_header_then_content ... ok
+test forward::proxy::tests::bad_gateway_is_502 ... ok
+test forward::proxy::tests::forwarded_for_overwrites_client_supplied_chain ... ok
+test forward::proxy::tests::forwarded_for_sets_peer_when_absent ... ok
+test forward::script_file::tests::missing_exact_file_falls_back ... ok
+test forward::script_file::tests::resolves_exact_php_file_match ... ok
+test forward::script_file::tests::non_php_exact_match_falls_back ... ok
+test forward::script_file::tests::directory_without_index_php_still_redirects ... ok
+test forward::script_file::tests::resolves_subdirectory_index_for_trailing_slash ... ok
+test forward::script_file::tests::root_path_resolves_to_root_index_php ... ok
+test forward::script_file::tests::rule_target_escaping_document_root_is_refused_unless_protection_is_off ... ok
+test forward::script_file::tests::directory_without_trailing_slash_redirects ... ok
+test forward::script_file::tests::subdirectory_with_no_index_php_falls_back ... ok
+test forward::script_file::tests::rule_target_resolves_to_a_nested_front_controller ... ok
+test forward::script_file::tests::rule_target_missing_or_not_php_is_none ... ok
+test forward::script_file::tests::symlinked_directory_escaping_document_root_is_not_a_redirect_candidate ... ok
+test forward::script_file::tests::symlinked_directory_escaping_document_root_redirects_when_protection_off ... ok
+test forward::script_file::tests::traversal_attempt_falls_back ... ok
+test forward::static_file::tests::serve_target_file_refuses_non_get_head ... ok
+test forward::static_file::tests::serve_target_file_missing_target_is_not_found ... ok
+test forward::static_file::tests::serve_target_file_refuses_a_directory_target ... ok
+test forward::script_file::tests::symlinked_script_escaping_document_root_falls_back ... ok
+test forward::static_file::tests::symlink_escape_response_shape ... ok
+test forward::script_file::tests::symlinked_script_escaping_document_root_resolves_when_protection_off ... ok
+test forward::static_file::tests::serve_target_file_head_has_no_body ... ok
+test forward::static_file::tests::serve_target_file_refuses_php_source_reached_through_a_symlink ... ok
+test forward::static_file::tests::serve_target_file_reports_escape_with_protection_on ... ok
+test forward::static_file::tests::serve_target_file_serves_escape_with_protection_off ... ok
+test forward::static_file::tests::serve_target_file_serves_the_rule_target ... ok
+test forward::static_file::tests::try_serve_index_directory_symlink_escaping_document_root_is_reported ... ok
+test forward::static_file::tests::try_serve_missing_file_is_not_found ... ok
+test forward::static_file::tests::try_serve_index_falls_back_to_index_htm_when_index_html_escapes ... ok
+test forward::upgrade::tests::is_upgrade_detects_comma_listed_token ... ok
+test forward::static_file::tests::try_serve_serves_escaping_symlink_when_protection_off ... ok
+test forward::static_file::tests::try_serve_index_serves_index_html ... ok
+test forward::upgrade::tests::is_upgrade_false_when_connection_lacks_token ... ok
+test forward::upgrade::tests::is_upgrade_detects_single_token ... ok
+test forward::upgrade::tests::is_upgrade_false_without_connection_header ... ok
+test forward::static_file::tests::try_serve_serves_plain_file_under_served_root ... ok
+test forward::upgrade::tests::strip_hop_by_hop_inserts_connection_upgrade_when_absent ... ok
+test forward::upgrade::tests::is_upgrade_requires_upgrade_header ... ok
+test forward::upgrade::tests::strip_hop_by_hop_only_removes_upgrade_and_connection_no_restamp ... ok
+test forward::static_file::tests::try_serve_index_reports_escape_when_no_candidate_is_servable ... ok
+test forward::static_file::tests::try_serve_serves_symlink_inside_document_root_but_outside_served_root ... ok
+test forward::static_file::tests::try_serve_index_serves_escaping_directory_symlink_when_protection_off ... ok
+test forward::upgrade::tests::strip_hop_by_hop_removes_each_fixed_token ... ok
+test forward::upgrade::tests::strip_hop_by_hop_only_removes_connection_listed_tokens ... ok
+test forward::upgrade::tests::strip_hop_by_hop_removes_connection_listed_tokens ... ok
+test pure::cgi_head::tests::body_remainder_is_empty_when_nothing_trails_the_terminator ... ok
+test pure::cgi_head::tests::finish_on_an_empty_accumulator_is_a_bare_200 ... ok
+test forward::upgrade::tests::strip_hop_by_hop_removes_fixed_set_keeps_upgrade ... ok
+test forward::static_file::tests::try_serve_symlink_escaping_document_root_is_reported ... ok
+test pure::cgi_head::tests::finish_treats_an_unterminated_block_as_the_whole_head ... ok
+test pure::cgi_head::tests::crlf_terminator_wins_over_a_later_bare_lf_pair ... ok
+test pure::cgi_head::tests::head_split_across_feeds_completes_on_the_later_chunk ... ok
+test pure::cgi_head::tests::lines_without_a_colon_are_skipped ... ok
+test pure::cgi_head::tests::many_tiny_feeds_still_find_a_terminator_the_scan_resumes_past ... ok
+test pure::cgi_head::tests::status_alongside_other_headers_keeps_them ... ok
+test pure::cgi_head::tests::non_utf8_value_is_lossy_and_costs_only_its_own_line ... ok
+test pure::cgi_head::tests::status_line_drives_the_code_and_is_not_surfaced ... ok
+test pure::cgi_head::tests::whole_head_and_body_in_one_feed ... ok
+test pure::cgi_params::tests::auto_login_with_no_preference_sends_empty_target_user ... ok
+test pure::cgi_params::tests::caddy_style_everything_to_index_php ... ok
+test pure::cgi_params::tests::https_param_is_on_when_secure ... ok
+test pure::cgi_params::tests::http_headers_translated_to_http_underscore ... ok
+test pure::cgi_params::tests::no_auto_login_omits_prepend_and_target_user_params ... ok
+test pure::cgi_head::tests::terminator_straddling_a_feed_boundary_at_every_split_point ... ok
+test pure::cgi_params::tests::content_type_and_length_pulled_out_of_http_prefix ... ok
+test pure::cgi_params::tests::no_query_string_yields_empty_query ... ok
+test pure::cgi_params::tests::resolved_exact_script_match_drives_script_name_and_filename ... ok
+test pure::cgi_params::tests::auto_login_adds_prepend_and_target_user_params ... ok
+test pure::cgi_params::tests::resolved_script_drives_script_name_and_filename ... ok
+test pure::cgi_params::tests::web_root_subdir_drives_script_filename_and_document_root ... ok
+test pure::fcgi_codec::tests::begin_request_body_layout ... ok
+test pure::fcgi_codec::tests::end_request_rejects_short ... ok
+test pure::cgi_params::tests::server_software_contains_nginx_for_framework_rewrite_detection ... ok
+test pure::fcgi_codec::tests::header_rejects_bad_version ... ok
+test pure::fcgi_codec::tests::header_rejects_short ... ok
+test pure::fcgi_codec::tests::header_round_trip ... ok
+test pure::fcgi_codec::tests::name_value_long_form ... ok
+test pure::query::tests::get_param_finds_value ... ok
+test pure::fcgi_codec::tests::name_value_short_form ... ok
+test pure::query::tests::get_param_none_when_absent ... ok
+test pure::fcgi_codec::tests::fcgi_max_payload_is_u16_max ... ok
+test pure::fcgi_codec::tests::end_request_decode ... ok
+test pure::query::tests::get_param_none_when_no_query ... ok
+test pure::query::tests::strip_param_absent_is_a_no_op ... ok
+test pure::query::tests::strip_param_bare_key_with_no_equals_sign ... ok
+test pure::query::tests::strip_param_drops_empty_fragments_and_trailing_ampersand ... ok
+test pure::query::tests::strip_param_no_query_string_at_all ... ok
+test pure::query::tests::strip_param_only_param_present_drops_question_mark ... ok
+test pure::query::tests::strip_param_removes_target_leaves_others_in_order ... ok
+test pure::cgi_head::tests::head_at_the_cap_still_completes_when_terminated ... ok
+test pure::query::tests::strip_param_removes_all_occurrences ... ok
+test pure::redirect::tests::build_table ... ok
+test pure::redirect::tests::directory_redirect_table ... ok
+test pure::redirect::tests::strip_port_ipv6_no_port ... ok
+test pure::redirect::tests::strip_port_ipv6_with_port ... ok
+test pure::redirect::tests::strip_port_plain ... ok
+test pure::route_rules::tests::empty_rule_set_never_matches ... ok
+test pure::route_rules::tests::longest_prefix_wins ... ok
+test pure::route_rules::tests::matches_are_boundary_correct ... ok
+test pure::route_rules::tests::root_rule_is_catch_all_and_loses_to_a_longer_prefix ... ok
+test pure::try_files::tests::content_types_cover_common_assets ... ok
+test pure::try_files::tests::directory_candidate_accepts_root_and_trailing_slashes ... ok
+test pure::try_files::tests::directory_candidate_rejects_non_directory_paths ... ok
+test pure::try_files::tests::directory_candidate_rejects_traversal ... ok
+test pure::try_files::tests::percent_encoded_segments_decode ... ok
+test pure::try_files::tests::php_sources_are_flagged ... ok
+test pure::try_files::tests::plain_file_paths_resolve ... ok
+test pure::try_files::tests::query_string_is_ignored ... ok
+test pure::try_files::tests::root_and_directories_go_to_front_controller ... ok
+test pure::try_files::tests::traversal_is_rejected ... ok
+test pure::unbound::tests::cookie_build_shapes ... ok
+test pure::unbound::tests::cookie_parse ... ok
+test pure::unbound::tests::html_escape_cases ... ok
+test pure::unbound::tests::is_clear_switch_table ... ok
+test pure::unbound::tests::loopback_host_table ... ok
+test pure::unbound::tests::parse_switch_table ... ok
+test pure::unbound::tests::picker_empty_state ... ok
+test pure::unbound::tests::picker_escapes_malicious_dest ... ok
+test pure::unbound::tests::sanitize_dest_collapses_off_origin_prefixes ... ok
+test server::classify_fallthrough_tests::non_get_navigation_without_pin_is_not_found ... ok
+test server::classify_fallthrough_tests::unparseable_cookie_falls_through_to_normal_classification ... ok
+test pure::unbound::tests::picker_lists_sites_by_primary_and_forwards_dest ... ok
+test server::login_token_tests::invalid_token_leaves_query_untouched ... ok
+test server::login_token_tests::path_outside_wp_admin_is_never_considered ... ok
+test server::login_token_tests::replayed_token_is_rejected_on_second_presentation ... ok
+test server::login_token_tests::valid_token_strips_query_and_returns_target_user ... ok
+test server::login_token_tests::valid_token_with_configured_user_returns_that_username ... ok
+test server::synthetic_response_tests::bad_request_response_shape ... ok
+test server::synthetic_response_tests::decide_picker_404s_for_non_html ... ok
+test server::synthetic_response_tests::decide_picker_picks_for_html_get ... ok
+test server::synthetic_response_tests::internal_error_response_shape ... ok
+test server::synthetic_response_tests::join_path_query_appends_non_empty_query ... ok
+test server::synthetic_response_tests::join_path_query_drops_empty_or_missing_query ... ok
+test server::synthetic_response_tests::join_path_query_normalises_protocol_relative_path ... ok
+test server::synthetic_response_tests::kind_label_maps_each_variant ... ok
+test server::synthetic_response_tests::not_found_response_shape ... ok
+test server::synthetic_response_tests::server_header_is_proxy_id ... ok
+test server::classify_fallthrough_tests::header_domain_form_resolves_via_resolver ... ok
+test server::login_token_tests::missing_token_is_declined ... ok
+test server::synthetic_response_tests::switch_response_rejects_invalid_location ... ok
+test server::synthetic_response_tests::synthetic_error_is_backend_protocol ... ok
+test server::unbound_tests::bare_label_switch_resolves_like_header ... ok
+test server::unbound_tests::blank_header_falls_through ... ok
+test server::unbound_tests::clear_response_shape ... ok
+test server::unbound_tests::bare_tilde_clears_pin ... ok
+test server::unbound_tests::cookie_serves_pinned_site ... ok
+test server::unbound_tests::domain_switch_not_confused_with_clear ... ok
+test server::unbound_tests::header_beats_bare_clear ... ok
+test server::unbound_tests::header_beats_switch ... ok
+test server::unbound_tests::header_routes_directly ... ok
+test server::unbound_tests::header_unknown_is_404_not_picker ... ok
+test server::unbound_tests::no_cookie_asset_request_is_404 ... ok
+test server::unbound_tests::no_cookie_navigation_shows_picker_with_dest ... ok
+test server::unbound_tests::picker_response_shape ... ok
+test server::unbound_tests::site_header_value_prefers_canonical_then_alias ... ok
+test server::unbound_tests::stale_cookie_clears_and_picks_or_404s ... ok
+test server::unbound_tests::switch_beats_existing_cookie ... ok
+test server::unbound_tests::switch_response_shape ... ok
+test server::unbound_tests::switch_location_is_same_origin ... ok
+test server::unbound_tests::switch_sets_cookie_and_location ... ok
+test server::unbound_tests::switch_works_for_any_method ... ok
+test server::unbound_tests::unbound_not_found_clear_variant_carries_no_store_and_clear_cookie ... ok
+test tls::tests::init_crypto_is_idempotent ... ok
+test tls::tests::build_server_config_returns_arc ... ok
+test server::unbound_tests::unknown_switch_degrades_to_picker_for_browsers ... ok
+test pure::cgi_head::tests::oversize_head_without_a_terminator_is_too_large ... ok
+
+test result: ok. 187 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/integration_http.rs (target/debug/deps/integration_http-8ca3735abe677110)
+
+running 42 tests
+test directory_index_html_served_when_no_index_php ... ok
+test automatic_spa_fallback_without_rule ... ok
+test directory_301_wins_over_rule_in_direct_mode ... ok
+test directory_index_htm_served_as_fallback ... ok
+test direct_script_execution_gated_to_wordpress_sites ... ok
+test client_disconnect_mid_stream_closes_backend_socket ... ok
+test automatic_spa_fallback_yields_to_index_php ... ok
+test backend_dying_mid_stream_fails_the_body_rather_than_truncating_it ... ok
+test escaping_php_rule_target_falls_back_to_root_index_php ... ok
+test front_controller_mode_does_not_redirect_directories ... ok
+test escaping_static_rule_target_is_403 ... ok
+test head_request_to_directory_index_returns_empty_body ... ok
+test directory_with_no_index_at_all_falls_through_to_fcgi ... ok
+test fcgi_response_streams_before_end_request ... ok
+test directory_redirect_preserves_login_token_unconsumed ... ok
+test index_php_present_wins_over_index_html ... ok
+test directory_request_without_trailing_slash_redirects ... ok
+test no_content_response_is_drained_and_carries_no_length ... ok
+test post_to_real_static_file_under_rule_prefix_goes_to_target ... ok
+test post_to_directory_is_not_redirected ... ok
+test nonexistent_directory_falls_through_to_fcgi ... ok
+test php_content_length_passes_through_and_x_accel_is_stripped ... ok
+test proxy_forwards_to_fcgi_backend ... ok
+test post_to_rule_prefixed_directory_reaches_target ... ok
+test post_under_rule_prefix_reaches_nested_front_controller ... ok
+test post_to_static_rule_target_is_405 ... ok
+test secure_site_redirect_does_not_consume_login_token ... ok
+test static_file_is_served_without_touching_fcgi ... ok
+test rule_applies_in_front_controller_mode ... ok
+test real_file_under_rule_prefix_wins ... ok
+test subdirectory_index_php_wins_over_root_index_php ... ok
+test symlink_escaping_document_root_is_served_when_protection_off ... ok
+test symlink_escaping_document_root_returns_403 ... ok
+test spa_rule_serves_index_html_for_deep_links_and_missing_assets ... ok
+test symlink_within_document_root_outside_served_root_is_served ... ok
+test unknown_host_returns_404 ... ok
+test symlinked_index_html_escaping_root_is_not_served ... ok
+test valid_login_token_adds_auto_prepend_and_strips_token_from_query ... ok
+test large_post_does_not_deadlock_when_backend_responds_first ... ok
+test upload_rejected_before_stdin_is_read_still_reaches_the_client ... ok
+test head_request_drains_backend_instead_of_killing_the_script ... ok
+test missing_host_header_returns_400 ... ok
+
+test result: ok. 42 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.02s
+
+     Running tests/integration_https.rs (target/debug/deps/integration_https-a072738c40bea114)
+
+running 2 tests
+test http_redirect_tracks_live_public_port_updates ... ok
+test https_handshake_routes_to_backend ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+
+     Running tests/integration_proxy.rs (target/debug/deps/integration_proxy-18f53ec58cec9245)
+
+running 2 tests
+test proxy_rule_wins_over_route_rule_on_same_prefix ... ok
+test whole_host_and_path_rules_and_bad_gateway ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/no_runtime_deps.rs (target/debug/deps/no_runtime_deps-7e9e22498a60b1be)
+
+running 1 test
+test no_forbidden_crates_in_runtime_graph_and_unique_versions ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.59s
+
+     Running unittests src/lib.rs (target/debug/deps/orcker_release_manifest-db94855953868213)
+
+running 15 tests
+test tests::drops_drafts_and_unparseable_and_sorts_newest_first ... ok
+test tests::latest_stable_and_rc_selection ... ok
+test tests::per_asset_url_rewrite_gating ... ok
+test tests::rc_hidden_when_not_newer_than_stable ... ok
+test tests::reconcile_deletes_stale_asset_in_public_tag ... ok
+test tests::reconcile_deletes_orphan_tag ... ok
+test tests::reconcile_empty_expected_deletes_nothing ... ok
+test tests::reconcile_ignores_malformed_paths ... ok
+test tests::reconcile_protects_draft_reverted_folder ... ok
+test tests::reconcile_updates_on_size_diff ... ok
+test tests::reconcile_prunes_assetless_published_release ... ok
+test tests::reconcile_uploads_missing ... ok
+test tests::reconcile_updates_on_checksum_diff_but_not_when_unknown ... ok
+test tests::selection_agrees_with_select_target ... ok
+test tests::wire_compatible_with_daemon_ghrelease ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/orcker_service_ctl-e32dd2686618f14d)
+
+running 11 tests
+test tests::current_uid_is_stable_and_matches_process_env ... ok
+test tests::parse_pids_handles_blank_lines_and_negative_junk ... ok
+test tests::parse_pids_reads_one_per_line_and_skips_junk ... ok
+test tests::service_ctl_holds_the_orckerd_path ... ok
+test tests::service_ctl_is_clone_and_debug ... ok
+test tests::service_error_is_debug ... ok
+test tests::service_ctl_new_accepts_pathbuf_and_str ... ok
+test tests::service_error_unsupported_display ... ok
+test tests::service_error_tool_display_includes_tool_and_message ... ok
+test tests::service_error_spawn_display ... ok
+test tests::running_pids_for_unknown_process_is_empty ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests src/lib.rs (target/debug/deps/orcker_stack-c8ac47f1210aab2f)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/compose.rs (target/debug/deps/compose-be888b4a880306ea)
+
+running 3 tests
+test deterministic_output ... ok
+test reference_postgres_snapshot ... ok
+test loopback_only_ports ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/validate.rs (target/debug/deps/validate-cb8f8396d107c253)
+
+running 1 test
+test rejects_invalid_inputs ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/orcker_tls-cbfffc1b038d9dd3)
+
+running 41 tests
+test bundle::tests::ca_appears_last ... ok
+test bundle::tests::concatenates_roots_then_ca_with_single_separator ... ok
+test bundle::tests::empty_roots_yields_ca_only ... ok
+test bundle::tests::normalises_trailing_newlines_on_both_inputs ... ok
+test bundle::tests::whitespace_only_roots_treated_as_empty ... ok
+test ca::tests::assert_send_sync_cert_authority ... ok
+test error::tests::construct_every_tls_error_variant ... ok
+test error::tests::display_parse_each_variant_non_empty ... ok
+test error::tests::display_tls_error_carries_reason ... ok
+test error::tests::display_validity_each_variant_non_empty ... ok
+test ca::tests::from_pem_rejects_garbage_cert_pem ... ok
+test ca::tests::from_pem_rejects_garbage_key_pem ... ok
+test error::tests::rcgen_error_detail_table_is_current ... ok
+test error::tests::reason_enums_are_copy_eq ... ok
+test ca::tests::debug_redacts_key_material ... ok
+test error::tests::tls_error_is_clone_partial_eq_eq ... ok
+test leaf::tests::accessors_return_inputs ... ok
+test leaf::tests::chain_pem_equals_format_leaf_newline_ca ... ok
+test leaf::tests::chain_pem_passes_through_arbitrary_ca_string ... ok
+test params::tests::ca_params_accepts_cn_at_64 ... ok
+test error::tests::display_generate_each_variant_non_empty ... ok
+test params::tests::ca_params_rejects_cn_over_64 ... ok
+test params::tests::ca_params_rejects_empty_cn ... ok
+test params::tests::ca_params_sets_ca_constraint ... ok
+test params::tests::leaf_params_emits_ip_san_for_ip_literal ... ok
+test params::tests::leaf_params_enables_aki ... ok
+test params::tests::leaf_params_keeps_dns_san_for_hostname ... ok
+test params::tests::leaf_params_rejects_empty_names ... ok
+test params::tests::leaf_params_rejects_non_ia5_with_index ... ok
+test ca::tests::from_pem_rejects_mismatched_key_and_cert ... ok
+test params::tests::leaf_params_sets_no_ca ... ok
+test ca::tests::generate_then_pem_roundtrip ... ok
+test validity::tests::new_accepts_2049_to_2050_cutover ... ok
+test tests::re_exports_compile ... ok
+test ca::tests::fingerprint_stable_across_from_pem ... ok
+test validity::tests::new_accepts_normal_range ... ok
+test validity::tests::new_accepts_equal_endpoints ... ok
+test validity::tests::accessors_return_inputs ... ok
+test validity::tests::new_accepts_pre_1950 ... ok
+test validity::tests::new_rejects_reversed ... ok
+test validity::tests::new_rejects_year_above_9998_via_9999_input ... ok
+
+test result: ok. 41 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/chain.rs (target/debug/deps/chain-b2e7aa2a3442d8d6)
+
+running 6 tests
+test ca_self_signed_signature_verifies ... ok
+test leaf_aki_matches_freshly_generated_ca_ski ... ok
+test leaf_issuer_dn_matches_ca_subject_dn ... ok
+test leaf_signature_verifies_against_ca_public_key ... ok
+test leaf_aki_matches_loaded_ca_ski ... ok
+test serial_numbers_unique_per_leaf_issuance ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/fingerprint.rs (target/debug/deps/fingerprint-52e59e134b6cbc67)
+
+running 3 tests
+test fingerprint_matches_hand_computed_sha256 ... ok
+test fingerprint_stable_after_from_pem ... ok
+test fingerprint_differs_between_independent_generations ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/issuance_negative.rs (target/debug/deps/issuance_negative-aa8f607fda3a41c3)
+
+running 12 tests
+test empty_common_name_rejected ... ok
+test boundary_common_name_accepted ... ok
+test empty_names_rejected ... ok
+test overlong_common_name_rejected ... ok
+test from_pem_cert_with_wrong_tag_rejected ... ok
+test from_pem_garbage_cert_rejected ... ok
+test validity_reversed_rejected ... ok
+test from_pem_garbage_key_rejected ... ok
+test non_ia5_name_rejected_with_index ... ok
+test from_pem_key_with_wrong_tag_rejected ... ok
+test from_pem_cross_algorithm_rejected ... ok
+test from_pem_key_does_not_match_cert_rejected ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/no_runtime_deps.rs (target/debug/deps/no_runtime_deps-f3fc09b70b473238)
+
+running 1 test
+test no_tokio_or_anyhow_in_runtime_graph_and_pinned_versions_unique ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.53s
+
+     Running tests/pem_edge_cases.rs (target/debug/deps/pem_edge_cases-b36c32ab55b2d30b)
+
+running 5 tests
+test pem_with_whitespace_in_label_rejected ... ok
+test pem_with_encrypted_body_rejected ... ok
+test well_formed_certificate_block_with_non_x509_body_rejected ... ok
+test trailing_newline_or_not_both_load ... ok
+test multi_block_pem_first_block_wins ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/roundtrip.rs (target/debug/deps/roundtrip-3745a3c3d5ae162d)
+
+running 6 tests
+test cert_pem_round_trip_byte_identical ... ok
+test key_pem_round_trip_byte_identical ... ok
+test cert_der_round_trip_byte_identical ... ok
+test fingerprint_round_trip_byte_identical ... ok
+test two_from_pem_calls_on_same_input_hash_identically ... ok
+test from_pem_recovers_signing_capability ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/sans.rs (target/debug/deps/sans-3281a94e63fbe508)
+
+running 8 tests
+test ca_key_usage_cert_sign_and_crl_sign ... ok
+test ca_basic_constraints_ca_true_pathlen_zero ... ok
+test ca_has_no_san_extension ... ok
+test leaf_extended_key_usage_server_auth_only ... ok
+test wildcard_san_preserved_as_dnsname ... ok
+test every_passed_name_appears_in_san ... ok
+test leaf_basic_constraints_ca_false ... ok
+test leaf_subject_carries_common_name ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/validity.rs (target/debug/deps/validity-3108531d3f46952d)
+
+running 5 tests
+test not_after_round_trips_to_second_precision ... ok
+test validity_pre_2050_uses_utctime ... ok
+test not_before_round_trips_to_second_precision ... ok
+test validity_post_2050_round_trips ... ok
+test leaf_validity_independent_of_ca_validity ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/orcker_tunnel-ac1476569afbb9f6)
+
+running 42 tests
+test args::tests::cleanup_then_delete_target_the_named_tunnel ... ok
+test args::tests::create_passes_credentials_file_and_name_last ... ok
+test args::tests::login_pins_origincert ... ok
+test args::tests::named_run_passes_config_and_cert_then_subcommand ... ok
+test args::tests::list_requests_json_output ... ok
+test args::tests::quick_non_secure_omits_tls_flags ... ok
+test args::tests::quick_secure_includes_host_rewrite_and_tls_flags ... ok
+test args::tests::route_dns_orders_tunnel_then_hostname ... ok
+test config::tests::empty_rules_render_only_the_catch_all ... ok
+test config::tests::multiple_rules_each_get_an_ingress_block ... ok
+test config::tests::non_secure_rule_omits_tls_knobs ... ok
+test config::tests::secure_rule_has_host_rewrite_sni_and_catch_all ... ok
+test origin::tests::non_secure_site_targets_http_listener_plainly ... ok
+test origin::tests::primary_host_and_bound_ports_used_verbatim ... ok
+test parse::tests::bare_apex_is_not_a_valid_tunnel_host ... ok
+test origin::tests::secure_site_targets_https_listener_with_sni_and_no_verify ... ok
+test parse::tests::finds_login_auth_url ... ok
+test parse::tests::ignores_noise_and_other_urls ... ok
+test parse::tests::login_url_absent_yields_none ... ok
+test parse::tests::named_ready_markers_match ... ok
+test parse::tests::parses_url_from_banner_box ... ok
+test parse::tests::finds_tunnel_id_from_create_output ... ok
+test parse::tests::parses_url_on_a_plain_line ... ok
+test parse::tests::returns_none_before_url_appears ... ok
+test supervise::error::tests::exit_reason_display ... ok
+test supervise::error::tests::exit_reason_hashable ... ok
+test supervise::error::tests::spawn_failure_reason_from_kind ... ok
+test parse::tests::rejects_non_uuid ... ok
+test supervise::listen::tests::display_tcp_loopback ... ok
+test supervise::listen::tests::display_unix_socket ... ok
+test supervise::real::tests::group_signal_target_rejects_zero_and_overflow ... ok
+test supervise::real::tests::is_text_file_busy_matches_only_etxtbsy ... ok
+test supervise::supervisor::tests::backoff_for_table_fpm ... ok
+test supervise::supervisor::tests::database_policy_tolerates_slow_startup ... ok
+test supervise::supervisor::tests::no_accidental_transitions ... ok
+test supervise::supervisor::tests::policy_profiles_differ_as_documented ... ok
+test supervise::supervisor::tests::transitions_table ... ok
+test supervise::supervisor::tests::tunnel_policy_tolerates_slow_connect_with_short_stop ... ok
+test manager::tests::begin_then_advance_captures_url_and_reports_running ... ok
+test manager::tests::named_tunnel_marks_running_on_registration_line ... ok
+test manager::tests::stop_removes_the_instance ... ok
+test manager::tests::crashing_tunnel_exhausts_restart_budget_then_fails_permanently ... ok
+
+test result: ok. 42 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.83s
+
+     Running unittests src/lib.rs (target/debug/deps/orcker_update-4ee0a37e4034e8d6)
+
+running 39 tests
+test artifact::tests::current_platform_is_known_on_dev_hosts ... ok
+test artifact::tests::both_artifacts_present_resolves_per_format ... ok
+test artifact::tests::foreign_minisig_does_not_satisfy ... ok
+test artifact::tests::linux_arch_matchers_are_disjoint ... ok
+test artifact::tests::intel_macos_has_no_artifact ... ok
+test artifact::tests::macos_selection_ignores_pkg_format ... ok
+test artifact::tests::minisign_rejects_malformed_signature ... ok
+test artifact::tests::missing_checksums_is_an_error ... ok
+test artifact::tests::minisign_rejects_wrong_key ... ok
+test artifact::tests::rpm_matchers_are_disjoint_from_deb_pacman_and_across_arch ... ok
+test artifact::tests::selects_linux_x86_64_deb ... ok
+test artifact::tests::selects_linux_aarch64_rpm ... ok
+test artifact::tests::minisign_rejects_tampered_data ... ok
+test artifact::tests::selects_linux_x86_64_pacman ... ok
+test artifact::tests::pacman_matchers_are_disjoint_from_deb_and_across_arch ... ok
+test artifact::tests::missing_signature_is_an_error ... ok
+test artifact::tests::selects_linux_aarch64_deb ... ok
+test artifact::tests::selects_linux_x86_64_rpm ... ok
+test artifact::tests::selects_macos_aarch64_app_tarball ... ok
+test artifact::tests::sha256_manifest_tolerates_star_and_dot_slash ... ok
+test artifact::tests::sha256_round_trip_and_manifest_lookup ... ok
+test artifact::tests::minisign_verifies_good_signature ... ok
+test artifact::tests::signature_extension_selection ... ok
+test tests::build_metadata_is_ignored_in_precedence ... ok
+test tests::empty_releases_yields_nothing ... ok
+test tests::never_checked_is_due ... ok
+test tests::ahead_of_stable_when_on_newer_prerelease ... ok
+test tests::channel_string_round_trips ... ok
+test tests::due_at_exact_interval_boundary ... ok
+test tests::edge_channel_picks_highest_including_prerelease ... ok
+test tests::future_last_checked_is_not_due ... ok
+test tests::no_stable_releases_at_all ... ok
+test tests::parse_tag_strips_v_prefix_and_rejects_junk ... ok
+test tests::prerelease_classification_uses_flag_or_semver ... ok
+test tests::up_to_date_when_current_equals_latest ... ok
+test tests::stable_channel_picks_highest_non_prerelease ... ok
+test tests::not_ahead_of_stable_when_on_old_stable ... ok
+test tests::not_due_one_second_under_interval ... ok
+test tests::prerelease_ordering_respects_semver ... ok
+
+test result: ok. 39 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running unittests src/lib.rs (target/debug/deps/orckerd-62ee0e41ae0116dc)
+
+running 278 tests
+test ansi::tests::passes_plain_text_through_unchanged ... ok
+test ansi::tests::dangling_escape_at_end_of_input_is_dropped ... ok
+test ansi::tests::preserves_multi_byte_utf8_around_escapes ... ok
+test ansi::tests::strips_cursor_hide_show ... ok
+test ansi::tests::strips_apc_terminated_by_bel ... ok
+test ansi::tests::strips_cursor_movement_and_column_reset ... ok
+test ansi::tests::strips_dcs_terminated_by_string_terminator ... ok
+test ansi::tests::strips_osc_terminated_by_bel ... ok
+test ansi::tests::strips_osc_terminated_by_string_terminator ... ok
+test ansi::tests::strips_sgr_color_codes ... ok
+test ansi::tests::strips_two_byte_escape ... ok
+test backend_resolver::tests::no_login_token_is_ever_accepted ... ok
+test detect_cache::tests::unreadable_root_returns_unresolved_without_caching ... ok
+test backend_resolver::tests::every_document_root_site_resolves_to_a_typed_error ... ok
+test engine_status::tests::an_expired_entry_is_not_served ... ok
+test detect_cache::tests::detects_and_caches ... ok
+test error::tests::already_running_display_includes_path ... ok
+test engine_status::tests::an_expired_entry_is_reprobed_and_the_result_is_stored ... ok
+test backend_resolver::tests::direct_script_execution_stays_off_by_default ... ok
+test engine_status::tests::an_empty_cache_serves_nothing ... ok
+test error::tests::exit_codes_pinned ... ok
+test engine_status::tests::a_fresh_entry_is_served_without_probing ... ok
+test download::tests::sha256_hex_matches_the_empty_input_vector ... ok
+test cert_store::tests::case_insensitive_sni_lookup ... ok
+test ipc_server::tests::dispatch_cached_update_status_uncached_reports_running_version ... ok
+test cert_store::tests::issues_on_miss_then_caches ... ok
+test ipc_server::tests::dispatch_daemon_info_reports_runtime_facts ... ok
+test ipc_server::tests::dispatch_delete_mails_empty_is_ok ... ok
+test ipc_server::tests::disabling_lan_revokes_a_pending_remote_setup_code ... ok
+test ipc_server::tests::dispatch_list_sites_empty ... ok
+test ipc_server::tests::dispatch_ping_returns_pong ... ok
+test ipc_server::tests::dispatch_restart_daemon_arms_flag_and_oks ... ok
+test ipc_server::tests::dispatch_list_mails_empty_then_populated_then_cleared ... ok
+test ipc_server::tests::dispatch_set_dns_port_rejects_zero_and_persists_valid ... ok
+test ipc_server::tests::dispatch_set_fallback_ports_validates_and_persists ... ok
+test ipc_server::tests::dispatch_set_mail_port_persists_and_rejects_zero ... ok
+test ipc_server::tests::check_update_rejects_tampered_manifest_signature ... ok
+test ipc_server::tests::link_auto_detects_web_root_for_laravel ... ok
+test ipc_server::tests::check_update_falls_back_to_cache_when_offline ... ok
+test ipc_server::tests::check_update_reports_both_channel_latests_live ... ok
+test ipc_server::tests::link_plain_php_serves_document_root ... ok
+test ipc_server::tests::check_update_edge_override_selects_prerelease_target ... ok
+test ipc_server::tests::link_then_duplicate_is_already_exists ... ok
+test ipc_server::tests::list_proxies_reports_domains_only_for_a_customised_proxy ... ok
+test ipc_server::tests::list_proxies_reports_nothing_for_a_name_shadowed_proxy ... ok
+test ipc_server::tests::list_parked_and_unpark_roundtrip ... ok
+test ipc_server::tests::load_to_centi_clamps_and_rounds ... ok
+test ipc_server::tests::list_sites_derives_front_controller_from_the_wordpress_registry ... ok
+test ipc_server::tests::mint_remote_setup_code_rejects_when_lan_off ... ok
+test ipc_server::tests::dispatch_doctor_fix_performs_nothing_and_reports_manual ... ok
+test ipc_server::tests::park_nonexistent_is_invalid_path ... ok
+test ipc_server::tests::path_needs_setup_no_tools_is_some_false ... ok
+test ipc_server::tests::self_forward_matches_only_loopback_on_bound_ports ... ok
+test ipc_server::tests::park_lists_child_and_persists ... ok
+test ipc_server::tests::set_secure_overrides_parked_keeping_kind_and_flips_flag ... ok
+test ipc_server::tests::dispatch_status_reports_runtime_facts ... ok
+test ipc_server::tests::set_update_channel_persists_to_config ... ok
+test ipc_server::tests::set_web_root_outside_document_root_is_invalid_path ... ok
+test ipc_server::tests::set_web_root_unknown_site_is_not_found ... ok
+test ipc_server::tests::poll_and_refresh_leaves_the_cache_untouched_on_a_fetch_failure ... ok
+test ipc_server::tests::set_web_root_explicit_then_auto_on_linked_site ... ok
+test ipc_server::tests::dispatch_group_mutations_persist_without_router_churn ... ok
+test ipc_server::tests::unlink_unknown_is_not_found ... ok
+test jobs::tests::cancel_signals_receiver_then_errors_on_unknown ... ok
+test jobs::tests::cursor_slicing_returns_only_newer_lines ... ok
+test ipc_server::tests::set_lan_enabled_persists_config_and_appears_in_status ... ok
+test jobs::tests::finish_sets_terminal_state_and_error ... ok
+test jobs::tests::push_log_drops_lines_that_are_ansi_only ... ok
+test jobs::tests::push_log_strips_ansi_escapes ... ok
+test ipc_server::tests::stage_update_downloads_verifies_and_writes_artifact ... ok
+test ipc_server::tests::dispatch_status_includes_mail ... ok
+test lan_setup::endpoint_tests::expired_code_is_rejected ... ok
+test lan_setup::endpoint_tests::method_and_path_guards ... ok
+test lan_setup::endpoint_tests::script_route_requires_a_code_and_is_single_use ... ok
+test lan_setup::endpoint_tests::wrong_guesses_do_not_revoke_the_minted_code ... ok
+test lan_setup::endpoint_tests::endpoint_serves_the_exact_bytes_that_were_hashed_for_advertisement ... ok
+test lan_setup::pure::tests::ct_eq_matches_only_equal ... ok
+test lan_setup::pure::tests::classify_fixed_routes ... ok
+test ipc_server::tests::stage_update_rejects_verification_failure_and_writes_nothing ... ok
+test lan_setup::pure::tests::extract_code_parses_param ... ok
+test lan_setup::pure::tests::installer_script_installs_the_ca_into_nss_for_browsers ... ok
+test lan_setup::pure::tests::installer_script_macos_writes_resolver_before_trust_and_is_idempotent ... ok
+test lan_setup::pure::tests::installer_script_gates_on_an_active_resolver_and_verifies_resolution ... ok
+test lan_setup::pure::tests::installer_script_linux_checks_resolver_before_installing_ca_and_rolls_back ... ok
+test lan_setup::pure::tests::installer_script_interpolates_and_embeds_the_ca ... ok
+test lan_setup::pure::tests::installer_script_uninstall_deletes_the_ca_by_hash_not_common_name ... ok
+test lan_setup::pure::tests::installer_script_picks_the_linux_anchor_dir_by_directory_not_by_tool ... ok
+test laravel_detect::tests::absent_when_no_artisan ... ok
+test link::tests::a_name_already_used_by_a_different_root_is_rejected ... ok
+test laravel_detect::tests::present_via_artisan_at_project_root ... ok
+test link::tests::an_explicit_port_is_honoured_and_a_taken_one_is_rejected ... ok
+test link::tests::idempotent_relink ... ok
+test link::tests::port_outside_the_range_is_rejected ... ok
+test mutate::tests::a_site_only_command_on_a_proxy_name_says_it_is_a_proxy ... ok
+test ipc_server::tests::stage_update_stages_from_legacy_sig_only_layout ... ok
+test mutate::tests::add_and_remove_parked_proxy_rule_prunes_key ... ok
+test mutate::tests::add_domain_parked_keys_by_docroot ... ok
+test mutate::tests::add_domain_records_delta_for_linked ... ok
+test mutate::tests::add_domain_rejects_claim_by_other_site ... ok
+test mutate::tests::add_domain_rejects_not_under_tld ... ok
+test link::tests::an_existing_descriptor_is_read_not_overwritten ... ok
+test mutate::tests::add_domain_to_proxy_records_a_proxy_delta ... ok
+test mutate::tests::add_domain_to_proxy_rejects_a_domain_owned_by_a_site ... ok
+test mutate::tests::add_domain_unknown_site_is_not_found ... ok
+test laravel_detect::tests::artisan_under_public_does_not_count_for_project_root ... ok
+test mutate::tests::add_proxy_invalid_name_renders_the_core_message_once ... ok
+test mutate::tests::add_proxy_registers_rejects_dup_and_loops ... ok
+test mutate::tests::add_proxy_rejects_an_apex_already_routed_to_a_site ... ok
+test mutate::tests::add_proxy_rejects_site_name_collision ... ok
+test mutate::tests::change_primary_and_suppress_apex ... ok
+test mutate::tests::create_group_appends_in_order ... ok
+test mutate::tests::create_group_rejects_empty_reserved_and_duplicate ... ok
+test mutate::tests::create_group_trims_name ... ok
+test mutate::tests::delete_group_moves_members_to_unallocated_and_is_idempotent ... ok
+test mutate::tests::error_code_mapping ... ok
+test mutate::tests::link_adds_then_rejects_duplicate ... ok
+test mutate::tests::group_matching_is_case_insensitive_and_canonicalises ... ok
+test mutate::tests::link_and_unlink_migrate_proxy_rules ... ok
+test mutate::tests::link_rejects_bad_name ... ok
+test mutate::tests::mixed_case_name_resolves_lowercased_site ... ok
+test mutate::tests::link_and_unlink_migrate_route_rules ... ok
+test mutate::tests::overrides_merge_rather_than_duplicating_for_a_parked_site ... ok
+test mutate::tests::park_adds_path_and_is_idempotent ... ok
+test mutate::tests::remove_added_domain_and_reject_last_exact ... ok
+test mutate::tests::remove_primary_and_reset_domains_work_on_a_proxy ... ok
+test mutate::tests::remove_last_exact_domain_of_a_proxy_is_refused ... ok
+test mutate::tests::removing_an_absent_route_rule_is_not_found ... ok
+test mutate::tests::link_migrates_parked_domain_delta ... ok
+test mutate::tests::rename_group_allows_case_only_change ... ok
+test ipc_server::tests::set_symlink_protection_persists_config_and_updates_live_atomic ... ok
+test mutate::tests::rename_group_is_case_insensitive_and_canonicalises_members ... ok
+test mutate::tests::rename_group_keeps_position_and_moves_members ... ok
+test mutate::tests::rename_group_rejects_empty_and_reserved ... ok
+test mutate::tests::rename_group_rejects_collision_with_other_group ... ok
+test mutate::tests::rename_group_unknown_from_is_not_found ... ok
+test mutate::tests::remove_proxy_reports_not_found ... ok
+test mutate::tests::route_rule_add_and_remove_on_a_linked_site ... ok
+test mutate::tests::secure_toggles_whole_host_proxy ... ok
+test mutate::tests::set_front_controller_records_override_keeping_parked ... ok
+test mutate::tests::set_front_controller_unknown_is_not_found ... ok
+test mutate::tests::set_front_controller_updates_linked_in_place ... ok
+test mutate::tests::set_group_order_requires_permutation ... ok
+test mutate::tests::set_primary_rejects_wildcard ... ok
+test mutate::tests::rename_group_trims_new_name ... ok
+test mutate::tests::remove_proxy_prunes_its_domain_delta ... ok
+test mutate::tests::reset_domains_clears_delta ... ok
+test mutate::tests::set_site_group_assigns_clears_and_lowercases ... ok
+test mutate::tests::set_secure_promotes_a_container_project ... ok
+test mutate::tests::route_rule_add_and_remove_on_a_parked_site ... ok
+test mutate::tests::set_site_group_unknown_group_is_not_found ... ok
+test mutate::tests::setsecure_false_is_stored_verbatim ... ok
+test mutate::tests::route_rule_rejects_duplicate_unknown_site_and_bad_input ... ok
+test mutate::tests::setsecure_records_override_keeping_parked ... ok
+test mutate::tests::setsecure_unknown_is_not_found ... ok
+test mutate::tests::unlink_linked_removes_it ... ok
+test mutate::tests::unlink_removes_a_container_project_and_frees_its_port ... ok
+test mutate::tests::unlink_parked_is_not_found_with_hint ... ok
+test mutate::tests::setsecure_updates_linked_in_place ... ok
+test mutate::tests::unlink_reparks_migrates_domain_delta_to_parked ... ok
+test ipc_server::tests::set_mcp_enabled_persists_config_and_appears_in_status ... ok
+test mutate::tests::unlink_unknown_is_not_found ... ok
+test mutate::tests::unpark_drops_proxy_rules_under_root ... ok
+test mutate::tests::unpark_drops_route_rules_under_root ... ok
+test redirect_port_tests::bound_on_well_known_port_ignores_the_probe ... ok
+test redirect_port_tests::fallback_without_a_live_redirect_advertises_the_bound_port ... ok
+test mutate::tests::unpark_removes_path_and_is_idempotent ... ok
+test redirect_port_tests::fallback_with_a_live_redirect_advertises_the_well_known_port ... ok
+test secure_fs::tests::create_private_dir_is_0700 ... ok
+test mutate::tests::unlink_without_parked_parent_drops_domain_delta ... ok
+test secure_fs::tests::create_private_dir_tightens_existing_dir ... ok
+test secure_fs::tests::restrict_writes_to_owner_strips_group_world_write ... ok
+test secure_fs::tests::restrict_to_owner_is_0600 ... ok
+test self_update::tests::channel_wire_mapping_round_trips ... ok
+test self_update::tests::manifest_to_releases_maps_and_drops_bad_entries ... ok
+test self_update::tests::snapshot_response_suppresses_stale_decision_after_channel_switch ... ok
+test self_update::tests::snapshot_response_suppresses_stale_decision_after_version_drift ... ok
+test self_update::tests::status_response_maps_decision_fields ... ok
+test self_update::tests::current_version_parses ... ok
+test site_domains::tests::a_site_shadows_a_same_named_project ... ok
+test self_update::tests::safe_filename_accepts_plain_names_rejects_traversal ... ok
+test self_update::tests::snapshot_response_preserves_decision_when_version_matches ... ok
+test single_instance::tests::acquire_creates_runtime_dir_if_missing ... ok
+test single_instance::tests::acquire_succeeds_on_fresh_runtime_dir ... ok
+test site_domains::tests::collisions_empty_for_apex_and_wildcard_on_different_sites ... ok
+test site_domains::tests::default_sites_are_apex_only ... ok
+test site_domains::tests::apex_and_wildcard_on_different_sites ... ok
+test site_domains::tests::explicit_beats_implicit_apex_and_shadows ... ok
+test site_domains::tests::collisions_label_proxy_winners_and_losers ... ok
+test site_domains::tests::collisions_reports_two_sites_claiming_one_explicit_domain ... ok
+test site_domains::tests::duplicate_name_keeps_first ... ok
+test site_domains::tests::explicit_proxy_domain_beats_an_implicit_site_apex ... ok
+test site_domains::tests::linked_delta_adds_domains ... ok
+test site_domains::tests::plan_proxies_carries_a_secured_project ... ok
+test site_domains::tests::proxy_keeps_its_other_domains_when_one_collides ... ok
+test site_domains::tests::proxy_versus_proxy_collision_resolves_in_config_order ... ok
+test site_domains::tests::real_site_beats_a_same_named_proxy ... ok
+test site_domains::tests::name_shadowed_proxy_never_owns_its_extra_domains ... ok
+test site_domains::tests::plan_proxies_projects_container_projects ... ok
+test site_domains::tests::proxies_and_rules_fold_into_router ... ok
+test site_domains::tests::route_rules_fold_into_router_for_both_site_kinds ... ok
+test site_domains::tests::wildcard_only_site_with_shadowed_apex_has_a_hijacked_primary_fqdn ... ok
+test startup::tests::build_router_and_routing_empty_config_is_empty ... ok
+test site_domains::tests::proxy_delta_adds_exact_and_wildcard_domains ... ok
+test startup::tests::build_routing_detects_wordpress_site ... ok
+test startup::tests::build_routing_includes_parked_site ... ok
+test startup::tests::ca_validity_spans_the_past_into_the_future ... ok
+test startup::tests::rand_boot_id_fits_52_bits ... ok
+test startup::tests::into_tokio_listener_converts_a_bound_socket ... ok
+test startup::tests::scan_sites_applies_php_override ... ok
+test startup::tests::load_or_default_config_uses_defaults_when_missing ... ok
+test startup::tests::parked_site_name_filters_and_slugifies ... ok
+test startup::tests::scan_sites_missing_parked_root_is_warning_not_error ... ok
+test startup::tests::scan_sites_applies_secure_override ... ok
+test startup::tests::load_or_generate_ca_generates_then_reloads ... ok
+test startup::tests::scan_sites_detects_web_root_and_collects_unresolved ... ok
+test startup::tests::scan_sites_linked_collision_leaves_override_dormant ... ok
+test startup::tests::scan_sites_linked_wins_over_parked_collision ... ok
+test startup::tests::load_or_default_config_loads_existing_then_rejects_invalid ... ok
+test jobs::tests::eviction_advances_dropped_and_cursor_stays_consistent ... ok
+test tools::bun::tests::host_platform_known ... ok
+test tools::external::tests::between_extracts_inner ... ok
+test tools::external::tests::between_requires_both_markers_in_order ... ok
+test startup::tests::scan_sites_web_root_override_pins_and_skips_watching ... ok
+test startup::tests::scan_sites_orphan_override_is_ignored ... ok
+test tools::external::tests::external_tool_resolves_primary_bin ... ok
+test startup::tests::scan_sites_slugifies_underscored_parked_dir ... ok
+test tools::bun::tests::display_version_strips_prefix ... ok
+test startup::tests::scan_sites_walks_parked_dirs ... ok
+test tools::external::tests::find_in_path_skips_non_executable_files ... ok
+test tools::external::tests::find_in_path_skips_exclude_dir_and_data_root ... ok
+test tools::external::tests::find_in_path_rejects_symlink_into_data ... ok
+test tools::external::tests::shell_invocation_picks_interactive_login_flags ... ok
+test tools::bun::tests::unpack_zip_extracts_executable_binary ... ok
+test tools::node::tests::host_platform_known ... ok
+test tools::external::tests::user_shell_prefers_shell_env ... ok
+test tools::tests::every_tool_accepts_an_external_copy ... ok
+test tools::node::tests::latest_lts_picks_first_string_lts ... ok
+test tools::node::tests::latest_lts_none_when_no_lts ... ok
+test tools::tests::list_status_covers_every_tool ... ok
+test tools::tests::parse_and_ids_round_trip ... ok
+test tools::tests::extract_root_dir_requires_exactly_one ... ok
+test tools::tests::sha_for_asset_matches_exact_filename_among_decoys ... ok
+test tools::tests::sha_for_asset_rejects_non_hex ... ok
+test tools::tests::tool_metadata_is_consistent ... ok
+test tools::tests::installed_version_ignores_blank_marker ... ok
+test tools::tests::status_reflects_marker ... ok
+test tools::tests::uninstall_removes_tool_dir_and_is_idempotent ... ok
+test tunnel::credentials::tests::base64_round_trips ... ok
+test tunnel::credentials::tests::base64_tolerates_whitespace_and_rejects_junk ... ok
+test tools::tests::stage_and_swap_places_and_replaces ... ok
+test tunnel::credentials::tests::parses_token_from_a_cert ... ok
+test tunnel::credentials::tests::missing_block_yields_none ... ok
+test tools::tests::reconcile_creates_and_prunes_tool_shims ... ok
+test tunnel::install::tests::find_in_paths_ignores_non_executable_file ... ok
+test tunnel::install::tests::host_allowlist_rejects_non_github ... ok
+test tunnel::install::tests::host_asset_tokens_are_cloudflares_not_phps ... ok
+test tunnel::install::tests::parse_cloudflared_version_extracts_token_ignoring_surrounding_text ... ok
+test tunnel::install::tests::find_in_paths_returns_first_executable_match ... ok
+test tunnel::install::tests::minimum_version_gate_is_inclusive_at_the_floor ... ok
+test tracing_init::tests::init_is_idempotent ... ok
+test tunnel::install::tests::resolve_adopts_a_compatible_system_binary ... ok
+test tunnel::install::tests::resolve_rejects_a_system_binary_below_the_version_floor ... ok
+test tunnel::install::tests::resolve_rejects_a_system_binary_when_the_probe_fails ... ok
+test tunnel::install::tests::resolve_prefers_managed_over_system_without_probing ... ok
+test tunnel::install::tests::install_binary_writes_executable_and_marker ... ok
+test tunnel::install::tests::version_gate_rejects_below_floor_and_unparseable_output ... ok
+test tunnel::tests::is_downgrade_covers_every_existing_fresh_combination ... ok
+test tunnel::install::tests::verify_integrity_is_fail_closed ... ok
+test tunnel::install::tests::resolve_rejects_a_system_binary_with_unparseable_version ... ok
+test tunnel::tests::a_removed_system_binary_is_dropped_from_the_cache_on_next_read ... ok
+test tunnel::install::tests::resolve_returns_none_with_no_managed_binary_and_no_path_candidate ... ok
+test wordpress_detect::tests::absent_when_no_marker_files ... ok
+test wordpress_detect::tests::true_via_wp_load ... ok
+test tunnel::install::tests::extract_pulls_cloudflared_from_tgz ... ok
+test wordpress_detect::tests::true_via_wp_config ... ok
+test tunnel::tests::resolved_cloudflared_never_downgrades_a_cached_managed_entry ... ok
+test test_support::tests::round_trips_through_production_verifier ... ok
+test tunnel::tests::resolved_cloudflared_reflects_a_fresh_install_without_restart ... ok
+
+test result: ok. 278 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.40s
+
+     Running unittests src/main.rs (target/debug/deps/orckerd-d7c1437973511acc)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/lifecycle.rs (target/debug/deps/lifecycle-ad3358d4aacc769a)
+
+running 6 tests
+test tests::boot_ping_shutdown_round_trip ... ok
+test tests::hello_welcome_handshake_round_trip ... ok
+test tests::unknown_request_type_gets_typed_error_not_decode_failure ... ok
+test tests::link_project_onto_a_bound_listener_is_refused ... ok
+test tests::park_round_trip_persists ... ok
+test tests::set_secure_round_trip_persists ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.38s
+
+     Running tests/no_runtime_deps.rs (target/debug/deps/no_runtime_deps-cf260fe51fa5b8dd)
+
+running 1 test
+test no_forbidden_crates_in_runtime_graph_and_unique_versions ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.58s
+
+     Running unittests src/main.rs (target/debug/deps/xtask-cad20b14f9a2b358)
+
+running 7 tests
+test version::tests::assert_all_match_reports_mismatches ... ok
+test version::tests::prerelease_versions_round_trip ... ok
+test version::tests::normalise_strips_single_v ... ok
+test version::tests::cargo_targets_workspace_package_not_dependencies ... ok
+test version::tests::json_value_and_trailing_comma_preserved ... ok
+test version::tests::reads_current_versions ... ok
+test version::tests::trailing_newline_preserved ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests orcker
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests orcker_config
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests orcker_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests orcker_depcheck
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests orcker_dns
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests orcker_doctor
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests orcker_engine
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests orcker_ipc
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests orcker_mail
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests orcker_mcp
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests orcker_platform
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests orcker_proxy
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests orcker_release_manifest
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests orcker_service_ctl
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests orcker_stack
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests orcker_tls
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests orcker_tunnel
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests orcker_update
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests orckerd
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+[gate 4/6] gui (only when touched)
+
+> orcker-gui@0.0.0 test
+> vitest run
+
+
+ RUN  v2.1.9 /home/matheusmariano/personal-projects/orcker/orcker/apps/orcker-gui
+
+ ✓ src/ipc/client.test.ts (20 tests) 44ms
+ ✓ src/composables/useDaemonStart.test.ts (5 tests) 728ms
+   ✓ useDaemonStart readiness wait > connects before the ceiling and shows no diagnostics panel 667ms
+ ✓ src/composables/useResource.test.ts (12 tests) 148ms
+ ✓ src/components/SiteDomainsPanel.spec.ts (15 tests) 694ms
+ ✓ src/lib/mailLinks.test.ts (46 tests) 795ms
+ ✓ src/lib/shortcuts/registry.test.ts (12 tests) 95ms
+ ✓ src/components/SiteRoutesPanel.spec.ts (7 tests) 459ms
+ ✓ tests/routeTargets.test.ts (3 tests) 35ms
+ ✓ tests/commandContract.test.ts (4 tests) 56ms
+ ✓ src/components/ui/tabs/tabs.spec.ts (8 tests) 761ms
+   ✓ ui/tabs > forwards v-model so activating a trigger changes the panel 387ms
+ ✓ src/components/TitleBar.spec.ts (4 tests) 232ms
+ ✓ src/views/ProxiesView.spec.ts (16 tests) 1671ms
+ ✓ src/components/SiteCard.spec.ts (6 tests) 265ms
+ ✓ src/lib/shortcuts/chord.test.ts (9 tests) 10ms
+ ✓ src/lib/elevation.test.ts (16 tests) 12ms
+ ✓ src/components/CommandPalette.spec.ts (6 tests) 214ms
+ ✓ src/composables/useIdes.test.ts (5 tests) 21ms
+ ✓ src/lib/sitesGroupState.spec.ts (6 tests) 25ms
+ ✓ src/lib/ideChoice.test.ts (9 tests) 20ms
+ ✓ src/lib/phpVersion.test.ts (23 tests) 36ms
+ ✓ src/components/SiteDetailsSidebar.spec.ts (31 tests) 5282ms
+   ✓ SiteDetailsSidebar > renders site information and opens the site 308ms
+   ✓ SiteDetailsSidebar > drops the previous site's override while the next site's preferences load 368ms
+ ✓ src/lib/siteFilter.test.ts (10 tests) 12ms
+ ✓ src/lib/shortcuts/siteCommands.test.ts (5 tests) 42ms
+ ✓ src/composables/useOperations.test.ts (4 tests) 16ms
+ ✓ src/lib/databaseFilename.test.ts (6 tests) 11ms
+ ✓ src/lib/siteName.test.ts (4 tests) 10ms
+ ✓ src/lib/domainValidation.test.ts (6 tests) 10ms
+ ✓ src/composables/useToast.test.ts (6 tests) 21ms
+ ✓ src/lib/shortcuts/format.test.ts (5 tests) 7ms
+ ✓ src/lib/shortcuts/useViewActions.test.ts (4 tests) 12ms
+ ✓ src/lib/utils.test.ts (5 tests) 9ms
+ ✓ src/components/components.test.ts (4 tests) 101ms
+ ✓ src/lib/windowState.test.ts (3 tests) 3ms
+ ✓ src/components/ui/Input.spec.ts (1 test) 45ms
+
+ Test Files  34 passed (34)
+      Tests  326 passed (326)
+   Start at  22:20:20
+   Duration  12.28s (transform 5.77s, setup 0ms, collect 17.04s, tests 11.90s, environment 33.43s, prepare 6.22s)
+
+
+> orcker-gui@0.0.0 build
+> vue-tsc --noEmit && vite build
+
+vite v6.4.2 building for production...
+transforming...
+node_modules/@vueuse/core/dist/index.js (3362:0): A comment
+
+"/* #__PURE__ */"
+
+in "node_modules/@vueuse/core/dist/index.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+node_modules/@vueuse/core/dist/index.js (5780:22): A comment
+
+"/* #__PURE__ */"
+
+in "node_modules/@vueuse/core/dist/index.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+✓ 2314 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                                           0.55 kB │ gzip:   0.34 kB
+dist/assets/OutageCut-BBB7gwgo.ttf                                       58.20 kB
+dist/assets/SitesView-tMRVoZz0.css                                        0.50 kB │ gzip:   0.18 kB
+dist/assets/index-CIasYsUY.css                                           37.68 kB │ gzip:   7.82 kB
+dist/assets/MailsViewerView-D60vrWc8.js                                   0.06 kB │ gzip:   0.08 kB
+dist/assets/index-DmyDvkQA.js                                             0.17 kB │ gzip:   0.16 kB
+dist/assets/index-CtkvNuH9.js                                             0.34 kB │ gzip:   0.23 kB
+dist/assets/search-CxYYcwZN.js                                            0.35 kB │ gzip:   0.28 kB
+dist/assets/lock-Dm8HGmnM.js                                              0.38 kB │ gzip:   0.30 kB
+dist/assets/refresh-cw-BVIF3A-a.js                                        0.50 kB │ gzip:   0.33 kB
+dist/assets/EmptyState.vue_vue_type_script_setup_true_lang-tqUIJ2mq.js    0.72 kB │ gzip:   0.44 kB
+dist/assets/ideChoice-CzBXF1Zz.js                                         0.77 kB │ gzip:   0.42 kB
+dist/assets/Badge.vue_vue_type_script_setup_true_lang-Dw05hh3T.js         0.80 kB │ gzip:   0.42 kB
+dist/assets/VisuallyHidden-DNSj2VEi.js                                    0.82 kB │ gzip:   0.48 kB
+dist/assets/shield-alert-DBxmzQOy.js                                      0.87 kB │ gzip:   0.46 kB
+dist/assets/Switch.vue_vue_type_script_setup_true_lang-CP-whFZx.js        1.00 kB │ gzip:   0.56 kB
+dist/assets/DoctorView-B8FruUQ2.js                                        4.02 kB │ gzip:   1.78 kB
+dist/assets/MailView-DWHUzW6k.js                                          5.16 kB │ gzip:   2.18 kB
+dist/assets/ToolingView-By9Mfp4i.js                                       6.64 kB │ gzip:   2.75 kB
+dist/assets/AsyncState.vue_vue_type_script_setup_true_lang-CU6-Y-rN.js    8.49 kB │ gzip:   3.46 kB
+dist/assets/AboutView-Bq7twkbu.js                                        15.61 kB │ gzip:   6.28 kB
+dist/assets/ProxiesView-Dnl-v6JF.js                                      16.05 kB │ gzip:   5.29 kB
+dist/assets/GeneralView-DZv_U07P.js                                      22.22 kB │ gzip:   6.61 kB
+dist/assets/OverviewView-CPbpci4t.js                                     26.98 kB │ gzip:   8.72 kB
+dist/assets/SitesView-RvBgpJy6.js                                        49.49 kB │ gzip:  14.47 kB
+dist/assets/IntegrationsView-Djen-Z7S.js                                 53.78 kB │ gzip:  16.53 kB
+dist/assets/index-3ozBMgEH.js                                           360.18 kB │ gzip: 122.84 kB
+✓ built in 6.43s
+[gate 5/6] no new clippy escape hatches
+[gate 6/6] surface check
+[surface] allowed prefixes: specs/ docs/ scripts/clippy-allow-baseline.txt apps/orcker-gui/
+[gate] OK

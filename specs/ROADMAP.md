@@ -68,7 +68,7 @@ Never a merge, never a bulk sync. Numbered above the reserved Phase-1 range.
 | 32 | SPEC-0032-pin-gate-sort-collation | accepted | FR-001 | SPEC-0001 |
 | 34 | SPEC-0034-ipc-version-skew-handshake | accepted | FR-002 | SPEC-0002 |
 | 35 | SPEC-0035-retire-config-native-runtime-sections | accepted | FR-002 | SPEC-0002 |
-| 39 | SPEC-0039-retire-unreachable-gui-host-commands | draft | FR-002 | SPEC-0036 |
+| 39 | SPEC-0039-retire-unreachable-gui-host-commands | accepted | FR-002 | SPEC-0036 |
 | 40 | SPEC-0040-dead-export-ratchet | draft | FR-002 | SPEC-0036 |
 | 41 | SPEC-0041-retire-orphaned-exec-help-text | draft | FR-002 | SPEC-0002 |
 | 42 | SPEC-0042-restore-missing-reference-doc | accepted | FR-022 | SPEC-0001 |
