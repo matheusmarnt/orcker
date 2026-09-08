@@ -38,8 +38,8 @@ function mountCard(site: SiteEntry, report: StatusReport | null) {
   return mount(SiteCard, { props: { site, report, tld: "test" } });
 }
 
-/** Clicks the WPA quick-action chip, which only renders when auto-login is on.
- *  The always-available WP Admin entry point now lives in the details sidebar
+/** Clicks the WPA quick-action chip, which renders for any WordPress site.
+ *  The always-available WP Admin entry point also lives in the details sidebar
  *  (see SiteDetailsSidebar.spec.ts); both go through `openWpAdmin`. */
 async function clickWpaChip(wrapper: ReturnType<typeof mountCard>) {
   const chip = wrapper.findAll("button").find((b) => b.text() === "WPA");
@@ -54,7 +54,7 @@ describe("SiteCard WP Admin chip", () => {
   });
 
   it("opens the plain wp-admin link in unbound mode", async () => {
-    const site = wpSite({ wp_auto_login: true });
+    const site = wpSite();
     const wrapper = mountCard(site, null); // no report => the localhost `/~` form
 
     await clickWpaChip(wrapper);
@@ -63,7 +63,7 @@ describe("SiteCard WP Admin chip", () => {
   });
 
   it("opens the plain wp-admin link when bound", async () => {
-    const site = wpSite({ wp_auto_login: true });
+    const site = wpSite();
     const wrapper = mountCard(site, boundReport());
 
     await clickWpaChip(wrapper);
@@ -71,8 +71,14 @@ describe("SiteCard WP Admin chip", () => {
     expect(openInBrowser).toHaveBeenCalledWith("http://blog.test/wp-admin/");
   });
 
-  it("hides the WPA chip when auto-login is off", () => {
-    const wrapper = mountCard(wpSite({ wp_auto_login: false }), boundReport());
+  it("shows the WPA chip on a WordPress site even with auto-login off", () => {
+    const wrapper = mountCard(wpSite({ is_wordpress: true, wp_auto_login: false }), boundReport());
+
+    expect(wrapper.findAll("button").find((b) => b.text() === "WPA")).toBeDefined();
+  });
+
+  it("hides the WPA chip on non-WordPress sites", () => {
+    const wrapper = mountCard(wpSite({ is_wordpress: false }), boundReport());
 
     expect(wrapper.findAll("button").find((b) => b.text() === "WPA")).toBeUndefined();
   });

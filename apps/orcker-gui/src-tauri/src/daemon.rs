@@ -108,14 +108,6 @@ pub(crate) fn resolve_orckerd_stable() -> Option<PathBuf> {
         .find(|c| c.is_file())
 }
 
-/// Is `orckerd` present on disk? With the daemon bundled this is normally true; it
-/// stays a command so the frontend can surface a clear error if a build/install
-/// is somehow missing the sidecar.
-#[tauri::command]
-pub fn daemon_installed() -> bool {
-    resolve_orckerd().is_some()
-}
-
 // ── optional: install the bundled `orcker` CLI on PATH (macOS + Linux) ────────
 //
 // `orcker` itself is already on PATH on a packaged Linux install (the `.deb`/Arch

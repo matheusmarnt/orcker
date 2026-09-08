@@ -756,3 +756,42 @@ Deviations, clarifications and trade-offs recorded by implementation cycles
   `specs/TRACEABILITY.md` records the final verdict as `HUMAN APPROVE
   (ESCALATE at round 3, attempts corrected 1 -> 2)`, matching the `SPEC-0052`
   precedent's phrasing for the same class of event.
+
+## 2026-09-07 · SPEC-0039 — R1 narrowed to two commands, `get_site_ide_overrides` excluded
+
+- Decision: approved R1 named three commands as dead (`daemon_installed`,
+  `get_site_ide_overrides`, `job_cancel`). S2 investigation found
+  `get_site_ide_overrides` live - `SiteDetailsSidebar.vue:156` calls it
+  (`getSiteIdeOverrides()`, alongside `getPreferredIde()`) feeding a mounted,
+  working per-site IDE-override picker (`changeIde` -> `setSiteIdeOverride`).
+  The spec was amended (`af4fbc9`, ahead of any implementation commit) to
+  narrow R1 to `daemon_installed` and `job_cancel` only; this cycle changes
+  nothing about `get_site_ide_overrides`.
+- Why: the approved spec's own Context stated the cross-check's premise
+  incorrectly for this one command. Implementing R1 as literally approved
+  would have deleted a live, mounted feature. CLAUDE.md's "spec contradicts
+  the code" rule requires escalating this, not improvising - resolved with
+  the human via `AskUserQuestion` before any code was written.
+- Impact: `specs/SPEC-0039-retire-unreachable-gui-host-commands.md`'s
+  Context/R1 text corrected in `af4fbc9`; `get_site_ide_overrides`,
+  `autostart.rs`, `SiteDetailsSidebar.vue` and `client.ts` are untouched by
+  this cycle's diff.
+
+## 2026-09-07 · SPEC-0039 — WPA chip gated on `site.is_wordpress`, not `wp_auto_login`
+
+- Decision: R3 offered two options (gate the WPA chip on `site.is_wordpress`,
+  or remove it) and required checking `docs/PRD.md` FR-020 first, escalating
+  if unsettled there. FR-020 is `orcker new` (project scaffolding) and does
+  not cover this; no FR in the PRD covers WordPress admin links at all. The
+  human chose to gate on `site.is_wordpress`.
+- Why: `openWpAdmin()` (`lib/wpAdmin.ts`) already opens the plain,
+  non-auto-login WP Admin login screen regardless of `wp_auto_login`, so
+  every WordPress site can safely reach it; `SiteDetailsSidebar.vue` already
+  carries an "always-available" WP Admin entry point separate from this
+  card's quick-action chip (per `SiteCard.spec.ts`'s own doc comment), so
+  `is_wordpress` gating brings the chip in line with existing precedent
+  rather than inventing a new one.
+- Impact: `apps/orcker-gui/src/components/SiteCard.vue`'s WPA chip
+  `v-if="site.wp_auto_login"` -> `v-if="site.is_wordpress"`;
+  `SiteCard.spec.ts` covers both directions (shown with auto-login off,
+  hidden on non-WordPress sites).

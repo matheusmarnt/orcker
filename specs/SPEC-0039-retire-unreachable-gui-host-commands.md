@@ -6,8 +6,8 @@ covers: [FR-002]
 depends_on: [SPEC-0036]
 surface:
   - apps/orcker-gui/
-status: in_progress
-attempts: 0
+status: accepted
+attempts: 2
 ---
 
 ## Context
@@ -45,3 +45,22 @@ this one command; it is out of scope here.
   `wp_auto_login`. `docs/PRD.md` FR-020, cited when this spec was drafted, is
   `orcker new` and does not cover this; no FR does. Escalated and decided with
   the human rather than improvised, per this spec's own instruction.
+
+## Acceptance checklist
+
+- [x] AC1 `daemon_installed` and `job_cancel` are dead and removed (command +
+      `generate_handler![]` registration), and a registered-but-uninvoked
+      command now fails the build the way a dangling one already does ->
+      test: `Tauri command contract > registers no command the GUI never
+      invokes`
+- [x] AC2 The WPA chip renders for every WordPress site, not only ones with
+      `wp_auto_login` set -> test: `SiteCard WP Admin chip > shows the WPA
+      chip on a WordPress site even with auto-login off` and `> hides the
+      WPA chip on non-WordPress sites`
+- [x] AC3 `scripts/gate.sh specs/SPEC-0039-*.md` passes
+
+FR acceptance: FR-002 has AC1/AC2 (`docs/PRD.md`), both already closed by
+SPEC-0002 (workspace compiles/tests green without the native-runtime crates;
+no binary starts native PHP/DB processes). This cycle adds no new FR
+acceptance criteria; AC1-AC3 above close R1-R3 of this spec, not FR-002's
+PRD ACs.
