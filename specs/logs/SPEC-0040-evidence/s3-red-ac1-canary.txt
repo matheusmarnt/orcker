@@ -1,0 +1,35 @@
+
+ RUN  v2.1.9 /home/matheusmariano/personal-projects/orcker/orcker/apps/orcker-gui
+
+ ❯ tests/deadExportRatchet.test.ts (1 test | 1 failed) 111ms
+   × has no new dead GUI export outside the allowlist, and no stale allowlist entry 110ms
+     → new dead export - delete it, un-export it, or add it to dead-export-allowlist.txt with a reason: expected [ Array(1) ] to deeply equal []
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/deadExportRatchet.test.ts > has no new dead GUI export outside the allowlist, and no stale allowlist entry
+AssertionError: new dead export - delete it, un-export it, or add it to dead-export-allowlist.txt with a reason: expected [ Array(1) ] to deeply equal []
+
+- Expected
++ Received
+
+- Array []
++ Array [
++   "apps/orcker-gui/src/lib/utils.ts	SPEC_0040_CANARY_UNUSED",
++ ]
+
+ ❯ tests/deadExportRatchet.test.ts:83:118
+     81|   const stale = [...allowlist].filter((key) => !liveKeys.has(key));
+     82| 
+     83|   expect(newDead, "new dead export - delete it, un-export it, or add i…
+       |                                                                                                                      ^
+     84|   expect(stale, "allowlist entry no longer dead - remove this line fro…
+     85| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  19:55:44
+   Duration  1.17s (transform 48ms, setup 0ms, collect 52ms, tests 111ms, environment 430ms, prepare 136ms)
+

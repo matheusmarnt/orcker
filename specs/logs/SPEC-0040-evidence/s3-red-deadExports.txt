@@ -1,0 +1,104 @@
+
+ RUN  v2.1.9 /home/matheusmariano/personal-projects/orcker/orcker/apps/orcker-gui
+
+ ❯ tests/deadExports.test.ts (4 tests | 4 failed) 15ms
+   × deadExports > does not count a mention inside a comment as usage 11ms
+     → expected Map{} to deeply equal Map{ 'helper' => 'a.ts' }
+   × deadExports > does not count a mention inside a string literal as usage 1ms
+     → expected Map{} to deeply equal Map{ 'helper' => 'a.ts' }
+   × deadExports > does not count a mention only inside the export's own test file as usage 1ms
+     → expected Map{} to deeply equal Map{ 'helper' => 'a.ts' }
+   × deadExports > does not report an export real code in its own home file calls 1ms
+     → expected Map{ 'helper' => 'a.ts' } to deeply equal Map{}
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/deadExports.test.ts > deadExports > does not count a mention inside a comment as usage
+AssertionError: expected Map{} to deeply equal Map{ 'helper' => 'a.ts' }
+
+- Expected
++ Received
+
+- Map {
+-   "helper" => "a.ts",
+- }
++ Map {}
+
+ ❯ tests/deadExports.test.ts:15:32
+     13|       ["b.ts", "// call helper() before shipping\n"],
+     14|     ]);
+     15|     expect(deadExports(files)).toEqual(new Map([["helper", "a.ts"]]));
+       |                                ^
+     16|   });
+     17| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  tests/deadExports.test.ts > deadExports > does not count a mention inside a string literal as usage
+AssertionError: expected Map{} to deeply equal Map{ 'helper' => 'a.ts' }
+
+- Expected
++ Received
+
+- Map {
+-   "helper" => "a.ts",
+- }
++ Map {}
+
+ ❯ tests/deadExports.test.ts:23:32
+     21|       ["b.ts", 'const note = "helper is unused";\n'],
+     22|     ]);
+     23|     expect(deadExports(files)).toEqual(new Map([["helper", "a.ts"]]));
+       |                                ^
+     24|   });
+     25| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  tests/deadExports.test.ts > deadExports > does not count a mention only inside the export's own test file as usage
+AssertionError: expected Map{} to deeply equal Map{ 'helper' => 'a.ts' }
+
+- Expected
++ Received
+
+- Map {
+-   "helper" => "a.ts",
+- }
++ Map {}
+
+ ❯ tests/deadExports.test.ts:31:32
+     29|       ["a.test.ts", 'import { helper } from "./a";\nhelper();\n'],
+     30|     ]);
+     31|     expect(deadExports(files)).toEqual(new Map([["helper", "a.ts"]]));
+       |                                ^
+     32|   });
+     33| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  tests/deadExports.test.ts > deadExports > does not report an export real code in its own home file calls
+AssertionError: expected Map{ 'helper' => 'a.ts' } to deeply equal Map{}
+
+- Expected
++ Received
+
+- Map {}
++ Map {
++   "helper" => "a.ts",
++ }
+
+ ❯ tests/deadExports.test.ts:38:32
+     36|       ["a.ts", "export function helper() { return 1; }\nfunction outer…
+     37|     ]);
+     38|     expect(deadExports(files)).toEqual(new Map());
+       |                                ^
+     39|   });
+     40| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+ Test Files  1 failed (1)
+      Tests  4 failed (4)
+   Start at  19:53:47
+   Duration  1.29s (transform 42ms, setup 0ms, collect 37ms, tests 15ms, environment 512ms, prepare 179ms)
+

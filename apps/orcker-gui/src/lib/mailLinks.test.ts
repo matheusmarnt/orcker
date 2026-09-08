@@ -5,7 +5,6 @@ import {
   eventTargetElement,
   linkifyText,
   listRemoteContentUrls,
-  prepareHtmlBody,
   resolveExternalHref,
   resolveFrameLink,
 } from "./mailLinks";
@@ -326,41 +325,6 @@ describe("listRemoteContentUrls", () => {
 
   it("returns an empty list when there is no remote content", () => {
     expect(listRemoteContentUrls(`<p>Hi <img src="cid:x"></p>`)).toEqual([]);
-  });
-});
-
-describe("prepareHtmlBody", () => {
-  it("stamps openable anchors with data-orcker-url and neutralizes href", () => {
-    const out = prepareHtmlBody(
-      `<p><a href="https://msi-portal.test/download">Download</a></p>`,
-    );
-    expect(out).toContain('data-orcker-url="https://msi-portal.test/download"');
-    expect(out).toMatch(/href="#"/);
-    expect(out).not.toContain('href="https://msi-portal.test/download"');
-  });
-
-  it("leaves non-openable anchors alone", () => {
-    const out = prepareHtmlBody(`<a href="#section">Jump</a>`);
-    expect(out).not.toContain("data-orcker-url");
-    expect(out).toContain('href="#section"');
-  });
-
-  it("strips scripts and inline handlers before stamping", () => {
-    const out = prepareHtmlBody(
-      `<p onclick="alert(1)"><script>alert(1)</script><a href="https://ok.example">Ok</a></p>`,
-    );
-    expect(out).not.toContain("<script");
-    expect(out).not.toContain("onclick");
-    expect(out).toContain('data-orcker-url="https://ok.example/"');
-  });
-
-  it("strips image maps so area hrefs cannot navigate", () => {
-    const out = prepareHtmlBody(
-      `<img usemap="#m" src="https://example.com/x.png"><map name="m"><area href="https://evil.example" shape="rect" coords="0,0,10,10"></map>`,
-    );
-    expect(out).not.toContain("<map");
-    expect(out).not.toContain("<area");
-    expect(out).not.toContain("example.com/x.png");
   });
 });
 

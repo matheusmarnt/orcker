@@ -85,13 +85,6 @@ function ensureOk(r: Response): Response {
   return r;
 }
 
-// ── daemon liveness ────────────────────────────────────────────────────────
-
-export async function ping(): Promise<boolean> {
-  const r = ensureOk(await call<Response>("ping"));
-  return r.type === "pong";
-}
-
 // ── sites ──────────────────────────────────────────────────────────────────
 
 export async function listSites(): Promise<SiteEntry[]> {
@@ -319,11 +312,6 @@ export async function listTools(): Promise<ToolStatus[]> {
   const r = ensureOk(await call<Response>("list_tools"));
   if (r.type !== "tools") throw new IpcError("unexpected response", "internal");
   return r.tools;
-}
-
-/** Install (or update to latest) a dev tool by id. Slow - downloads + verifies. */
-export async function installTool(tool: string): Promise<void> {
-  ensureOk(await call<Response>("install_tool", { tool }));
 }
 
 export async function uninstallTool(tool: string): Promise<void> {
@@ -595,20 +583,6 @@ export async function openInTerminal(path: string): Promise<void> {
 export async function pickDirectory(defaultPath?: string): Promise<string | null> {
   const { open } = await import("@tauri-apps/plugin-dialog");
   const picked = await open({ directory: true, multiple: false, defaultPath });
-  return typeof picked === "string" ? picked : null;
-}
-
-/** Save-file dialog (for backups). Returns the chosen path, or null if cancelled. */
-export async function pickSaveFile(defaultPath?: string): Promise<string | null> {
-  const { save } = await import("@tauri-apps/plugin-dialog");
-  const picked = await save({ defaultPath });
-  return typeof picked === "string" ? picked : null;
-}
-
-/** Open-file dialog (for restores). Returns the chosen path, or null if cancelled. */
-export async function pickOpenFile(): Promise<string | null> {
-  const { open } = await import("@tauri-apps/plugin-dialog");
-  const picked = await open({ directory: false, multiple: false });
   return typeof picked === "string" ? picked : null;
 }
 

@@ -256,7 +256,7 @@ export interface StatusReport {
   default_php: PhpVersion;
   php: PhpPoolStatus[];
   sites: SiteCounts;
-  /** Each entry is load × 100 (hundredths); render via formatLoadAvg. */
+  /** Each entry is load × 100 (hundredths). */
   load_avg: [number, number, number] | null;
   /** The daemon's own version (e.g. "2.0.1"). Empty/absent against a daemon
    *  predating version reporting (the Rust field is `#[serde(default)]`); render

@@ -1,0 +1,33 @@
+
+ RUN  v2.1.9 /home/matheusmariano/personal-projects/orcker/orcker/apps/orcker-gui
+
+ ❯ tests/contractMirror.test.ts (4 tests | 1 failed) 18ms
+   × isContractMirror > exempts an Extract<Response> alias whose wire tag the Rust side still defines 14ms
+     → expected false to be true // Object.is equality
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/contractMirror.test.ts > isContractMirror > exempts an Extract<Response> alias whose wire tag the Rust side still defines
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/contractMirror.test.ts:8:60
+      6|     const types = `export type SitesResponse = Extract<Response, { typ…
+      7|     const rust = `pub enum Response {\n    Sites(SitesReport),\n}\n`;
+      8|     expect(isContractMirror("SitesResponse", types, rust)).toBe(true);
+       |                                                            ^
+      9|   });
+     10| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 passed (4)
+   Start at  19:55:19
+   Duration  1.25s (transform 49ms, setup 0ms, collect 46ms, tests 18ms, environment 543ms, prepare 186ms)
+

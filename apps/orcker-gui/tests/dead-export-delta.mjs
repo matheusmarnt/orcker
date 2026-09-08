@@ -28,15 +28,11 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
+import { deadExports } from "./deadExports.mjs";
 
 const ROOT = execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim();
 const SUBTREE = "apps/orcker-gui/src";
 const SOURCE = /\.(ts|vue)$/;
-
-// A top-level `export` of a named binding. Re-exports and `export default` are
-// out: neither introduces a name this scan can resolve consumers for.
-const EXPORT =
-  /^export\s+(?:async\s+)?(?:abstract\s+)?(?:const|let|var|function|class|type|interface|enum)\s+([A-Za-z0-9_$]+)/gm;
 
 function walk(dir) {
   return readdirSync(dir).flatMap((entry) => {
@@ -64,40 +60,6 @@ function atHead() {
     files.set(path, execFileSync("git", ["show", `HEAD:${path}`], { cwd: ROOT, encoding: "utf8" }));
   }
   return files;
-}
-
-/**
- * Names exported from exactly one file and referenced from no other file.
- *
- * "Referenced from another file" is the test, not "imported": a Vue SFC uses a
- * name in its template, and a word-boundary scan sees that where an import
- * graph would need the template compiled. The cost is false negatives on
- * same-file-only helpers, which is why this reports rather than fails.
- * A name exported from two files is skipped - the scan cannot tell which one a
- * consumer meant.
- */
-function deadExports(files) {
-  const homes = new Map();
-  for (const [path, text] of files) {
-    for (const [, name] of text.matchAll(EXPORT)) {
-      homes.set(name, [...(homes.get(name) ?? []), path]);
-    }
-  }
-  const dead = new Map();
-  for (const [name, paths] of homes) {
-    if (paths.length !== 1) continue;
-    const home = paths[0];
-    const pattern = new RegExp(`\\b${name.replace(/\$/g, "\\$")}\\b`);
-    let used = false;
-    for (const [path, text] of files) {
-      if (path !== home && pattern.test(text)) {
-        used = true;
-        break;
-      }
-    }
-    if (!used) dead.set(name, home);
-  }
-  return dead;
 }
 
 const now = deadExports(workingTree());

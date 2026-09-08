@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 
 import { IpcError } from "@/ipc/client";
-import { invalidate, resetResourceCache, useResource } from "./useResource";
+import { resetResourceCache, useResource } from "./useResource";
 
 type Wrapper = ReturnType<typeof mount>;
 let wrappers: Wrapper[] = [];
@@ -76,17 +76,6 @@ describe("useResource", () => {
     a.api.mutate((cur) => ({ n: (cur?.n ?? 0) + 41 }));
     expect(a.api.data.value).toEqual({ n: 42 });
     expect(b.api.data.value).toEqual({ n: 42 });
-  });
-
-  it("invalidate refetches the latest value", async () => {
-    const fetcher = vi.fn().mockResolvedValueOnce("old").mockResolvedValueOnce("new");
-    const { api } = mountResource("inv", fetcher);
-    await flushPromises();
-    expect(api.data.value).toBe("old");
-
-    await invalidate("inv");
-    expect(api.data.value).toBe("new");
-    expect(fetcher).toHaveBeenCalledTimes(2);
   });
 
   it("keeps last-good data when a revalidation fails", async () => {
