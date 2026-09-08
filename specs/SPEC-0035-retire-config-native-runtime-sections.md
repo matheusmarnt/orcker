@@ -7,8 +7,8 @@ depends_on: [SPEC-0002]
 surface:
   - crates/orcker-core/
   - crates/orcker-config/
-status: in_progress
-attempts: 0
+status: accepted
+attempts: 2
 ---
 
 ## Context
@@ -34,7 +34,15 @@ The same holds for `[services]` and the service-directive registry.
 
 ## Acceptance checklist
 
-- [ ] AC1 A config file with the removed sections still loads, with the
+- [x] AC1 A config file with the removed sections still loads, with the
       behaviour R1 chose, proved by a test
-- [ ] AC2 `rg -n "php_pool" crates` returns no matches
-- [ ] AC3 `scripts/gate.sh specs/SPEC-0035-*.md` passes
+- [x] AC2 `rg -n "php_pool" crates` returns no matches
+- [x] AC3 `scripts/gate.sh specs/SPEC-0035-*.md` passes
+
+FR acceptance: FR-002 has AC1/AC2 (`docs/PRD.md`), both already closed by
+SPEC-0002 (workspace compiles/tests green without the native-runtime crates;
+no binary starts native PHP/DB processes). This cycle adds no new FR
+acceptance criteria; AC1-AC3 above close R1-R3 of this spec, not FR-002's
+PRD ACs. The gate's `cargo test --workspace` run (S5) incidentally
+re-exercises FR-002 AC1 as a side effect of running the whole suite; it does
+not close it independently.

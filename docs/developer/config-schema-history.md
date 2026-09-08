@@ -117,6 +117,8 @@ These are FPM pool-block settings rather than ini directives, so they reach the 
 
 The table loads **leniently**, like `[php.directives]`: an out-of-range value or an unknown setting name is dropped during parsing rather than failing the load. A malformed version key is still a hard error, and strict validation lives at set time (CLI/GUI/IPC).
 
+**Retired (SPEC-0035):** the native FPM pool manager that read this table left with the native runtime (SPEC-0002). `[php.pool]` now loads but is silently ignored - any content, including a malformed version key, is accepted and dropped - and it is never written back by `orcker.toml`'s serialiser. The behaviour described above (leniency, the hard error on a bad version key) is history, not current.
+
 **Migration from v19:** bare version bump - the table defaults to empty when absent, so a v19 file needs no other change.
 
 **To downgrade to v19:** change `version = 20` to `version = 19` and delete any `[php.pool.*]` tables (an older daemon rejects the unknown tables under `deny_unknown_fields`, it doesn't just ignore them). Every version falls back to the built-in ceiling of 16.

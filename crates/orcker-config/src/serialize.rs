@@ -228,10 +228,6 @@ struct PhpSectionSer<'a> {
     // when empty for the same byte-stability reason.
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     directives: BTreeMap<String, &'a BTreeMap<String, String>>,
-    // Sub-tables keyed by version string (`[php.pool."8.4"]`). Skipped when
-    // empty for the same byte-stability reason.
-    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
-    pool: BTreeMap<String, &'a BTreeMap<String, String>>,
     // Array-of-tables keyed by version string (`[[php.extensions."8.5"]]`).
     // Skipped when empty so a default config emits no `[php.extensions]` region
     // (byte-shape goldens assume no extra tables). A trailing sub-table region,
@@ -337,7 +333,6 @@ pub(crate) fn to_toml(c: &Config) -> Result<String, ConfigError> {
                 .iter()
                 .map(|(v, m)| (v.to_string(), m))
                 .collect(),
-            pool: c.php.pool.iter().map(|(v, m)| (v.to_string(), m)).collect(),
             extensions: c
                 .php
                 .extensions

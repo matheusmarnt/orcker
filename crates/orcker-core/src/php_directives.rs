@@ -57,9 +57,8 @@ const RESERVED: &[(&str, &str)] = &[
 ///
 /// The `pm.` prefix is denied wholesale: those are FPM pool-block settings,
 /// not ini directives, so rendering one as `php_value[pm.…]` makes FPM log
-/// `ERROR: Unable to set php_value` on every worker spawn. They belong to
-/// [`crate::php_pool`]. Matching is by prefix there and exact for every
-/// other reserved name.
+/// `ERROR: Unable to set php_value` on every worker spawn. Matching is by
+/// prefix there and exact for every other reserved name.
 #[must_use]
 pub fn reserved(name: &str) -> Option<&'static str> {
     if php_settings::is_supported(name) {
@@ -67,7 +66,7 @@ pub fn reserved(name: &str) -> Option<&'static str> {
     }
     if name.starts_with("pm.") {
         return Some(
-            "FPM pool settings are managed with `orcker php pool` (or the GUI pool-size control)",
+            "pm.* settings are FPM pool-block directives, not php.ini directives, and cannot be set this way",
         );
     }
     RESERVED
@@ -307,7 +306,7 @@ mod tests {
     }
 
     #[test]
-    fn pool_prefix_is_reserved_and_points_at_the_pool_command() {
+    fn pool_prefix_is_reserved() {
         for name in [
             "pm.max_children",
             "pm.start_servers",
@@ -316,7 +315,7 @@ mod tests {
             "pm.",
         ] {
             let hint = reserved(name).unwrap_or_default();
-            assert!(hint.contains("orcker php pool"), "{name}: {hint:?}");
+            assert!(hint.contains("pool-block"), "{name}: {hint:?}");
         }
     }
 
