@@ -69,7 +69,7 @@ Never a merge, never a bulk sync. Numbered above the reserved Phase-1 range.
 | 34 | SPEC-0034-ipc-version-skew-handshake | accepted | FR-002 | SPEC-0002 |
 | 35 | SPEC-0035-retire-config-native-runtime-sections | accepted | FR-002 | SPEC-0002 |
 | 39 | SPEC-0039-retire-unreachable-gui-host-commands | accepted | FR-002 | SPEC-0036 |
-| 40 | SPEC-0040-dead-export-ratchet | draft | FR-002 | SPEC-0036 |
+| 40 | SPEC-0040-dead-export-ratchet | accepted | FR-002 | SPEC-0036 |
 | 41 | SPEC-0041-retire-orphaned-exec-help-text | draft | FR-002 | SPEC-0002 |
 | 42 | SPEC-0042-restore-missing-reference-doc | accepted | FR-022 | SPEC-0001 |
 | 43 | SPEC-0043-orcker-stack-instruction-file | accepted | FR-022 | SPEC-0003, SPEC-0004 |
@@ -88,3 +88,4 @@ Never a merge, never a bulk sync. Numbered above the reserved Phase-1 range.
 | 57 | SPEC-0057-mirror-dt4-evidence-check-into-supervisor-agent | draft | FR-001 | SPEC-0052 |
 | 58 | SPEC-0058-remove-stale-orcker-php-crate-doc | draft | FR-002 | SPEC-0002 |
 | 59 | SPEC-0059-retire-config-services-section | draft | FR-002 | SPEC-0002 |
+| 60 | SPEC-0060-retire-stale-ipc-response-mirrors | draft | FR-002 | SPEC-0040 |

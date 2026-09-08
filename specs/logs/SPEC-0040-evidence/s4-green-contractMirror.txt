@@ -1,0 +1,10 @@
+
+ RUN  v2.1.9 /home/matheusmariano/personal-projects/orcker/orcker/apps/orcker-gui
+
+ ✓ tests/contractMirror.test.ts (4 tests) 7ms
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+   Start at  19:55:34
+   Duration  1.27s (transform 59ms, setup 0ms, collect 42ms, tests 7ms, environment 526ms, prepare 288ms)
+

@@ -52,7 +52,6 @@ fn main() {
             Some(vec![AUTOSTART_ARG]),
         ))
         .invoke_handler(tauri::generate_handler![
-            commands::ping,
             commands::list_sites,
             commands::park,
             commands::link,
@@ -110,7 +109,6 @@ fn main() {
             commands::trust_ca,
             commands::untrust_ca,
             commands::list_tools,
-            commands::install_tool,
             commands::uninstall_tool,
             commands::install_tool_streamed,
             commands::install_cloudflared_streamed,

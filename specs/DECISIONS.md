@@ -795,3 +795,48 @@ Deviations, clarifications and trade-offs recorded by implementation cycles
   `v-if="site.wp_auto_login"` -> `v-if="site.is_wordpress"`;
   `SiteCard.spec.ts` covers both directions (shown with auto-login off,
   hidden on non-WordPress sites).
+
+## 2026-09-08 · SPEC-0040 — stale `ipc/types.ts` Response mirrors deferred to a new spec, not SPEC-0037
+
+- Decision: five `Extract<Response, …>` aliases in `src/ipc/types.ts`
+  (`PhpVersionsResponse`, `AvailablePhpResponse`, `ServicesResponse`,
+  `AvailableServicesResponse`, `ServiceLogsResponse`) extract wire tags with no
+  matching `crates/orcker-ipc::Response` variant - protocol debt, not a fresh
+  dead export this cycle introduced. The spec's own Context named
+  "SPEC-0037 is the natural partner" for this class of leftover, but
+  SPEC-0037-restore-coverage-deleted-by-spec-0002 is already `accepted`
+  (closed, its diff long merged); reopening it would mean editing a spec whose
+  cycle already has a supervisor APPROVE on record. Filed a new draft,
+  `specs/SPEC-0060-retire-stale-ipc-response-mirrors.md`, instead - allowlisted
+  the five names with a reason pointing there rather than deleting them or
+  guessing whether the still-queued Docker PHP-version/services specs
+  (SPEC-0008/0009/0018/0019/0021) will need the names again.
+- Why: CLAUDE.md's "found extra work -> add a 3-line draft spec, never expand
+  the current diff" rule; deleting the GUI's `Response` union members and
+  their downstream types is materially larger than this spec's ratchet-mechanism
+  surface, and whether the right fix is deletion or reconnection is a product
+  call this cycle has no basis to make unilaterally.
+- Impact: `apps/orcker-gui/tests/dead-export-allowlist.txt` carries the five
+  names with this reason; `specs/SPEC-0060-retire-stale-ipc-response-mirrors.md`
+  (draft) and `specs/ROADMAP.md` row 60 record the deferred work.
+
+## 2026-09-08 · SPEC-0040 — R5's `src-tauri/` blind spot closed by the existing clippy gate, not by extending the scan
+
+- Decision: R5 asks to "extend the scan to `src-tauri/`" so a dead
+  `pub(crate)` Rust fn would not hide there. Implemented as: no change to the
+  TS/Vue scanner's `SUBTREE`, no new Rust-side scan. Verified instead that
+  `apps/orcker-gui/src-tauri` is a workspace member (`Cargo.toml:3`) and that
+  `scripts/gate.sh` step 2 (`cargo clippy --workspace --all-targets -- -D
+  warnings`) already denies rustc's default-warn `dead_code` lint there - six
+  pre-existing `#[cfg_attr(not(target_os = "macos"), allow(dead_code))]` in
+  `autostart.rs` are the proof it fires. The supervisor's own probe confirmed
+  this live: an added dead `pub(crate) fn` in `commands.rs` failed gate step 2
+  with `error: function 'supervisor_probe_dead' is never used`.
+- Why: R5's requirement is "a dead Rust item cannot hide", not "the JS scanner
+  must cover Rust" - a second, weaker regex-based scan duplicating a check the
+  compiler already performs exactly would be the kind of unrequested
+  abstraction CLAUDE.md's own conventions argue against, and would drift out
+  of sync with rustc's actual reachability analysis over time.
+- Impact: no code added for this blind spot; `specs/SPEC-0040-dead-export-ratchet.md`'s
+  R5 and `specs/logs/SPEC-0040.md` S1/S6 record the verification in place of a
+  diff.

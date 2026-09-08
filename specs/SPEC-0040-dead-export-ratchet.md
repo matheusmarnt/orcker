@@ -6,8 +6,8 @@ covers: [FR-002]
 depends_on: [SPEC-0036]
 surface:
   - apps/orcker-gui/
-status: in_progress
-attempts: 0
+status: accepted
+attempts: 1
 ---
 
 ## Context
@@ -72,9 +72,15 @@ supervisor probing the delta scan itself:
 
 ## Acceptance checklist
 
-- [ ] AC1 A new dead export fails the check; RED recorded
-- [ ] AC2 The inherited set is disposed of, each entry with a disposition
-- [ ] AC3 `scripts/gate.sh specs/SPEC-0040-*.md` passes
+- [x] AC1 A new dead export fails the check; RED recorded
+- [x] AC2 The inherited set is disposed of, each entry with a disposition
+- [x] AC3 `scripts/gate.sh specs/SPEC-0040-*.md` passes
+
+FR acceptance: FR-002 has AC1/AC2 (`docs/PRD.md`), both already closed by
+SPEC-0002 (workspace compiles/tests green without the native-runtime crates;
+no binary starts native PHP/DB processes). This cycle adds no new FR
+acceptance criteria; AC1-AC3 above close R1-R5 of this spec, not FR-002's
+PRD ACs.
 
 ## Out of scope
 

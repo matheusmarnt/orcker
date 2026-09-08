@@ -424,18 +424,3 @@ export function buildMailFrameDocument(
   };
 }
 
-/**
- * Strip executable / navigable hazards from captured HTML (body fragment).
- * Prefer {@link buildMailFrameDocument} when head styles must survive.
- */
-export function sanitizeMailHtml(html: string): string {
-  return buildMailFrameDocument(html).body;
-}
-
-/**
- * Stamp openable `<a href>` tags with `data-orcker-url` (body HTML only).
- * @deprecated Prefer {@link buildMailFrameDocument} for the mail viewer.
- */
-export function prepareHtmlBody(html: string): string {
-  return buildMailFrameDocument(`<body>${html}</body>`).body;
-}

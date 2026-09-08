@@ -1,0 +1,35 @@
+# Shrink-only ratchet allowlist for tests/deadExportRatchet.test.ts.
+#
+# Every dead GUI export not covered here fails the check - this file exists
+# only for the ones a human has decided to keep, each with a written reason.
+# An export in `src/ipc/types.ts` that still mirrors a live crates/orcker-ipc
+# Response variant does NOT belong here: that exemption is computed live by
+# deadExportRatchet.test.ts (SPEC-0040 R3), so it can never go stale the way a
+# static line would.
+#
+# Format: one "<path>\t<name>" per group, path relative to the repo root.
+
+# Test-only exports: needed to reset module-scoped state between test cases,
+# not a production consumer. Deleting the function would break the tests that
+# rely on it for isolation (SPEC-0036 set this same precedent for `jobStatus`
+# staying exported rather than un-exported when a real use needed it).
+apps/orcker-gui/src/composables/useIdes.ts	resetIdes
+apps/orcker-gui/src/composables/useResource.ts	resetResourceCache
+apps/orcker-gui/src/lib/sitesGroupState.ts	resetSitesGroupState
+
+# Mirror live orcker_core::PhpVersion (crates/orcker-core/src/php.rs) - the
+# PHP-version UI that would call them (SPEC-0019 php-versions-eol) has not
+# landed yet. Not protocol debt: the Rust side is current, only the GUI
+# callsite is missing.
+apps/orcker-gui/src/lib/phpVersion.ts	phpVersionInRange
+apps/orcker-gui/src/lib/phpVersion.ts	isLegacyVersion
+
+# Extract<Response, ...> aliases whose Rust variant is already gone
+# (SPEC-0034/SPEC-0035 retired the wire tag, the TS mirror was never swept).
+# Disposal deferred to SPEC-0060-retire-stale-ipc-response-mirrors - out of
+# this spec's surface.
+apps/orcker-gui/src/ipc/types.ts	PhpVersionsResponse
+apps/orcker-gui/src/ipc/types.ts	AvailablePhpResponse
+apps/orcker-gui/src/ipc/types.ts	ServicesResponse
+apps/orcker-gui/src/ipc/types.ts	AvailableServicesResponse
+apps/orcker-gui/src/ipc/types.ts	ServiceLogsResponse

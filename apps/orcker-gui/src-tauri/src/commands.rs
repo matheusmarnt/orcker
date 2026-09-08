@@ -47,13 +47,6 @@ fn code_str(code: &ErrorCode) -> String {
         .unwrap_or_else(|| "internal".to_owned())
 }
 
-// ── liveness ───────────────────────────────────────────────────────────────
-
-#[tauri::command]
-pub async fn ping() -> Result<Response, GuiError> {
-    finish(exchange_timeout(&Request::Ping, PROBE_TIMEOUT).await?)
-}
-
 // ── sites ──────────────────────────────────────────────────────────────────
 
 #[tauri::command]
@@ -525,11 +518,6 @@ pub async fn untrust_ca() -> Result<bool, GuiError> {
 #[tauri::command]
 pub async fn list_tools() -> Result<Response, GuiError> {
     finish(exchange(&Request::ListTools).await?)
-}
-
-#[tauri::command]
-pub async fn install_tool(tool: String) -> Result<Response, GuiError> {
-    finish(exchange(&Request::InstallTool { tool }).await?)
 }
 
 #[tauri::command]

@@ -154,13 +154,6 @@ export function useResource<T>(
   return { data: entry.data, loading, refreshing, error: entry.error, refresh, mutate };
 }
 
-/** Silently refetch a key after a mutation; no-op if nothing subscribes to it yet.
- * Forced, since it follows a write: it must not dedupe onto a pre-write fetch. */
-export function invalidate(key: string): Promise<void> {
-  const entry = cache.get(key);
-  return entry ? revalidate(entry, true) : Promise.resolve();
-}
-
 /** Test-only: drop all cached entries so specs start from a cold cache. */
 export function resetResourceCache(): void {
   cache.clear();
