@@ -6,7 +6,7 @@ covers: [FR-002]
 depends_on: [SPEC-0036]
 surface:
   - apps/orcker-gui/
-status: approved
+status: in_progress
 attempts: 0
 ---
 
