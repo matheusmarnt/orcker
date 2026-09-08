@@ -340,10 +340,13 @@ struct PhpSectionWire {
     // v16: free-form per-version ini directives, keyed by version string.
     #[serde(default)]
     directives: BTreeMap<String, BTreeMap<String, String>>,
-    // v20: per-version FPM pool settings, keyed by version string. Additive:
-    // pre-v20 files omit it.
-    #[serde(default)]
-    pool: BTreeMap<String, BTreeMap<String, String>>,
+    // v20 added per-version FPM pool settings here. SPEC-0035 retired the
+    // one reader (the native FPM pool manager, gone since SPEC-0002): the
+    // field stays only so `deny_unknown_fields` doesn't reject a file that
+    // still carries the table. Untyped and renamed - nothing reads it again,
+    // and the leading `_` tells `dead_code` that's on purpose.
+    #[serde(default, rename = "pool")]
+    _pool: Option<toml::Value>,
 }
 
 impl Default for PhpSectionWire {
@@ -354,7 +357,7 @@ impl Default for PhpSectionWire {
             extensions: BTreeMap::new(),
             version_settings: BTreeMap::new(),
             directives: BTreeMap::new(),
-            pool: BTreeMap::new(),
+            _pool: None,
         }
     }
 }
@@ -542,7 +545,6 @@ impl TryFrom<Wire> for Config {
             extensions: convert_extensions(w.php.extensions)?,
             version_settings: convert_version_settings(w.php.version_settings)?,
             directives: convert_directives(w.php.directives)?,
-            pool: convert_pool(w.php.pool)?,
         };
         let ports = Ports {
             http: w.ports.http,
@@ -843,30 +845,6 @@ fn convert_directives(
                 php_directives::validate_name(k).is_ok()
                     && php_directives::validate_value(val).is_ok()
                     && php_directives::reserved(k).is_none()
-            })
-            .collect();
-        if !kept.is_empty() {
-            out.insert(v, kept);
-        }
-    }
-    Ok(out)
-}
-
-/// Convert the raw wire per-version pool map into the typed
-/// [`PhpSection::pool`] shape. Same policy as [`convert_directives`]: a bad
-/// version key errors, while an entry whose name is not a pool setting Orcker
-/// exposes, or whose value is out of range, is dropped leniently.
-fn convert_pool(
-    wire: BTreeMap<String, BTreeMap<String, String>>,
-) -> Result<BTreeMap<orcker_core::PhpVersion, BTreeMap<String, String>>, ConfigError> {
-    use orcker_core::php_pool;
-    let mut out = BTreeMap::new();
-    for (ver, entries) in wire {
-        let v = orcker_core::PhpVersion::from_str(&ver)?;
-        let kept: BTreeMap<String, String> = entries
-            .into_iter()
-            .filter(|(k, val)| {
-                php_pool::validate_name(k).is_ok() && php_pool::validate_value(val).is_ok()
             })
             .collect();
         if !kept.is_empty() {
@@ -2896,59 +2874,25 @@ target = \"../../etc/passwd\"\n";
         assert!(Config::from_toml(bad2).is_err());
     }
 
+    /// SPEC-0035: `[php.pool]`'s one reader (this file's own conversion into
+    /// `PhpSection::pool`) is gone along with the native FPM pool manager it
+    /// served (SPEC-0002). A pre-existing file carrying the table - garbage
+    /// version key included - must still load; nothing in it is ever kept or
+    /// written back.
     #[test]
-    fn pool_settings_round_trip() {
-        let s = "version = 20\n[php]\ndefault = \"8.3\"\n\
-                 [php.pool.\"8.3\"]\nmax_children = \"32\"\n";
-        let c = Config::from_toml(s).unwrap();
-        let v83 = orcker_core::PhpVersion::new(8, 3);
-        assert_eq!(
-            c.php
-                .pool
-                .get(&v83)
-                .and_then(|m| m.get("max_children"))
-                .map(String::as_str),
-            Some("32")
+    fn pool_section_loads_but_is_silently_dropped() {
+        let s = format!(
+            "version = {}\n[php]\ndefault = \"8.3\"\n\
+             [php.pool.\"8.3\"]\nmax_children = \"32\"\n\
+             [php.pool.\"eight\"]\nmax_children = \"32\"\n",
+            crate::CURRENT_VERSION
         );
-        let back = Config::from_toml(&c.to_toml().unwrap()).unwrap();
-        assert_eq!(back, c);
-    }
-
-    /// Same load-time leniency as the directives tables: an out-of-range or
-    /// unparseable value, or a pool setting Orcker does not expose, is dropped
-    /// rather than failing the load.
-    #[test]
-    fn invalid_pool_entries_are_dropped_leniently() {
-        let s = "version = 20\n[php]\ndefault = \"8.3\"\n\
-                 [php.pool.\"8.3\"]\n\
-                 max_children = \"32\"\n\
-                 start_servers = \"4\"\n\
-                 [php.pool.\"8.4\"]\n\
-                 max_children = \"0\"\n\
-                 [php.pool.\"8.5\"]\n\
-                 max_children = \"2000\"\n\
-                 [php.pool.\"8.2\"]\n\
-                 max_children = \"abc\"\n";
-        let c = Config::from_toml(s).unwrap();
-        let v83 = orcker_core::PhpVersion::new(8, 3);
-        let pool = c.php.pool.get(&v83).unwrap();
-        assert_eq!(pool.len(), 1);
-        assert_eq!(pool.get("max_children").map(String::as_str), Some("32"));
-        for (major, minor) in [(8, 4), (8, 5), (8, 2)] {
-            assert!(
-                !c.php
-                    .pool
-                    .contains_key(&orcker_core::PhpVersion::new(major, minor)),
-                "{major}.{minor}"
-            );
-        }
-    }
-
-    #[test]
-    fn bad_pool_version_key_errors() {
-        let bad = "version = 20\n[php]\ndefault = \"8.3\"\n\
-                   [php.pool.\"eight\"]\nmax_children = \"32\"\n";
-        assert!(Config::from_toml(bad).is_err());
+        let c = Config::from_toml(&s).unwrap();
+        let out = c.to_toml().unwrap();
+        assert!(
+            !out.contains("[php.pool"),
+            "pool must not round-trip; got: {out}"
+        );
     }
 
     #[test]

@@ -64,7 +64,6 @@ crates/orcker-core/src/net.rs:1
 crates/orcker-core/src/php.rs:1
 crates/orcker-core/src/php_directives.rs:1
 crates/orcker-core/src/php_extensions.rs:1
-crates/orcker-core/src/php_pool.rs:1
 crates/orcker-core/src/php_settings.rs:1
 crates/orcker-core/src/ports.rs:1
 crates/orcker-core/src/project.rs:1

@@ -1,0 +1,21 @@
+[gate 1/6] rustfmt
+Diff in /home/matheusmariano/personal-projects/orcker/orcker/crates/orcker-config/src/parse.rs:2889:
+         );
+         let c = Config::from_toml(&s).unwrap();
+         let out = c.to_toml().unwrap();
+[31m-        assert!(!out.contains("[php.pool"), "pool must not round-trip; got: {out}");
+(B[m[32m+        assert!(
+(B[m[32m+            !out.contains("[php.pool"),
+(B[m[32m+            "pool must not round-trip; got: {out}"
+(B[m[32m+        );
+(B[m     }
+ 
+     #[test]
+Diff in /home/matheusmariano/personal-projects/orcker/orcker/crates/orcker-config/tests/toml_byte_shape.rs:502:
+     assert_eq!(back, c);
+ }
+ 
+[31m-
+(B[m #[test]
+ fn default_config_emits_no_groups_table() {
+     let s = Config::default().to_toml().unwrap();

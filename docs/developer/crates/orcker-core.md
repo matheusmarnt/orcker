@@ -58,7 +58,6 @@ mod net;
 mod php;
 pub mod php_directives;
 pub mod php_extensions;
-pub mod php_pool;
 pub mod php_settings;
 mod proxy;
 mod route_rule;
@@ -74,7 +73,6 @@ pub use net::is_lan_source;
 pub use php::{PhpVersion, FIRST_SUPPORTED_MINOR};
 pub use php_directives::{DirectiveError, DirectiveNameErrorReason};
 pub use php_extensions::{ExtError, NameErrorReason, PathErrorReason};
-pub use php_pool::{PoolNameErrorReason, PoolSettingError, PoolValueErrorReason};
 pub use php_settings::{PhpSettingError, ValueErrorReason};
 pub use proxy::{match_rule, validate_proxy_name, ProxyRule, ProxySite, UpstreamTarget};
 pub use route_rule::RouteRule;
@@ -97,7 +95,6 @@ pub use tld::Tld;
 | `php_settings`       | `pub mod`     | managed PHP ini directives + value validation             |
 | `php_directives`     | `pub mod`     | free-form per-version ini directives (shape checks + reserved names) |
 | `php_extensions`     | `pub mod`     | custom `.so` extension registry validation                |
-| `php_pool`           | `pub mod`     | FPM pool-block settings (`max_children`) + the built-in default |
 | `service_directives` | `pub mod`     | free-form service config overrides: dialects, rendering, `scan_local` |
 | `detect`             | `pub mod`     | pure web-root detection (`ProjectSignals` → `Detection`)  |
 | `host`               | `pub(crate)`  | `Host:` header normalisation, consumed only by `resolve`  |
@@ -346,36 +343,6 @@ Injection attempts - embedded newlines, `;`, `#`, `]`, `=`, or over-length
 input - are all rejected here. Downstream renderers re-validate, but this is the
 first and primary gate.
 :::
-
-## `php_pool` - FPM pool-block settings
-
-FPM's pool knobs (`pm`, `pm.max_children`, …) are **not** ini directives: they
-sit in the pool block of the generated config, not behind `php_value[…]`.
-Setting one through the free-form directives path would render
-`php_value[pm.max_children]`, which FPM refuses with `ERROR: Unable to set
-php_value` on every worker spawn - so `php_directives::reserved` denies the whole
-`pm.` prefix and points here.
-
-```rust
-pub const DEFAULT_MAX_CHILDREN: u32 = 16;
-
-pub fn validate_name(name: &str) -> Result<(), PoolSettingError>;   // allowlist of one
-pub fn validate_value(value: &str) -> Result<u32, PoolSettingError>; // 1..=1024
-pub fn override_max_children(settings: Option<&BTreeMap<String, String>>) -> Option<u32>;
-```
-
-Orcker exposes exactly one knob, `max_children`, so `validate_name` is an
-allowlist of one rather than a shape check - pool settings are a typed surface,
-not free-form ini. `validate_value` accepts a plain run of ASCII digits
-(surrounding whitespace trimmed) inside `1..=1024`; a leading sign or a decimal
-point is rejected rather than coerced.
-
-`DEFAULT_MAX_CHILDREN` is the single source of truth for the default:
-[`orcker-php`](./orcker-php)'s `PoolConfig::dev_defaults` renders it and the CLI
-prints it as `(default)`, so the two cannot drift. `override_max_children`
-returns `None` both when a version has no override *and* when its stored value
-no longer validates, which is what makes a bad hand-edit of `[php.pool]` degrade
-to the default instead of breaking the pool.
 
 ## `route_rule` - path prefix to a local file {#route-rule}
 

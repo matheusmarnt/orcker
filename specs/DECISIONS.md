@@ -690,3 +690,69 @@ Deviations, clarifications and trade-offs recorded by implementation cycles
   amend-then-implement, spec-amendment commit ahead of the implementation
   commit, recorded here rather than only in the per-spec cycle log, since a
   cycle log is closed at S8 and this is a cross-cycle process gap.
+
+## 2026-09-07 · SPEC-0035 — an existing `orcker.toml` carrying `[php.pool]` loads with the table silently ignored
+
+- Decision: R1 asked for a choice between silently ignoring, warning once, or
+  migrating an existing `[php.pool]` table now that `php_pool.rs` and its one
+  reader (`orcker-config`'s `convert_pool`) are deleted. Chose **silently
+  ignored**: the wire keeps an untyped, renamed `_pool: Option<toml::Value>`
+  field solely so `#[serde(deny_unknown_fields)]` still accepts a file
+  carrying the table, and the value is never read, kept, or written back.
+- Why: warning needs a doctor/CLI surface to report through, and migrating
+  implies a successor location for `max_children` to move to; neither exists
+  and both are outside this spec's surface (`crates/orcker-core/`,
+  `crates/orcker-config/`). Silently dropping a value nothing has consumed
+  since SPEC-0002 removed the native FPM pool manager is the only option
+  available purely within that surface, and matches the fact that the data
+  was already effectively dead (write-only) before this spec.
+- Impact: a pre-existing `orcker.toml` with `[php.pool.*]` now loads cleanly
+  and the table never reappears on save, including a previously-rejected
+  malformed version key (`[php.pool."eight"]`), which used to be a hard
+  parse error and is now also silently dropped. No warning surfaces to the
+  user anywhere (CLI, GUI, `orcker doctor`) that the table was ignored; a
+  future spec that adds a doctor check could revisit this if that silence
+  turns out to be a problem in practice.
+- `[services]` disposition (R1 named both tables): corrected 2026-09-07
+  (supervisor round 2 caught this bullet stating the opposite of the
+  verified finding). `ServicesSection`/`ServiceInstance`/`KNOWN_SERVICES`
+  (`crates/orcker-config/src/schema.rs`) and
+  `crates/orcker-core/src/service_directives.rs` have **no consumer outside
+  `crates/orcker-config/`** - confirmed by grep for the type names and for
+  `.services` field access across the whole workspace. `bin/orckerd` has no
+  `services` module at all, despite `schema.rs:636` citing
+  `orckerd::services::auto_start_installed` as the daemon-side consumer;
+  that citation does not resolve to any code in this workspace. `[services]`
+  is in the same write-only state `[php.pool]` was before this spec. No code
+  change this cycle regardless: R2 scopes deletion to `php_pool` alone, and
+  retiring `[services]` is a much larger surface (a whole config section
+  plus a ~1000-line core module) with an open product question - delete, or
+  reconnect to `orcker-stack`/`orcker-engine`'s Docker service rendering,
+  which may not exist yet. Parked as
+  `specs/SPEC-0059-retire-config-services-section.md` (draft) rather than
+  decided here.
+
+## 2026-09-07 · SPEC-0035 — human APPROVE at round 3, after an `attempts` miscount forced ESCALATE
+
+- Decision: round 3's supervisor verdict was ESCALATE, not because any
+  substance failed - DT1-DT10 and AC1-AC3 all passed, independently
+  re-verified across three rounds - but because the spec's own `attempts`
+  front matter read `1` while its cycle log recorded two REWORK rounds.
+  Correctly counted (`docs/SDD.md` section 5: REWORK increments `attempts`),
+  a third round sets `attempts = 3`, which section 8.3 forces to ESCALATE
+  regardless of findings. The human chose to correct the counter
+  (`attempts: 1 -> 2`) and approve directly, rather than have the supervisor
+  run a fourth pass that could only re-confirm the same green result.
+- Why: the same reasoning as SPEC-0052's round-3 ESCALATE - the counter
+  itself was the only open item, the supervisor cannot fix a file (it never
+  edits) or waive its own limiter (that would be approving on doubt), and a
+  fourth identical verification pass produces no new information once
+  substance has been independently re-derived three times over.
+- Impact: `specs/SPEC-0035-retire-config-native-runtime-sections.md`
+  (`attempts: 1 -> 2`, `status: in_progress -> accepted`);
+  `specs/logs/SPEC-0035.md` keeps the full three-round record, including
+  round 2's own near-miss (a decision bullet asserting the opposite of the
+  verified tree state - see the entry above) and round 3's ESCALATE.
+  `specs/TRACEABILITY.md` records the final verdict as `HUMAN APPROVE
+  (ESCALATE at round 3, attempts corrected 1 -> 2)`, matching the `SPEC-0052`
+  precedent's phrasing for the same class of event.

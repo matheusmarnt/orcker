@@ -96,8 +96,11 @@ pub use schema::{
 /// v19 added the top-level `lan_enabled` and `lan_setup_port` scalars
 /// ([`Config::lan_enabled`], [`Config::lan_setup_port`]) for LAN exposure (both
 /// default when absent), also a bare bump. v20 added the optional
-/// `[php.pool]` table ([`PhpSection::pool`]) for per-version FPM pool
+/// `[php.pool]` table for per-version FPM pool
 /// settings; it defaults (empty) when absent, so v19→v20 is a bare bump too.
+/// SPEC-0035 retired it: the table is silently ignored on load and never
+/// written back, since the FPM pool manager that read it left with the
+/// native runtime (SPEC-0002).
 /// v21 added the optional `[route_rules]` table ([`Config::route_rules`])
 /// holding per-site path-prefix routing rules (prefix → a local target under
 /// the served root); it defaults (empty) when absent, so v20→v21 is a bare bump.

@@ -67,7 +67,7 @@ Never a merge, never a bulk sync. Numbered above the reserved Phase-1 range.
 | 31 | SPEC-0031-repoint-release-and-cdn-automation | draft | FR-001 | SPEC-0001 |
 | 32 | SPEC-0032-pin-gate-sort-collation | accepted | FR-001 | SPEC-0001 |
 | 34 | SPEC-0034-ipc-version-skew-handshake | accepted | FR-002 | SPEC-0002 |
-| 35 | SPEC-0035-retire-config-native-runtime-sections | draft | FR-002 | SPEC-0002 |
+| 35 | SPEC-0035-retire-config-native-runtime-sections | accepted | FR-002 | SPEC-0002 |
 | 39 | SPEC-0039-retire-unreachable-gui-host-commands | draft | FR-002 | SPEC-0036 |
 | 40 | SPEC-0040-dead-export-ratchet | draft | FR-002 | SPEC-0036 |
 | 41 | SPEC-0041-retire-orphaned-exec-help-text | draft | FR-002 | SPEC-0002 |
@@ -86,3 +86,5 @@ Never a merge, never a bulk sync. Numbered above the reserved Phase-1 range.
 | 54 | SPEC-0054-fr-acceptance-must-be-enumerated | accepted | FR-001 | SPEC-0045, SPEC-0047 |
 | 55 | SPEC-0055-validate-reason-display-list-is-partial | accepted | FR-001 | SPEC-0053 |
 | 57 | SPEC-0057-mirror-dt4-evidence-check-into-supervisor-agent | draft | FR-001 | SPEC-0052 |
+| 58 | SPEC-0058-remove-stale-orcker-php-crate-doc | draft | FR-002 | SPEC-0002 |
+| 59 | SPEC-0059-retire-config-services-section | draft | FR-002 | SPEC-0002 |

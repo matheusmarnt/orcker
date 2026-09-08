@@ -1,0 +1,59 @@
+./crates/orcker-core/src/service_directives.rs:64:/// `ServicesSection` is keyed. This lives here rather than in the service layer
+./crates/orcker-config/src/parse.rs:16:    Config, DumpsSection, MailSection, ParkedSection, PhpSection, Ports, ServiceInstance,
+./crates/orcker-config/src/parse.rs:17:    ServicesSection,
+./crates/orcker-config/src/parse.rs:110:    services: BTreeMap<String, ServiceInstanceWire>,
+./crates/orcker-config/src/parse.rs:390:struct ServiceInstanceWire {
+./crates/orcker-config/src/parse.rs:576:        let services = ServicesSection {
+./crates/orcker-config/src/parse.rs:587:                        ServiceInstance {
+./crates/orcker-config/src/parse.rs:858:/// [`ServiceInstance::overrides`] shape. Same lenient policy as
+./crates/orcker-config/src/parse.rs:873:    let Some(dialect) = service_directives::dialect_for(ty) else {
+./crates/orcker-config/src/parse.rs:878:            service_directives::validate_name(k).is_ok()
+./crates/orcker-config/src/parse.rs:879:                && service_directives::validate_value(dialect, val).is_ok()
+./crates/orcker-config/src/parse.rs:880:                && service_directives::reserved(dialect, k).is_none()
+./crates/orcker-config/src/parse.rs:2493:            .insert("sqlserver".to_string(), ServiceInstance::default());
+./crates/orcker-config/src/parse.rs:2508:                .insert((*s).to_string(), ServiceInstance::default());
+./crates/orcker-config/src/parse.rs:2518:            ServiceInstance {
+./crates/orcker-config/src/parse.rs:2521:                ..ServiceInstance::default()
+./crates/orcker-config/src/parse.rs:2532:            .insert("reverb".to_string(), ServiceInstance::default());
+./crates/orcker-config/src/parse.rs:2546:            .insert("mysql:x".to_string(), ServiceInstance::default());
+./crates/orcker-config/src/parse.rs:2560:            ServiceInstance {
+./crates/orcker-config/src/parse.rs:2562:                ..ServiceInstance::default()
+./crates/orcker-config/src/parse.rs:2707:            .insert("sqlserver".to_string(), ServiceInstance::default());
+./crates/orcker-config/src/parse.rs:2718:            .insert("sqlserver".to_string(), ServiceInstance::default());
+./crates/orcker-config/src/lib.rs:31:    ParkedSection, PhpSection, Ports, ServiceInstance, ServicesSection, SiteOverride,
+./crates/orcker-config/src/lib.rs:49:/// service `[services.<id>]` tables ([`ServiceInstance`], carrying version /
+./crates/orcker-config/src/lib.rs:108:/// ([`ServiceInstance::overrides`]) holding free-form configuration overrides
+./crates/orcker-config/tests/io.rs:12:use orcker_config::{Config, ConfigError, PhpSection, ServiceInstance};
+./crates/orcker-config/tests/io.rs:33:        .insert("mysql".to_string(), ServiceInstance::default());
+./crates/orcker-config/src/error.rs:110:    /// `[services]` contained an instance whose id is not in `KNOWN_SERVICES`.
+./crates/orcker-config/src/schema.rs:88:    pub services: ServicesSection,
+./crates/orcker-config/src/schema.rs:128:            services: ServicesSection::default(),
+./crates/orcker-config/src/schema.rs:599:/// to a [`ServiceInstance`] table (`[services.redis]`); the v2→v3 migration in
+./crates/orcker-config/src/schema.rs:602:pub struct ServicesSection {
+./crates/orcker-config/src/schema.rs:614:    pub instances: BTreeMap<String, ServiceInstance>,
+./crates/orcker-config/src/schema.rs:619:/// Keyed in [`ServicesSection::instances`] by the instance *wire id*: the type id
+./crates/orcker-config/src/schema.rs:625:pub struct ServiceInstance {
+./crates/orcker-config/src/schema.rs:648:impl Default for ServiceInstance {
+./crates/orcker-config/src/schema.rs:723:        assert!(ServicesSection::default().instances.is_empty());
+./crates/orcker-config/src/schema.rs:728:        let inst = ServiceInstance::default();
+./crates/orcker-config/src/serialize.rs:49:    services: BTreeMap<&'a str, ServiceInstanceSer<'a>>,
+./crates/orcker-config/src/serialize.rs:260:struct ServiceInstanceSer<'a> {
+./crates/orcker-config/src/serialize.rs:379:                    ServiceInstanceSer {
+./crates/orcker-config/tests/roundtrip.rs:10:use orcker_config::{Config, PhpSection, Ports, ServiceInstance, SiteOverride};
+./crates/orcker-config/tests/roundtrip.rs:88:        .insert("mysql".to_string(), ServiceInstance::default());
+./crates/orcker-config/tests/roundtrip.rs:91:        .insert("redis".to_string(), ServiceInstance::default());
+./crates/orcker-config/tests/roundtrip.rs:130:        ServiceInstance {
+./crates/orcker-config/tests/roundtrip.rs:135:            ..ServiceInstance::default()
+./crates/orcker-config/tests/toml_byte_shape.rs:14:use orcker_config::{Config, ServiceInstance, SiteOverride};
+./crates/orcker-config/tests/toml_byte_shape.rs:41:        .insert("mysql".to_string(), ServiceInstance::default());
+./crates/orcker-config/tests/toml_byte_shape.rs:44:        ServiceInstance {
+./crates/orcker-config/tests/toml_byte_shape.rs:47:            ..ServiceInstance::default()
+./crates/orcker-config/tests/toml_byte_shape.rs:261:        .insert("redis".to_string(), ServiceInstance::default());
+./crates/orcker-config/tests/toml_byte_shape.rs:264:        .insert("mysql".to_string(), ServiceInstance::default());
+./crates/orcker-config/tests/toml_byte_shape.rs:281:        ServiceInstance {
+./crates/orcker-config/tests/toml_byte_shape.rs:284:            ..ServiceInstance::default()
+./crates/orcker-config/tests/toml_byte_shape.rs:300:        .insert("mysql".to_string(), ServiceInstance::default());
+./crates/orcker-config/tests/toml_byte_shape.rs:324:        ServiceInstance {
+./crates/orcker-config/tests/toml_byte_shape.rs:329:            ..ServiceInstance::default()
+./crates/orcker-config/tests/toml_byte_shape.rs:334:        .insert("redis".to_string(), ServiceInstance::default());
+---non-config/core matches above this line (should be empty)---

@@ -220,7 +220,9 @@ fn migrate_v18_to_v19(value: &mut Value) -> Result<(), ConfigError> {
 /// `v19 → v20`: bump the version. v20 added the optional `[php.pool]` table
 /// of per-version FPM pool settings, which defaults (empty) when absent, so an
 /// in-place version bump is the entire migration. As with `[php.directives]`,
-/// per-version tables cannot be seeded from a pure step.
+/// per-version tables cannot be seeded from a pure step. SPEC-0035 later
+/// retired `[php.pool]` itself: the table loads but is silently dropped, so
+/// this migration step is unaffected either way.
 fn migrate_v19_to_v20(value: &mut Value) -> Result<(), ConfigError> {
     set_version(value, 20)
 }

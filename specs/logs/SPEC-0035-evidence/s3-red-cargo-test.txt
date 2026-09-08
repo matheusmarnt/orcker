@@ -1,0 +1,22 @@
+   Compiling orcker-config v0.0.0 (/home/matheusmariano/personal-projects/orcker/orcker/crates/orcker-config)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.72s
+     Running unittests src/lib.rs (target/debug/deps/orcker_config-63e5274f32e84996)
+
+running 1 test
+test parse::tests::pool_section_loads_but_is_silently_dropped ... FAILED
+
+failures:
+
+---- parse::tests::pool_section_loads_but_is_silently_dropped stdout ----
+
+thread 'parse::tests::pool_section_loads_but_is_silently_dropped' (28502) panicked at crates/orcker-config/src/parse.rs:2912:39:
+called `Result::unwrap()` on an `Err` value: Core(InvalidPhpVersion { input: "eight", reason: UnsupportedPrefix })
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    parse::tests::pool_section_loads_but_is_silently_dropped
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 180 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p orcker-config --lib`
