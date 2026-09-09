@@ -840,3 +840,46 @@ Deviations, clarifications and trade-offs recorded by implementation cycles
 - Impact: no code added for this blind spot; `specs/SPEC-0040-dead-export-ratchet.md`'s
   R5 and `specs/logs/SPEC-0040.md` S1/S6 record the verification in place of a
   diff.
+
+## 2026-09-08 · SPEC-0038 — two host-coverage premises corrected before any test
+
+- Decision: the approved spec's Context claimed `apps/orcker-gui/src-tauri/`
+  "has no behavioural test", and R4 named `main.rs`'s `WebviewUrl::App` as a
+  route reference to widen the guard to. Both are factually wrong at `HEAD`:
+  six `#[cfg(test)]` modules already exist (`commands.rs` 14 tests, `tray.rs`
+  8, plus `autostart.rs`/`daemon.rs`/`logging.rs`), and grep finds zero
+  `WebviewUrl` occurrences anywhere in `src-tauri` - windows are declared
+  statically in `tauri.conf.json` and fetched by label
+  (`app.get_webview_window("main"/"mails")`). The spec was amended (`67b179a`,
+  ahead of any implementation commit) to state the tray/command coverage gap
+  accurately, drop the `main.rs` clause from R4, and restate AC2 as "the
+  dispatcher and command-decision tests go from 0 to N" instead of "runs a
+  non-zero number of tests" - the latter was already true at `HEAD` and would
+  have closed as a tautology (DT4/JG5).
+- Why: implementing R4 as literally approved would have asked for a guard on
+  code that does not exist, and leaving AC2 as written would let the cycle
+  close having added no dispatcher coverage at all while still reading
+  "done". CLAUDE.md's "spec contradicts the code" rule requires correcting
+  the premise before writing tests against it, not improvising around it.
+- Impact: `specs/SPEC-0038-tauri-host-coverage.md`'s Context/R4/AC2/AC3 text
+  corrected in `67b179a`; no code touched by that commit.
+
+## 2026-09-08 · SPEC-0038 — R2's "faked IPC client" satisfied at `ipc.rs::exchange_at`, not a command handler
+
+- Decision: R2 asked to cover `commands.rs` handlers "with a faked IPC
+  client". Every `#[tauri::command]` calls `crate::ipc::exchange`/`exchange_timeout`
+  directly - concrete functions, not a trait - so no per-command seam exists
+  to inject a fake through. `ipc.rs::exchange_at` already carries its own doc
+  comment advertising the fake: "Factored out so tests can target a tempdir
+  socket." R2 is satisfied there instead: a `#[cfg(all(test, unix))]` module
+  binds a real Unix socket, plays a minimal fake daemon (one framed
+  request/response) against `exchange_at`, and asserts both the success and
+  closed-connection branches.
+- Why: adding an injectable trait across 76 command handlers to satisfy R2
+  literally would be exactly the abstraction CLAUDE.md's own conventions
+  argue against for a "thin bridge" crate, and the untested code R2 is
+  actually about - the wire round trip - lives in `exchange_at`, not in any
+  individual command's decision logic (those are covered separately by R2's
+  `parse_channel`/`staged_kind_str` tests).
+- Impact: no new seam added to `commands.rs`; `apps/orcker-gui/src-tauri/src/ipc.rs`
+  gained a test module using its existing `exchange_at` factoring.

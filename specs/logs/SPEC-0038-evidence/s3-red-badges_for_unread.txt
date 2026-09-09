@@ -1,0 +1,24 @@
+   Compiling orcker-gui v0.0.0 (/home/matheusmariano/personal-projects/orcker/orcker/apps/orcker-gui/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.85s
+     Running unittests src/main.rs (target/debug/deps/orcker_gui-75d7eb80a10388ac)
+
+running 1 test
+test tray::tests::badges_for_flags_waiting_update_and_unread_mail ... FAILED
+
+failures:
+
+---- tray::tests::badges_for_flags_waiting_update_and_unread_mail stdout ----
+
+thread 'tray::tests::badges_for_flags_waiting_update_and_unread_mail' (222601) panicked at apps/orcker-gui/src-tauri/src/tray.rs:1087:13:
+assertion `left == right` failed
+  left: Badges { update: false, unread: false }
+ right: Badges { update: false, unread: true }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    tray::tests::badges_for_flags_waiting_update_and_unread_mail
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 53 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p orcker-gui --bin orcker-gui`

@@ -238,6 +238,19 @@ fn parse_channel(s: &str) -> Result<orcker_ipc::Channel, GuiError> {
     }
 }
 
+/// The `ORCKER_APPLY_KIND` string for a staged artifact kind, or `None` for a
+/// kind the applier does not know how to install. Kept in sync with the
+/// `ORCKER_APPLY_KIND` parser in `bin/orcker/src/apply.rs`.
+fn staged_kind_str(kind: orcker_ipc::StagedArtifact) -> Option<&'static str> {
+    match kind {
+        orcker_ipc::StagedArtifact::AppTarGz => Some("app_tar_gz"),
+        orcker_ipc::StagedArtifact::Deb => Some("deb"),
+        orcker_ipc::StagedArtifact::Pacman => Some("pacman"),
+        orcker_ipc::StagedArtifact::Rpm => Some("rpm"),
+        _ => None,
+    }
+}
+
 /// Check for a Orcker self-update. `channel` (`"stable"`/`"edge"`) overrides the
 /// saved preference for this check only; omit to use the saved default.
 #[tauri::command]
@@ -277,17 +290,8 @@ pub async fn apply_update(app: tauri::AppHandle, channel: Option<String>) -> Res
     };
     let orcker = crate::daemon::resolve_binary("orcker")
         .ok_or_else(|| GuiError::internal("could not locate the bundled orcker binary"))?;
-    let kind_str = match kind {
-        orcker_ipc::StagedArtifact::AppTarGz => "app_tar_gz",
-        orcker_ipc::StagedArtifact::Deb => "deb",
-        orcker_ipc::StagedArtifact::Pacman => "pacman",
-        orcker_ipc::StagedArtifact::Rpm => "rpm",
-        _ => {
-            return Err(GuiError::internal(
-                "unknown staged artifact kind from the daemon",
-            ))
-        }
-    };
+    let kind_str = staged_kind_str(kind)
+        .ok_or_else(|| GuiError::internal("unknown staged artifact kind from the daemon"))?;
     spawn_applier(&orcker, &path, kind_str)?;
     app.exit(0);
     Ok(())
@@ -1171,5 +1175,28 @@ mod tests {
         );
         assert_eq!(resolve_site_root(&sites, "missing"), None);
         assert_eq!(resolve_site_root(&[], "blog"), None);
+    }
+
+    #[test]
+    fn parse_channel_accepts_known_names_and_rejects_others() {
+        assert_eq!(
+            parse_channel("stable").unwrap(),
+            orcker_ipc::Channel::Stable
+        );
+        assert_eq!(parse_channel("edge").unwrap(), orcker_ipc::Channel::Edge);
+        assert!(parse_channel("nightly").is_err());
+    }
+
+    #[test]
+    fn staged_kind_str_maps_every_known_artifact() {
+        let cases = [
+            (orcker_ipc::StagedArtifact::AppTarGz, Some("app_tar_gz")),
+            (orcker_ipc::StagedArtifact::Deb, Some("deb")),
+            (orcker_ipc::StagedArtifact::Pacman, Some("pacman")),
+            (orcker_ipc::StagedArtifact::Rpm, Some("rpm")),
+        ];
+        for (kind, expected) in cases {
+            assert_eq!(staged_kind_str(kind), expected, "{kind:?}");
+        }
     }
 }

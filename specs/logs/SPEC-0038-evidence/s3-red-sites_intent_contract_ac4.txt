@@ -1,0 +1,36 @@
+
+ RUN  v2.1.9 /home/matheusmariano/personal-projects/orcker/orcker/apps/orcker-gui
+
+ ❯ tests/sitesIntent.test.ts (5 tests | 1 failed | 4 skipped) 9ms
+   × sites-intent contract > the tray, App.vue's whitelist, SitesView.consumeIntent, and SitesIntent agree 8ms
+     → expected [ 'link', 'park' ] to deeply equal [ 'create', 'link', 'park' ]
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/sitesIntent.test.ts > sites-intent contract > the tray, App.vue's whitelist, SitesView.consumeIntent, and SitesIntent agree
+AssertionError: expected [ 'link', 'park' ] to deeply equal [ 'create', 'link', 'park' ]
+
+- Expected
++ Received
+
+  Array [
+-   "create",
+    "link",
+    "park",
+  ]
+
+ ❯ tests/sitesIntent.test.ts:63:31
+     61|     }
+     62|     const sorted = (xs: string[]) => [...new Set(xs)].sort();
+     63|     expect(sorted(whitelist)).toEqual(sorted(tray));
+       |                               ^
+     64|     expect(sorted(handled)).toEqual(sorted(tray));
+     65|     expect(sorted(typeMembers)).toEqual(sorted(tray));
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 4 skipped (5)
+   Start at  21:01:03
+   Duration  815ms (transform 35ms, setup 0ms, collect 33ms, tests 9ms, environment 354ms, prepare 185ms)
+

@@ -1,0 +1,24 @@
+   Compiling orcker-gui v0.0.0 (/home/matheusmariano/personal-projects/orcker/orcker/apps/orcker-gui/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.84s
+     Running unittests src/main.rs (target/debug/deps/orcker_gui-75d7eb80a10388ac)
+
+running 1 test
+test tray::tests::mail_label_counts_unread_and_caps_at_99_plus ... FAILED
+
+failures:
+
+---- tray::tests::mail_label_counts_unread_and_caps_at_99_plus stdout ----
+
+thread 'tray::tests::mail_label_counts_unread_and_caps_at_99_plus' (221269) panicked at apps/orcker-gui/src-tauri/src/tray.rs:1069:13:
+assertion `left == right` failed: unread 99
+  left: "Mail (99+)"
+ right: "Mail (99)"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    tray::tests::mail_label_counts_unread_and_caps_at_99_plus
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 53 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p orcker-gui --bin orcker-gui`

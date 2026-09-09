@@ -1,0 +1,22 @@
+   Compiling orcker-gui v0.0.0 (/home/matheusmariano/personal-projects/orcker/orcker/apps/orcker-gui/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.41s
+     Running unittests src/main.rs (target/debug/deps/orcker_gui-75d7eb80a10388ac)
+
+running 1 test
+test ipc::tests::exchange_at_decodes_the_daemons_response ... FAILED
+
+failures:
+
+---- ipc::tests::exchange_at_decodes_the_daemons_response stdout ----
+
+thread 'ipc::tests::exchange_at_decodes_the_daemons_response' (236933) panicked at apps/orcker-gui/src-tauri/src/ipc.rs:128:14:
+exchange succeeds: GuiError { code: "internal", message: "mutated for RED evidence" }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    ipc::tests::exchange_at_decodes_the_daemons_response
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 57 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p orcker-gui --bin orcker-gui`

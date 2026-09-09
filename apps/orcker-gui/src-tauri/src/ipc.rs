@@ -82,3 +82,77 @@ pub async fn exchange(_req: &Request) -> Result<Response, GuiError> {
         "the Windows IPC client is not yet supported (daemon pipe name is non-deterministic)",
     ))
 }
+
+#[cfg(all(test, unix))]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+mod tests {
+    use super::exchange_at;
+    use interprocess::local_socket::tokio::Listener;
+    use interprocess::local_socket::traits::tokio::{Listener as _, Stream as _};
+    use interprocess::local_socket::{GenericFilePath, ListenerOptions, ToFsName};
+    use orcker_ipc::{
+        read_message, write_message, FrameDecoder, Request, Response, DEFAULT_MAX_FRAME,
+    };
+
+    fn bind(sock: &std::path::Path) -> Listener {
+        let name = sock
+            .to_fs_name::<GenericFilePath>()
+            .expect("socket path encodes as a local-socket name");
+        ListenerOptions::new()
+            .name(name)
+            .create_tokio()
+            .expect("bind test socket")
+    }
+
+    #[tokio::test]
+    async fn exchange_at_decodes_the_daemons_response() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let sock = tmp.path().join("orcker.sock");
+        let listener = bind(&sock);
+
+        let server = tokio::spawn(async move {
+            let stream = listener.accept().await.expect("accept");
+            let (reader, writer) = stream.split();
+            let mut reader = reader;
+            let mut writer = writer;
+            let mut decoder = FrameDecoder::new();
+            read_message::<_, Request>(&mut reader, &mut decoder)
+                .await
+                .expect("read request")
+                .expect("connection stays open for the request");
+            write_message(&mut writer, &Response::Pong, DEFAULT_MAX_FRAME)
+                .await
+                .expect("write response");
+        });
+
+        let resp = exchange_at(&sock, &Request::Ping)
+            .await
+            .expect("exchange succeeds");
+        assert!(matches!(resp, Response::Pong), "got {resp:?}");
+        server.await.expect("server task");
+    }
+
+    #[tokio::test]
+    async fn exchange_at_reports_a_daemon_that_closes_without_responding() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let sock = tmp.path().join("orcker.sock");
+        let listener = bind(&sock);
+
+        let server = tokio::spawn(async move {
+            let stream = listener.accept().await.expect("accept");
+            let (reader, _writer) = stream.split();
+            let mut reader = reader;
+            let mut decoder = FrameDecoder::new();
+            read_message::<_, Request>(&mut reader, &mut decoder)
+                .await
+                .expect("read request")
+                .expect("connection stays open for the request");
+        });
+
+        let err = exchange_at(&sock, &Request::Ping)
+            .await
+            .expect_err("closed connection is an error");
+        assert_eq!(err.code, "unreachable");
+        server.await.expect("server task");
+    }
+}

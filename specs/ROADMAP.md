@@ -16,7 +16,7 @@ queue approaches them.
 | 36 | SPEC-0036-remove-dead-gui-surfaces | accepted | FR-002 | SPEC-0002 |
 | 37 | SPEC-0037-restore-coverage-deleted-by-spec-0002 | accepted | FR-002 | SPEC-0002 |
 | 3 | SPEC-0003-stack-compose-renderer | accepted | FR-022 (partial) | SPEC-0001 |
-| 38 | SPEC-0038-tauri-host-coverage | draft | FR-002 | SPEC-0002, SPEC-0036 |
+| 38 | SPEC-0038-tauri-host-coverage | accepted | FR-002 | SPEC-0002, SPEC-0036 |
 | 4 | SPEC-0004-engine-docker-detection | accepted | FR-010 | SPEC-0001, SPEC-0037 |
 | 5 | SPEC-0005-proxy-container-spike | accepted | FR-003 (partial) | SPEC-0002, SPEC-0037 |
 | 6 | SPEC-0006-link-loopback-port | accepted | FR-021, FR-013 (partial) | SPEC-0004, SPEC-0005, SPEC-0037 |

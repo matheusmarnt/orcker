@@ -1,0 +1,45 @@
+   Compiling orcker-gui v0.0.0 (/home/matheusmariano/personal-projects/orcker/orcker/apps/orcker-gui/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.43s
+     Running unittests src/main.rs (target/debug/deps/orcker_gui-75d7eb80a10388ac)
+
+running 14 tests
+test tray::tests::mail_label_counts_unread_and_caps_at_99_plus ... ok
+test tray::tests::badges_for_flags_waiting_update_and_unread_mail ... ok
+test tray::tests::menu_action_maps_nav_prefix_to_its_route ... FAILED
+test tray::tests::menu_action_ignores_noop_and_unknown_ids ... ok
+test tray::tests::menu_action_maps_every_static_menu_id ... ok
+test tray::tests::recolor_opaque_to_black_sets_opaque_pixels_black ... ok
+test tray::tests::nav_items_expose_the_expected_routes ... FAILED
+test tray::tests::recolor_opaque_to_white_sets_opaque_pixels_white ... ok
+test tray::tests::tray_icon_variant_wire_names_are_kebab_case ... ok
+test tray::tests::y_glyph_rgba_light_is_white ... ok
+test tray::tests::menu_icon_dark_recolors_opaque_pixels_white ... ok
+test tray::tests::menu_icon_light_leaves_pixels_unchanged ... ok
+test tray::tests::y_glyph_rgba_dark_is_black ... ok
+test tray::tests::menu_icon_dark_preserves_alpha_channel ... ok
+
+failures:
+
+---- tray::tests::menu_action_maps_nav_prefix_to_its_route stdout ----
+
+thread 'tray::tests::menu_action_maps_nav_prefix_to_its_route' (217241) panicked at apps/orcker-gui/src-tauri/src/tray.rs:1026:9:
+assertion `left == right` failed
+  left: Ignore
+ right: Navigate("/sites")
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- tray::tests::nav_items_expose_the_expected_routes stdout ----
+
+thread 'tray::tests::nav_items_expose_the_expected_routes' (217245) panicked at apps/orcker-gui/src-tauri/src/tray.rs:1036:13:
+assertion `left == right` failed
+  left: Ignore
+ right: Navigate("/sites")
+
+
+failures:
+    tray::tests::menu_action_maps_nav_prefix_to_its_route
+    tray::tests::nav_items_expose_the_expected_routes
+
+test result: FAILED. 12 passed; 2 failed; 0 ignored; 0 measured; 40 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p orcker-gui --bin orcker-gui`

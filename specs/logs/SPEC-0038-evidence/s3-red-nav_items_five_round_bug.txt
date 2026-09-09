@@ -1,0 +1,33 @@
+   Compiling orcker-gui v0.0.0 (/home/matheusmariano/personal-projects/orcker/orcker/apps/orcker-gui/src-tauri)
+warning: constant `ABOUT` is never used
+  --> apps/orcker-gui/src-tauri/src/tray.rs:66:15
+   |
+66 |     pub const ABOUT: &[u8] = include_bytes!("../icons/menu/info.png");
+   |               ^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `orcker-gui` (bin "orcker-gui" test) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.36s
+     Running unittests src/main.rs (target/debug/deps/orcker_gui-75d7eb80a10388ac)
+
+running 1 test
+test tray::tests::nav_items_expose_the_expected_routes ... FAILED
+
+failures:
+
+---- tray::tests::nav_items_expose_the_expected_routes stdout ----
+
+thread 'tray::tests::nav_items_expose_the_expected_routes' (218580) panicked at apps/orcker-gui/src-tauri/src/tray.rs:1032:9:
+assertion `left == right` failed
+  left: [("nav:/sites", "Sites")]
+ right: [("nav:/sites", "Sites"), ("nav:/about", "About")]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    tray::tests::nav_items_expose_the_expected_routes
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 53 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p orcker-gui --bin orcker-gui`
