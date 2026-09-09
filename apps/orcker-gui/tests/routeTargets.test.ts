@@ -9,13 +9,15 @@ import { VIEW_TARGETS } from "../src/lib/shortcuts/registry";
  *
  * No other check sees this class. vue-router does not fail a build on an
  * unmatched `to`, the Tauri command contract test only looks at command names,
- * and `src-tauri/` has no test at all - which is how a tray item pointing at a
- * deleted route survived five review rounds of SPEC-0002.
+ * and nothing before this scanned the tray's own `nav:` ids or the window url in
+ * `tauri.conf.json` - which is how a tray item pointing at a deleted route
+ * survived five review rounds of SPEC-0002.
  *
  * The scan deliberately covers **both sides**: the Vue/TS navigation forms and
- * the Rust tray, which emits `navigate` events the app turns into
- * `router.push`. A guard that reads only the language it is written in is
- * theatre.
+ * the Rust tray's `nav:` menu ids. It does not scan the tray's `emit("navigate", ...)`
+ * call sites directly (SPEC-0038 R3) - `tray.rs`'s own tests now prove every
+ * `nav:` id dispatches to the `Navigate` action with its route intact, which is
+ * the property this file cannot see once a payload stops being a string literal.
  *
  * Lives in `tests/` rather than beside the code because it needs `node:fs`, and
  * `tsconfig.json` typechecks `src/**` without node types.
@@ -59,18 +61,31 @@ function frontEndTargets(): [string, string][] {
   return out;
 }
 
-/** Route paths the Rust tray navigates to, via `nav:` ids and `navigate` emits. */
+/** Route paths the Rust tray navigates to, via its `nav:` menu ids. */
 function trayTargets(): [string, string][] {
   const file = join(ROOT, "src-tauri", "src", "tray.rs");
   const text = readFileSync(file, "utf8");
   const out: [string, string][] = [];
-  const patterns = [/"nav:(\/[^"]*)"/g, /emit\(\s*"navigate"\s*,\s*"(\/[^"]*)"/g];
-  for (const p of patterns) {
-    for (const m of text.matchAll(p)) {
-      const line = text.slice(0, m.index).split("\n").length;
-      out.push([m[1], `src-tauri/src/tray.rs:${line}`]);
-    }
+  for (const m of text.matchAll(/"nav:(\/[^"]*)"/g)) {
+    const line = text.slice(0, m.index).split("\n").length;
+    out.push([m[1], `src-tauri/src/tray.rs:${line}`]);
   }
+  return out;
+}
+
+/** Route paths a Tauri window's `url` navigates to (`index.html#/route`). */
+function tauriConfTargets(): [string, string][] {
+  const file = join(ROOT, "src-tauri", "tauri.conf.json");
+  const conf = JSON.parse(readFileSync(file, "utf8"));
+  const windows: unknown[] = conf?.app?.windows ?? [];
+  const out: [string, string][] = [];
+  windows.forEach((w, i) => {
+    const url = (w as { url?: unknown }).url;
+    if (typeof url !== "string") return;
+    const hash = url.indexOf("#");
+    if (hash === -1) return;
+    out.push([url.slice(hash + 1), `src-tauri/tauri.conf.json:app.windows[${i}].url`]);
+  });
   return out;
 }
 
@@ -88,7 +103,15 @@ describe("navigation targets", () => {
   });
 
   it("navigates only to paths the router defines, from the Rust tray", () => {
-    expect(dangling(trayTargets(), definedRoutes())).toEqual([]);
+    const targets = trayTargets();
+    expect(targets.length).toBeGreaterThan(0);
+    expect(dangling(targets, definedRoutes())).toEqual([]);
+  });
+
+  it("navigates only to paths the router defines, from tauri.conf.json", () => {
+    const targets = tauriConfTargets();
+    expect(targets.length).toBeGreaterThan(0);
+    expect(dangling(targets, definedRoutes())).toEqual([]);
   });
 
   it("keeps the digit chords an unbroken run from 1, with no duplicates", () => {

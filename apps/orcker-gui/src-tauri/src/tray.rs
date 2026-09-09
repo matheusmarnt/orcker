@@ -240,10 +240,18 @@ async fn fetch_state() -> TrayState {
 
 /// Which badges the icon needs: a red dot bottom-right for a waiting update (app
 /// or PHP), an orange dot bottom-left for unread mail. They can coexist.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct Badges {
     update: bool,
     unread: bool,
+}
+
+/// The badges `state` calls for; see [`Badges`].
+fn badges_for(state: &TrayState) -> Badges {
+    Badges {
+        update: state.update_target.is_some(),
+        unread: state.unread > 0,
+    }
 }
 
 impl Badges {
@@ -265,10 +273,7 @@ fn apply(app: &AppHandle, state: &TrayState, dark: bool, variant: TrayIconVarian
     };
     if let Some(tray) = app.tray_by_id(TRAY_ID) {
         let _ = tray.set_menu(Some(menu));
-        let badges = Badges {
-            update: state.update_target.is_some(),
-            unread: state.unread > 0,
-        };
+        let badges = badges_for(state);
         if let Some(icon) = tray_icon(app, badges, variant, dark) {
             let _ = tray.set_icon(Some(icon));
             #[cfg(target_os = "macos")]
@@ -560,47 +565,70 @@ fn disabled(
     MenuItem::with_id(app, id, text, false, None::<&str>)
 }
 
+/// Which effect a tray menu id asks for - the decision half of
+/// [`on_menu_event`], kept free of Tauri types so it is testable without a
+/// running app. `noop:*` labels and unknown ids - including the macOS app
+/// menu's `close-window`/`minimize-window`, which share the global event
+/// stream - map to `Ignore`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum MenuAction<'a> {
+    ShowMain,
+    Quit,
+    ShowMails,
+    /// Show the main window, then hand the Sites page an intent ("link"/"park").
+    SitesIntent(&'a str),
+    /// Show the main window, then route the frontend to this path.
+    Navigate(&'a str),
+    CheckUpdate,
+    Daemon(Lifecycle),
+    Ignore,
+}
+
+/// The action a tray menu id asks for; see [`MenuAction`].
+fn menu_action(id: &str) -> MenuAction<'_> {
+    match id {
+        "open" => MenuAction::ShowMain,
+        "quit" => MenuAction::Quit,
+        "mail" => MenuAction::ShowMails,
+        "sites:link" => MenuAction::SitesIntent("link"),
+        "sites:park" => MenuAction::SitesIntent("park"),
+        "update:apply" => MenuAction::Navigate("/about"),
+        "update:check" => MenuAction::CheckUpdate,
+        "daemon:start" => MenuAction::Daemon(Lifecycle::Start),
+        "daemon:restart" => MenuAction::Daemon(Lifecycle::Restart),
+        "daemon:stop" => MenuAction::Daemon(Lifecycle::Stop),
+        _ => id
+            .strip_prefix("nav:")
+            .map_or(MenuAction::Ignore, MenuAction::Navigate),
+    }
+}
+
 /// The single global menu-event handler. It keeps receiving events for items
 /// installed later via `set_menu` (the listener is registered on the tray, not
 /// the menu instance), so every dynamic id is matched here. Runs on the main
 /// thread; it must never take `MENU_LOCK` (it only spawns work or shows windows).
-/// `noop:*` labels and unknown ids - including the macOS app menu's
-/// `close-window`/`minimize-window`, which share this global event stream - fall
-/// through unmatched.
 fn on_menu_event(app: &AppHandle, event: MenuEvent) {
-    let id = event.id.as_ref();
-    match id {
-        "open" => crate::show_main(app),
-        "quit" => app.exit(0),
-        "mail" => {
+    match menu_action(event.id.as_ref()) {
+        MenuAction::ShowMain => crate::show_main(app),
+        MenuAction::Quit => app.exit(0),
+        MenuAction::ShowMails => {
             let _ = crate::mail_window::show_mails(app);
         }
-        "sites:link" => {
+        MenuAction::SitesIntent(intent) => {
             crate::show_main(app);
-            let _ = app.emit("sites-intent", "link");
+            let _ = app.emit("sites-intent", intent);
         }
-        "sites:park" => {
+        MenuAction::Navigate(route) => {
             crate::show_main(app);
-            let _ = app.emit("sites-intent", "park");
+            let _ = app.emit("navigate", route);
         }
-        "update:apply" => {
-            crate::show_main(app);
-            let _ = app.emit("navigate", "/about");
-        }
-        "update:check" => spawn_update_check(app.clone()),
-        "daemon:start" => spawn_lifecycle(app.clone(), Lifecycle::Start),
-        "daemon:restart" => spawn_lifecycle(app.clone(), Lifecycle::Restart),
-        "daemon:stop" => spawn_lifecycle(app.clone(), Lifecycle::Stop),
-        _ => {
-            if let Some(route) = id.strip_prefix("nav:") {
-                crate::show_main(app);
-                let _ = app.emit("navigate", route.to_string());
-            }
-        }
+        MenuAction::CheckUpdate => spawn_update_check(app.clone()),
+        MenuAction::Daemon(kind) => spawn_lifecycle(app.clone(), kind),
+        MenuAction::Ignore => {}
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Lifecycle {
     Start,
     Restart,
@@ -885,7 +913,10 @@ fn build_transient_menu(app: &AppHandle, label: &str) -> tauri::Result<Menu<Wry>
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 mod tests {
-    use super::{icons, menu_icon, recolor_opaque, y_glyph_rgba, TrayIconVariant};
+    use super::{
+        badges_for, icons, mail_label, menu_action, menu_icon, recolor_opaque, y_glyph_rgba,
+        Badges, Lifecycle, MenuAction, TrayIconVariant, TrayState, NAV_ITEMS,
+    };
 
     #[test]
     fn menu_icon_light_leaves_pixels_unchanged() {
@@ -968,6 +999,125 @@ mod tests {
                 serde_json::to_string(&variant).expect("enum serializes"),
                 wire
             );
+        }
+    }
+
+    #[test]
+    fn menu_action_maps_every_static_menu_id() {
+        let cases = [
+            ("open", MenuAction::ShowMain),
+            ("quit", MenuAction::Quit),
+            ("mail", MenuAction::ShowMails),
+            ("sites:link", MenuAction::SitesIntent("link")),
+            ("sites:park", MenuAction::SitesIntent("park")),
+            ("update:apply", MenuAction::Navigate("/about")),
+            ("update:check", MenuAction::CheckUpdate),
+            ("daemon:start", MenuAction::Daemon(Lifecycle::Start)),
+            ("daemon:restart", MenuAction::Daemon(Lifecycle::Restart)),
+            ("daemon:stop", MenuAction::Daemon(Lifecycle::Stop)),
+        ];
+        for (id, expected) in cases {
+            assert_eq!(menu_action(id), expected, "id {id:?}");
+        }
+    }
+
+    #[test]
+    fn menu_action_maps_nav_prefix_to_its_route() {
+        let route = "/sites";
+        let id = format!("nav:{route}");
+        assert_eq!(menu_action(&id), MenuAction::Navigate(route));
+        assert_eq!(menu_action("nav:"), MenuAction::Navigate(""));
+    }
+
+    #[test]
+    fn nav_items_expose_the_expected_routes() {
+        let routes: Vec<(&str, &str)> = NAV_ITEMS
+            .iter()
+            .map(|(id, label, _)| (*id, *label))
+            .collect();
+        assert_eq!(routes, [("nav:/sites", "Sites"), ("nav:/about", "About")]);
+        for (id, _, _) in NAV_ITEMS {
+            let route = id
+                .strip_prefix("nav:")
+                .expect("NAV_ITEMS id has nav: prefix");
+            assert_eq!(menu_action(id), MenuAction::Navigate(route));
+        }
+    }
+
+    #[test]
+    fn menu_action_ignores_noop_and_unknown_ids() {
+        let unknown = format!("{}:{}", "bogus", "id");
+        let ids = [
+            "noop:header",
+            "noop:ports",
+            "noop:transient",
+            "close-window",
+            "minimize-window",
+            "",
+            unknown.as_str(),
+        ];
+        for id in ids {
+            assert_eq!(menu_action(id), MenuAction::Ignore, "id {id:?}");
+        }
+    }
+
+    #[test]
+    fn mail_label_counts_unread_and_caps_at_99_plus() {
+        let cases = [
+            (0, "Mail"),
+            (1, "Mail (1)"),
+            (99, "Mail (99)"),
+            (100, "Mail (99+)"),
+            (101, "Mail (99+)"),
+        ];
+        for (unread, expected) in cases {
+            assert_eq!(mail_label(unread), expected, "unread {unread}");
+        }
+    }
+
+    #[test]
+    fn badges_for_flags_waiting_update_and_unread_mail() {
+        let cases = [
+            (
+                None,
+                0,
+                Badges {
+                    update: false,
+                    unread: false,
+                },
+            ),
+            (
+                Some("1.2.3".to_string()),
+                0,
+                Badges {
+                    update: true,
+                    unread: false,
+                },
+            ),
+            (
+                None,
+                3,
+                Badges {
+                    update: false,
+                    unread: true,
+                },
+            ),
+            (
+                Some("1.2.3".to_string()),
+                3,
+                Badges {
+                    update: true,
+                    unread: true,
+                },
+            ),
+        ];
+        for (update_target, unread, expected) in cases {
+            let state = TrayState {
+                update_target,
+                unread,
+                ..TrayState::default()
+            };
+            assert_eq!(badges_for(&state), expected);
         }
     }
 }

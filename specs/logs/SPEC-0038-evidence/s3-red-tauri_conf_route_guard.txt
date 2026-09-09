@@ -1,0 +1,35 @@
+
+ RUN  v2.1.9 /home/matheusmariano/personal-projects/orcker/orcker/apps/orcker-gui
+
+ ❯ tests/routeTargets.test.ts (4 tests | 1 failed | 3 skipped) 11ms
+   × navigation targets > navigates only to paths the router defines, from tauri.conf.json 10ms
+     → expected [ Array(1) ] to deeply equal []
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/routeTargets.test.ts > navigation targets > navigates only to paths the router defines, from tauri.conf.json
+AssertionError: expected [ Array(1) ] to deeply equal []
+
+- Expected
++ Received
+
+- Array []
++ Array [
++   "/mails-viewer-bogus (src-tauri/tauri.conf.json:app.windows[1].url)",
++ ]
+
+ ❯ tests/routeTargets.test.ts:114:48
+    112|     const targets = tauriConfTargets();
+    113|     expect(targets.length).toBeGreaterThan(0);
+    114|     expect(dangling(targets, definedRoutes())).toEqual([]);
+       |                                                ^
+    115|   });
+    116| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 skipped (4)
+   Start at  20:59:18
+   Duration  765ms (transform 43ms, setup 0ms, collect 41ms, tests 11ms, environment 363ms, prepare 144ms)
+

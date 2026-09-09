@@ -6,8 +6,8 @@ covers: [FR-002]
 depends_on: [SPEC-0002, SPEC-0036]
 surface:
   - apps/orcker-gui/
-status: in_progress
-attempts: 0
+status: accepted
+attempts: 1
 ---
 
 ## Context
@@ -69,16 +69,22 @@ them rather than reaching for a Tauri test harness.
 
 ## Acceptance checklist
 
-- [ ] AC1 The tray menu-id dispatcher has behavioural tests, RED recorded
-- [ ] AC2 The tray dispatcher and command-decision tests go from 0 to N ->
+- [x] AC1 The tray menu-id dispatcher has behavioural tests, RED recorded
+- [x] AC2 The tray dispatcher and command-decision tests go from 0 to N ->
       evidence: `cargo test -p orcker-gui` count for the tray and command
       modules, before and after
-- [ ] AC3 The route guard covers `tauri.conf.json`; RED recorded by pointing its
+- [x] AC3 The route guard covers `tauri.conf.json`; RED recorded by pointing its
       window url at a route that does not exist
-- [ ] AC4 Every `sites-intent` payload the tray emits is a member of `SitesIntent`
+- [x] AC4 Every `sites-intent` payload the tray emits is a member of `SitesIntent`
       and is handled by `SitesView.consumeIntent`; RED recorded by emitting a
       payload nothing consumes (the SPEC-0036 failure, reproduced)
-- [ ] AC5 `scripts/gate.sh specs/SPEC-0038-*.md` passes
+- [x] AC5 `scripts/gate.sh specs/SPEC-0038-*.md` passes
+
+FR acceptance: FR-002 has AC1/AC2 (`docs/PRD.md`), both already closed by
+SPEC-0002 (workspace compiles/tests green without the three native-runtime
+crates; no binary starts native PHP/DB processes). This cycle adds no new FR
+acceptance criteria; AC1-AC5 above close R1-R5 of this spec, not FR-002's
+PRD ACs.
 
 ## Out of scope
 

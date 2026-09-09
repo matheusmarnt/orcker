@@ -1,0 +1,22 @@
+   Compiling orcker-gui v0.0.0 (/home/matheusmariano/personal-projects/orcker/orcker/apps/orcker-gui/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.76s
+     Running unittests src/main.rs (target/debug/deps/orcker_gui-75d7eb80a10388ac)
+
+running 1 test
+test ipc::tests::exchange_at_reports_a_daemon_that_closes_without_responding ... FAILED
+
+failures:
+
+---- ipc::tests::exchange_at_reports_a_daemon_that_closes_without_responding stdout ----
+
+thread 'ipc::tests::exchange_at_reports_a_daemon_that_closes_without_responding' (238289) panicked at apps/orcker-gui/src-tauri/src/ipc.rs:150:14:
+closed connection is an error: Ok
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    ipc::tests::exchange_at_reports_a_daemon_that_closes_without_responding
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 57 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p orcker-gui --bin orcker-gui`

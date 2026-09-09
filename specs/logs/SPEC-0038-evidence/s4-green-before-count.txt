@@ -1,0 +1,56 @@
+   Compiling orcker-gui v0.0.0 (/home/matheusmariano/personal-projects/orcker/orcker/apps/orcker-gui/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.14s
+     Running unittests src/main.rs (target/debug/deps/orcker_gui-75d7eb80a10388ac)
+
+running 48 tests
+test autostart::tests::decide_is_up_to_date_on_equal ... ok
+test autostart::tests::daemon_self_repair_busy_round_trips_the_flag ... ok
+test autostart::tests::decide_conflicts_when_gui_is_older ... ok
+test autostart::tests::decide_reconciles_on_advance_or_unknown ... ok
+test autostart::tests::an_unchanged_update_skips_the_write ... ok
+test autostart::tests::gui_settings_round_trips_stored_editor_preferences ... ok
+test autostart::tests::gui_settings_without_editor_fields_deserializes_to_auto_detect ... ok
+test autostart::tests::a_failed_write_leaves_the_previous_settings_intact ... ok
+test autostart::tests::gui_settings_without_title_bar_style_field_deserializes_to_auto ... ok
+test autostart::tests::reg_action_covers_version_and_phantom ... ok
+test autostart::tests::prune_site_overrides_drops_only_unknown_sites ... ok
+test autostart::tests::reg_plan_starts_when_current_unknown_or_conflicting ... ok
+test autostart::tests::reg_plan_upgrades_on_version_advance ... ok
+test autostart::tests::title_bar_style_wire_values ... ok
+test commands::tests::base64_decode_matches_known_vectors ... ok
+test commands::tests::base64_decode_rejects_invalid_input ... ok
+test commands::tests::code_str_renders_snake_case_for_every_known_variant ... ok
+test commands::tests::finish_maps_daemon_error_to_gui_error ... ok
+test commands::tests::finish_passes_success_through ... ok
+test autostart::tests::gui_settings_without_tray_icon_variant_field_deserializes_to_auto ... ok
+test commands::tests::ide_options_preserve_wire_and_display_names ... ok
+test commands::tests::launch_ide_dispatches_to_the_requested_detected_editor ... ok
+test commands::tests::launch_ide_propagates_a_launcher_failure ... ok
+test commands::tests::launch_ide_rejects_an_undetected_id_with_its_display_name ... ok
+test autostart::tests::settings_write_round_trips_and_leaves_no_temporary_file ... ok
+test commands::tests::open_root_maps_an_opener_failure_to_a_typed_gui_error ... ok
+test commands::tests::resolve_site_root_matches_by_name_only ... ok
+test commands::tests::safe_attachment_filename_strips_path_and_unsafe_chars ... ok
+test commands::tests::validated_project_directory_rejects_non_directories ... ok
+test daemon::tests::no_version_skew_hint_when_logs_clean ... ok
+test commands::tests::validated_project_directory_accepts_directories ... ok
+test daemon::tests::version_skew_log_yields_reregister_hint ... ok
+test commands::tests::write_mail_attachment_file_uses_unique_names_on_collision ... ok
+test autostart::tests::reg_plan_installs_when_unregistered ... ok
+test logging::tests::bounded_tail_drops_partial_first_line ... ok
+test logging::tests::bounded_tail_keeps_boundary_aligned_first_line ... ok
+test logging::tests::keeps_lines_within_age ... ok
+test logging::tests::truncates_existing_file_on_create ... ok
+test logging::tests::resets_when_stale ... ok
+test tray::tests::recolor_opaque_to_black_sets_opaque_pixels_black ... ok
+test tray::tests::recolor_opaque_to_white_sets_opaque_pixels_white ... ok
+test tray::tests::tray_icon_variant_wire_names_are_kebab_case ... ok
+test tray::tests::menu_icon_dark_recolors_opaque_pixels_white ... ok
+test tray::tests::y_glyph_rgba_dark_is_black ... ok
+test tray::tests::menu_icon_dark_preserves_alpha_channel ... ok
+test tray::tests::y_glyph_rgba_light_is_white ... ok
+test tray::tests::menu_icon_light_leaves_pixels_unchanged ... ok
+test autostart::tests::concurrent_updates_keep_every_change_and_leave_a_parseable_file ... ok
+
+test result: ok. 48 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+
