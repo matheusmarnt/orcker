@@ -7,7 +7,7 @@ depends_on: [SPEC-0042]
 surface:
   - docs/
   - specs/
-status: approved
+status: in_progress
 attempts: 0
 ---
 
