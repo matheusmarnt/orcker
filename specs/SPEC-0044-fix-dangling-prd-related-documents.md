@@ -108,9 +108,14 @@ fix (RED) and after (GREEN).
       before this diff lists `README-INSTALL.md`, this spec, `docs/SDD.md`,
       `docs/PRD.md`, `specs/logs/SPEC-0042.md`; after this diff it additionally
       lists exactly `docs/rfc/RFC-0002-*.md`, `specs/DECISIONS.md`, this cycle
-      log, `specs/SPEC-0061-*.md` and `specs/SPEC-0062-*.md` — five additions,
-      not four, and `this spec` is not one of them (it already carried the
-      strings in its approved Context; supervisor round 1 caught both errors)
+      log and `specs/SPEC-0061-*.md` — four additions, not five, and neither
+      `this spec` nor `specs/SPEC-0062-*.md` is one of them: the former already
+      carried the strings before this cycle, the latter discusses the same
+      defect only in its title form ("análise de viabilidade", no `.md`, no
+      `orcker-` prefix) so this filename-scoped grep does not and should not
+      match it (supervisor round 1 caught the `this spec`/count errors; the
+      `SPEC-0062` omission was caught re-deriving this AC's own evidence before
+      resubmitting)
 - [ ] AC5 `scripts/gate.sh specs/SPEC-0044-fix-dangling-prd-related-documents.md`
       passes
 
