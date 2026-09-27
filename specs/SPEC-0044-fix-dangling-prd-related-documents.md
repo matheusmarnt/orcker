@@ -8,7 +8,7 @@ surface:
   - docs/
   - specs/
 status: in_progress
-attempts: 1
+attempts: 2
 ---
 
 ## Context
@@ -47,11 +47,13 @@ document later.
   is this spec's target, per R3/Out of scope), which R3 hands to the owner
   instead; quoted subject matter in prose *about* this defect (this spec, the
   RFC, this cycle log, `specs/DECISIONS.md`, `specs/SPEC-0061-*.md`,
-  `specs/SPEC-0062-*.md`); the pre-existing, out-of-surface occurrences in
-  `docs/SDD.md` (line 4, line 495) and `specs/logs/SPEC-0042.md`, none of which
-  this diff touches or is scoped to fix (the former is SPEC-0061's target; the
-  latter is R5-protected history); and `README-INSTALL.md`, a different,
-  unrelated naming convention (Out of scope). This is deliberately a rule
+  `specs/SPEC-0062-*.md`); the pre-existing, out-of-*scope* (both are inside
+  the declared surface `docs/`/`specs/`, just not this diff's target)
+  occurrences in `docs/SDD.md` (line 4, line 495) and `specs/logs/SPEC-0042.md`,
+  neither of which this diff touches or is scoped to fix (the former is
+  SPEC-0061's target; the latter is R5-protected history); and
+  `README-INSTALL.md`, genuinely outside the declared surface (repo root) and
+  a different, unrelated naming convention besides. This is deliberately a rule
   enumerating every role, not a file count, because SPEC-0042's own R4 found a
   bare file list breaks under its own artifacts — and because this spec's own
   first attempt at that file list omitted `specs/SPEC-0061-*.md` and
@@ -115,7 +117,16 @@ fix (RED) and after (GREEN).
       `orcker-` prefix) so this filename-scoped grep does not and should not
       match it (supervisor round 1 caught the `this spec`/count errors; the
       `SPEC-0062` omission was caught re-deriving this AC's own evidence before
-      resubmitting)
+      resubmitting). A second, broader evidence pass covers R4's title-form
+      clause specifically: `grep -rli 'viabilidade' --include='*.md' .` before
+      this diff lists `docs/PRD.md`, `docs/SDD.md`, `specs/logs/SPEC-0042.md`,
+      this spec (4 files — a subset of the filename-scoped RED above, since
+      "viabilidade" is a substring of the wrong filename too); after this diff
+      it additionally lists `docs/rfc/RFC-0002-*.md`, `specs/DECISIONS.md`,
+      this cycle log, `specs/SPEC-0061-*.md` **and** `specs/SPEC-0062-*.md` —
+      5 additions, 9 total, `SPEC-0062` correctly present this time because
+      this check is not filename-scoped (supervisor round 2, R4/AC4 title-form
+      coverage gap)
 - [ ] AC5 `scripts/gate.sh specs/SPEC-0044-fix-dangling-prd-related-documents.md`
       passes
 
