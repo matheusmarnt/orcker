@@ -1,0 +1,5 @@
+captured: bed12b54e8c35a5493bee0717a4e5b625d5f9d27+impl (mutant, not applied — an extra line appended to a copy of Proposed text, in memory only) · command: printf '%s\n' "$PROPOSED_TEXT_PLUS_INJECTED_LINE" | grep -c 'orcker-analise-viabilidade'
+file: specs/logs/SPEC-0044-evidence/ac3-mutant.txt
+
+1
+exit=0

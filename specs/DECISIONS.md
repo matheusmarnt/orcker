@@ -10,6 +10,78 @@ Deviations, clarifications and trade-offs recorded by implementation cycles
 - Impact: <files/specs/requirements affected; follow-up spec id if any>
 ```
 
+## 2026-09-27 · SPEC-0044 — human APPROVE at attempts=3, after three process-only REWORK rounds
+
+- Decision: the cycle escalated per `docs/SDD.md` section 8.3's `attempts = 3`
+  rule rather than run a fourth supervisor pass, and the human chose to approve
+  as-is instead of re-specifying, splitting, or aborting.
+- Why: all three REWORK rounds were cycle-log record defects, never a failure
+  of R1-R5's rule text or `docs/rfc/RFC-0002-*.md`'s actual proposed content
+  (independently re-verified byte-for-byte every round, including from-scratch
+  AC2-AC4 mutants): round 1 left FR-001 acceptance unaddressed and misstated
+  R4/AC4's survivor list; round 2 fixed that plus a title-form coverage gap
+  (spawning `specs/SPEC-0062-*.md`); round 3 found five more record defects
+  introduced or left by round 2's own fixes — `ac4-titleform-red.txt` logged as
+  `tee`-captured but actually hand-typed; an S3 RED block's "unchanged by
+  re-capture" claim left stale in one of two places; `ac3-mutant.txt`'s
+  recorded command references an undefined variable and, run as written,
+  proves the opposite of what it records; `ac5-green.txt` never re-captured
+  after round 2's commit; and `specs/DECISIONS.md`/RFC-0002/SPEC-0061
+  attributing this cycle's own `git log --all --full-history` finding to
+  SPEC-0042's cycle log, which only established "absent from the checkout."
+  With substance verified three times over, the human judged a fourth
+  identical supervisor pass would re-confirm the same result rather than
+  surface anything new, same reasoning as SPEC-0052's precedent.
+- Impact: `specs/SPEC-0044-fix-dangling-prd-related-documents.md` (status →
+  `accepted`), `specs/ROADMAP.md` row 44, `specs/TRACEABILITY.md`. The five
+  round-3 findings above are recorded, not corrected — `specs/logs/SPEC-0044.md`
+  stands exactly as round 3 reviewed it, by the human's explicit choice not to
+  authorize further fixes past the cap. `docs/rfc/RFC-0002-*.md` remains
+  `status: open`, unapplied, and unaffected by any of the five findings.
+
+## 2026-09-26 · SPEC-0044 — Requirements and Acceptance checklist authored into an already-approved spec; viability-analysis citation dropped, not imported
+
+- Decision: (1) authored `## Requirements` (R1-R5), `## Design & contracts`,
+  `## Test plan`, `## Acceptance checklist` and `## Out of scope` into
+  `specs/SPEC-0044-fix-dangling-prd-related-documents.md` mid-cycle, after it
+  had already flipped `draft -> approved` carrying only a `## Context`, per the
+  cross-cycle route SPEC-0043 established (amend-then-implement, an amendment
+  commit ahead of the implementation commit). (2) The Context's own open fork —
+  "the viability analysis has to be imported or the citation dropped" — was put
+  to the human directly: **drop** the `orcker-analise-viabilidade.md` (v1.1)
+  citation from `docs/PRD.md:5` rather than import a document that has never
+  existed in this repository, via `docs/rfc/RFC-0002-*.md`, with the RFC noting
+  the owner can override by supplying the document later.
+- Why: (1) `docs/SDD.md` section 4 requires those sections on every spec; the
+  amendment is derived strictly from the existing Context (repoint the SDD
+  citation, resolve the drop-or-import fork), so no new product decision was
+  smuggled in beyond what (2) already settled. (2) `git log --all
+  --full-history` over the whole repository found zero commits ever touching a
+  file by that name, which SPEC-0042's own cycle log independently noted when
+  it deferred this defect — there was nothing to import, so the fork was a
+  human product call, not a transcription, and was asked rather than assumed.
+- Impact: `specs/SPEC-0044-fix-dangling-prd-related-documents.md`,
+  `docs/rfc/RFC-0002-fix-prd-header-related-documents.md`. Follow-up:
+  `specs/SPEC-0061-fix-dangling-sdd-related-documents.md` (draft) files the
+  identical citation found duplicated in `docs/SDD.md` itself (header line 4,
+  and line 495) — inside SPEC-0044's declared surface (`docs/`) but outside its
+  approved Context/scope, left for its own cycle.
+  Any other spec already `approved` with only a `## Context` takes the same
+  amend-then-implement route SPEC-0043 recorded.
+- Addendum (supervisor round 1, REWORK): the same phantom document is also
+  cited by title, not filename, at `docs/PRD.md:68,89,242,250` — outside
+  RFC-0002's line-5 target and requiring a prose rewrite rather than a citation
+  swap, so filed as its own follow-up, `specs/SPEC-0062-fix-prd-viability-analysis-prose-citations.md`
+  (draft), rather than widening this diff. RFC-0002 discloses these four
+  mentions explicitly so applying it is not mistaken for fully resolving the
+  citation. Also fixed in this round: DT10 (added an FR-001 acceptance note),
+  and R4/AC4's survivor enumeration, which the first pass got wrong twice — it
+  omitted `specs/SPEC-0061-*.md` and miscounted the already-existing `this
+  spec` as one of the diff's new occurrences. The **drop, not import** call
+  above was made before this addendum's finding; if the human weighs the fuller
+  picture (five citations, not one) differently, `docs/rfc/RFC-0002-*.md` is
+  still `status: open` and unapplied.
+
 ## 2026-09-06 · SPEC-0052 — human APPROVE at attempts=3, after three process-only REWORK rounds
 
 - Decision: the cycle escalated per `docs/SDD.md` section 8.3's `attempts = 3`

@@ -1,0 +1,8 @@
+captured: 858fff1e0d40c87f52b23026146d923fcde4e6cc · command: grep -n 'viabilidade' docs/PRD.md
+file: specs/logs/SPEC-0044-evidence/prd-viability-mentions.txt
+
+5:> **Owner:** Matheus Mariano · **Documentos relacionados:** `orcker-analise-viabilidade.md` (v1.1), `orcker-sdd.md`
+68:Decisões validadas com o produto owner em 2026-08-20 (rodadas 1 e 2 — detalhes e trade-offs na análise de viabilidade):
+89:Prioridade: **M**ust / **S**hould / **C**ould (MoSCoW). Fase conforme roadmap da análise de viabilidade. Critérios de aceite (AC) são objetivos e verificáveis — as specs do SDD devem mapear cada AC a um teste ou evidência executável.
+242:Detalhamento e mitigação na análise de viabilidade, seção 8: proficiência Rust (mitigada por harness agêntico + crates novas puras primeiro), drift do upstream (tag congelada + mudanças concentradas em crates novas), marca Orcker×Docker (disclaimer + monitoramento), integrações herdadas que dependem de loopback (host-gateway, Fase 2), performance de volumes no macOS (documentar OrbStack/virtiofs).
+250:- Análise de viabilidade Orcker v1.1 (documento irmão) · Yerd: https://github.com/forjedio/yerd · Artigo do stack de referência: https://wallacemartinss.dev/pt/blog/docker-for-laravel-development

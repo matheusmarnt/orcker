@@ -1,0 +1,5 @@
+captured: bed12b54e8c35a5493bee0717a4e5b625d5f9d27+impl (mutant, not applied — sed-stripped copy only) · command: sed -n '/## Proposed text/,/## Rationale/p' docs/rfc/RFC-0002-*.md | sed 's/docs\/SDD\.md//' | grep -c 'docs/SDD\.md'
+file: specs/logs/SPEC-0044-evidence/ac2-mutant.txt
+
+0
+exit=1
