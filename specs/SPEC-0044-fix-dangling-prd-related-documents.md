@@ -8,7 +8,7 @@ surface:
   - docs/
   - specs/
 status: in_progress
-attempts: 2
+attempts: 3
 ---
 
 ## Context
