@@ -8,7 +8,7 @@ surface:
   - docs/
   - specs/
 status: in_progress
-attempts: 0
+attempts: 1
 ---
 
 ## Context
@@ -39,17 +39,24 @@ document later.
   quotes the current line, gives the corrected line, and states that applying
   it is the human's act.
 - **R4** This diff introduces no *new* citation of either wrong name
-  (`orcker-analise-viabilidade.md`, `orcker-sdd.md`). After the diff, every
-  occurrence of either string falls into one of four roles: the `docs/PRD.md`
-  citation itself, which an agent may not edit and which R3 hands to the owner
+  (`orcker-analise-viabilidade.md`, `orcker-sdd.md`) or of the same phantom
+  document by its title form ("análise de viabilidade"). After the diff, every
+  occurrence falls into one of four roles: the `docs/PRD.md` citations
+  themselves (line 5, and the title-form mentions at lines 68/89/242/250 —
+  none of which this diff edits; an agent may not edit the PRD, and only line 5
+  is this spec's target, per R3/Out of scope), which R3 hands to the owner
   instead; quoted subject matter in prose *about* this defect (this spec, the
-  RFC, this cycle log, `specs/DECISIONS.md`); the pre-existing, out-of-surface
-  occurrences in `docs/SDD.md` (line 4, line 495) and `specs/logs/SPEC-0042.md`,
-  none of which this diff touches or is scoped to fix (the former is
-  SPEC-0061's target; the latter is R5-protected history); and
-  `README-INSTALL.md`, a different, unrelated naming convention (Out of scope).
-  This is deliberately a rule enumerating every role, not a file count, because
-  SPEC-0042's own R4 found a bare file list breaks under its own artifacts.
+  RFC, this cycle log, `specs/DECISIONS.md`, `specs/SPEC-0061-*.md`,
+  `specs/SPEC-0062-*.md`); the pre-existing, out-of-surface occurrences in
+  `docs/SDD.md` (line 4, line 495) and `specs/logs/SPEC-0042.md`, none of which
+  this diff touches or is scoped to fix (the former is SPEC-0061's target; the
+  latter is R5-protected history); and `README-INSTALL.md`, a different,
+  unrelated naming convention (Out of scope). This is deliberately a rule
+  enumerating every role, not a file count, because SPEC-0042's own R4 found a
+  bare file list breaks under its own artifacts — and because this spec's own
+  first attempt at that file list omitted `specs/SPEC-0061-*.md` and
+  miscounted `this spec` as a new occurrence when it was already a survivor
+  before this cycle (supervisor round 1, AC4).
 - **R5** Historical records are not rewritten. `specs/logs/*.md` and
   `specs/TRACEABILITY.md` state what was true when a past cycle closed and keep
   their current wording.
@@ -60,10 +67,11 @@ No code, no crates, no dependencies. File operations:
 
 | File | Operation |
 |------|-----------|
-| `docs/rfc/RFC-0002-fix-prd-header-related-documents.md` | new, per R3 |
+| `docs/rfc/RFC-0002-fix-prd-header-related-documents.md` | new, per R3; also discloses the line 68/89/242/250 title-form mentions as out of its scope |
 | `specs/SPEC-0044-fix-dangling-prd-related-documents.md` | this file (Requirements/AC, status) |
 | `specs/SPEC-0061-fix-dangling-sdd-related-documents.md` | new, 3-line draft, found-and-not-done |
-| `specs/ROADMAP.md` | add the SPEC-0061 row |
+| `specs/SPEC-0062-fix-prd-viability-analysis-prose-citations.md` | new, 3-line draft, found-and-not-done (supervisor round 1) |
+| `specs/ROADMAP.md` | add the SPEC-0061 and SPEC-0062 rows |
 | `specs/DECISIONS.md` | new entry |
 
 RFC front matter follows the RFC-0001 shape: `id`, `title`, `target` (the PRD
@@ -86,26 +94,41 @@ fix (RED) and after (GREEN).
       `git diff --exit-code HEAD -- docs/PRD.md` exits 0, and
       `docs/rfc/RFC-0002-fix-prd-header-related-documents.md` is present
 - [ ] AC2 (R1) the RFC's proposed text repoints the SDD citation to the real
-      path → evidence: `grep -c 'docs/SDD\.md' docs/rfc/RFC-0002-*.md` is ≥1
+      path → evidence: the RFC's "Proposed text" section (isolated by
+      `sed -n '/## Proposed text/,/## Rationale/p'`) matches `docs/SDD\.md` at
+      least once. Scoped to that section, not the whole file — the unscoped
+      `grep -c` over the full RFC also matches "Current text"/"Rationale"
+      prose and cannot fail (supervisor round 1, JG5)
 - [ ] AC3 (R2) the RFC's proposed text drops the viability-analysis citation →
-      evidence: the RFC's "Proposed text" section (isolated by
-      `sed -n '/## Proposed text/,/## Rationale/p'`) does not match
+      evidence: the same "Proposed text" section does not match
       `orcker-analise-viabilidade`
-- [ ] AC4 (R4) this diff introduces no new occurrence of either wrong name →
-      evidence: `grep -rln 'orcker-analise-viabilidade\.md\|orcker-sdd\.md'
-      --include='*.md' .` before and after the diff lists the same file set
-      plus exactly four additions this diff makes on purpose — this spec, the
-      RFC, this cycle log, `specs/DECISIONS.md` — all four in the prose-about-
-      the-defect role; `docs/SDD.md` and `README-INSTALL.md` are present in
-      both runs, unchanged by this diff
+- [ ] AC4 (R4) this diff introduces no new occurrence of either wrong name, and
+      correctly enumerates every survivor → evidence: `grep -rln
+      'orcker-analise-viabilidade\.md\|orcker-sdd\.md' --include='*.md' .`
+      before this diff lists `README-INSTALL.md`, this spec, `docs/SDD.md`,
+      `docs/PRD.md`, `specs/logs/SPEC-0042.md`; after this diff it additionally
+      lists exactly `docs/rfc/RFC-0002-*.md`, `specs/DECISIONS.md`, this cycle
+      log, `specs/SPEC-0061-*.md` and `specs/SPEC-0062-*.md` — five additions,
+      not four, and `this spec` is not one of them (it already carried the
+      strings in its approved Context; supervisor round 1 caught both errors)
 - [ ] AC5 `scripts/gate.sh specs/SPEC-0044-fix-dangling-prd-related-documents.md`
       passes
+
+FR acceptance: FR-001 has AC1/AC2/AC3 (`docs/PRD.md:93-94`). AC2 (`orcker ping`)
+and AC3 (LICENSE/README lineage) are closed by SPEC-0001. AC1 (`cargo fmt` /
+`clippy -D warnings` / `cargo test --workspace` green) is this cycle's own
+gate, closed by AC5 above.
 
 ## Out of scope
 
 - Applying the RFC to `docs/PRD.md` — R3 forbids it; the human owner's act.
 - Fixing `docs/SDD.md`'s own duplicate citations (header line 4, line 495) —
   same defect class, different file, filed as SPEC-0061 instead.
+- Fixing `docs/PRD.md`'s other, title-form mentions of the same phantom
+  document at lines 68, 89, 242 and 250 ("análise de viabilidade" / "Análise de
+  viabilidade Orcker v1.1") — same document, different (non-header) citations
+  requiring their own RFC and, unlike a filename swap, a rewrite of the prose
+  around each mention; found during supervisor round 1, filed as SPEC-0062.
 - `README-INSTALL.md`'s install-bundle template naming of `orcker-sdd.md` /
   `orcker-prd.md` — a portable-bundle convention pointing at `docs/prd-sdd/`,
   not a citation into this repo's doc tree; not the same defect.
