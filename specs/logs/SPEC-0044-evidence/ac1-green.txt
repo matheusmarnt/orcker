@@ -1,0 +1,6 @@
+captured: 858fff1e0d40c87f52b23026146d923fcde4e6cc+impl (working tree, uncommitted implementation) · command: git diff --exit-code HEAD -- docs/PRD.md ; ls docs/rfc/RFC-0002-fix-prd-header-related-documents.md
+file: specs/logs/SPEC-0044-evidence/ac1-green.txt
+
+PRD diff exit=0
+docs/rfc/RFC-0002-fix-prd-header-related-documents.md
+RFC ls exit=0

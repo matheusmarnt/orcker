@@ -1,0 +1,5 @@
+captured: 858fff1e0d40c87f52b23026146d923fcde4e6cc+impl · command: sed -n '/## Proposed text/,/## Rationale/p' docs/rfc/RFC-0002-*.md | grep -c 'orcker-analise-viabilidade'
+file: specs/logs/SPEC-0044-evidence/ac3-green.txt
+
+0
+exit=1

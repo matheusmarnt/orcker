@@ -1,0 +1,12 @@
+captured: bed12b54e8c35a5493bee0717a4e5b625d5f9d27+impl (working tree, uncommitted implementation) · command: grep -rli 'viabilidade' --include='*.md' . | sed 's|^\./||' | sort
+file: specs/logs/SPEC-0044-evidence/ac4-titleform-green.txt
+
+docs/PRD.md
+docs/rfc/RFC-0002-fix-prd-header-related-documents.md
+docs/SDD.md
+specs/DECISIONS.md
+specs/logs/SPEC-0042.md
+specs/logs/SPEC-0044.md
+specs/SPEC-0044-fix-dangling-prd-related-documents.md
+specs/SPEC-0061-fix-dangling-sdd-related-documents.md
+specs/SPEC-0062-fix-prd-viability-analysis-prose-citations.md

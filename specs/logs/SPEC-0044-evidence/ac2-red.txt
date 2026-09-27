@@ -1,0 +1,5 @@
+captured: 858fff1e0d40c87f52b23026146d923fcde4e6cc (working tree, clean at HEAD) · command: sed -n '/## Proposed text/,/## Rationale/p' docs/rfc/RFC-0002-*.md | grep -c 'docs/SDD\.md'
+file: specs/logs/SPEC-0044-evidence/ac2-red.txt
+
+0
+exit=1

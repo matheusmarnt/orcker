@@ -73,7 +73,7 @@ Never a merge, never a bulk sync. Numbered above the reserved Phase-1 range.
 | 41 | SPEC-0041-retire-orphaned-exec-help-text | draft | FR-002 | SPEC-0002 |
 | 42 | SPEC-0042-restore-missing-reference-doc | accepted | FR-022 | SPEC-0001 |
 | 43 | SPEC-0043-orcker-stack-instruction-file | accepted | FR-022 | SPEC-0003, SPEC-0004 |
-| 44 | SPEC-0044-fix-dangling-prd-related-documents | draft | FR-001 | SPEC-0042 |
+| 44 | SPEC-0044-fix-dangling-prd-related-documents | accepted | FR-001 | SPEC-0042 |
 | 45 | SPEC-0045-verifiable-human-approval | accepted | FR-001 | SPEC-0042 |
 | 46 | SPEC-0046-elevate-dev-instance-socket | accepted | FR-001 | SPEC-0001 |
 | 47 | SPEC-0047-traceability-record-repair | accepted | FR-001 | SPEC-0045 |
@@ -89,3 +89,5 @@ Never a merge, never a bulk sync. Numbered above the reserved Phase-1 range.
 | 58 | SPEC-0058-remove-stale-orcker-php-crate-doc | draft | FR-002 | SPEC-0002 |
 | 59 | SPEC-0059-retire-config-services-section | draft | FR-002 | SPEC-0002 |
 | 60 | SPEC-0060-retire-stale-ipc-response-mirrors | draft | FR-002 | SPEC-0040 |
+| 61 | SPEC-0061-fix-dangling-sdd-related-documents | draft | FR-001 | SPEC-0044 |
+| 62 | SPEC-0062-fix-prd-viability-analysis-prose-citations | draft | FR-001 | SPEC-0044 |

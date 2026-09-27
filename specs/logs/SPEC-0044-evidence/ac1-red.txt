@@ -1,0 +1,6 @@
+captured: 858fff1e0d40c87f52b23026146d923fcde4e6cc (working tree, clean at HEAD) · command: git diff --exit-code HEAD -- docs/PRD.md ; ls docs/rfc/RFC-0002-fix-prd-header-related-documents.md
+file: specs/logs/SPEC-0044-evidence/ac1-red.txt
+
+PRD diff exit=0
+ls: não foi possível acessar 'docs/rfc/RFC-0002-fix-prd-header-related-documents.md': Arquivo ou diretório inexistente
+RFC ls exit=2

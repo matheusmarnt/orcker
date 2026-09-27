@@ -1,0 +1,8 @@
+captured: 858fff1e0d40c87f52b23026146d923fcde4e6cc (working tree, clean at HEAD) · command: grep -rln 'orcker-analise-viabilidade\.md\|orcker-sdd\.md' --include='*.md' . | sed 's|^\./||' | sort
+file: specs/logs/SPEC-0044-evidence/ac4-red.txt
+
+docs/PRD.md
+docs/SDD.md
+README-INSTALL.md
+specs/logs/SPEC-0042.md
+specs/SPEC-0044-fix-dangling-prd-related-documents.md
