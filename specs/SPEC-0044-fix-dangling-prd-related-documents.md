@@ -38,14 +38,18 @@ document later.
   to the human as one RFC, `docs/rfc/RFC-0002-*.md`, targeting line 5, which
   quotes the current line, gives the corrected line, and states that applying
   it is the human's act.
-- **R4** After the diff, no file *cites* either wrong name
-  (`orcker-analise-viabilidade.md`, `orcker-sdd.md`) in a citation role. The
-  strings may still occur, but only in two roles, neither of which is a
-  citation: in `docs/PRD.md`, which an agent may not edit and which R3 hands to
-  the owner instead; and as quoted subject matter in prose *about* this defect
-  (this spec, the RFC, the cycle log, `specs/DECISIONS.md`). This is
-  deliberately a rule and not a file list (SPEC-0042 R4 found the list form
-  breaks under its own artifacts).
+- **R4** This diff introduces no *new* citation of either wrong name
+  (`orcker-analise-viabilidade.md`, `orcker-sdd.md`). After the diff, every
+  occurrence of either string falls into one of four roles: the `docs/PRD.md`
+  citation itself, which an agent may not edit and which R3 hands to the owner
+  instead; quoted subject matter in prose *about* this defect (this spec, the
+  RFC, this cycle log, `specs/DECISIONS.md`); the pre-existing, out-of-surface
+  occurrences in `docs/SDD.md` (line 4, line 495) and `specs/logs/SPEC-0042.md`,
+  none of which this diff touches or is scoped to fix (the former is
+  SPEC-0061's target; the latter is R5-protected history); and
+  `README-INSTALL.md`, a different, unrelated naming convention (Out of scope).
+  This is deliberately a rule enumerating every role, not a file count, because
+  SPEC-0042's own R4 found a bare file list breaks under its own artifacts.
 - **R5** Historical records are not rewritten. `specs/logs/*.md` and
   `specs/TRACEABILITY.md` state what was true when a past cycle closed and keep
   their current wording.
@@ -87,10 +91,13 @@ fix (RED) and after (GREEN).
       evidence: the RFC's "Proposed text" section (isolated by
       `sed -n '/## Proposed text/,/## Rationale/p'`) does not match
       `orcker-analise-viabilidade`
-- [ ] AC4 (R4) no live file cites either wrong name → evidence:
-      `grep -rn 'orcker-analise-viabilidade\.md\|orcker-sdd\.md' --include='*.md' .`
-      lists only `docs/PRD.md` (R3, owner-applied), this spec, the RFC, the
-      cycle log and `specs/DECISIONS.md` — no other survivor
+- [ ] AC4 (R4) this diff introduces no new occurrence of either wrong name →
+      evidence: `grep -rln 'orcker-analise-viabilidade\.md\|orcker-sdd\.md'
+      --include='*.md' .` before and after the diff lists the same file set
+      plus exactly four additions this diff makes on purpose — this spec, the
+      RFC, this cycle log, `specs/DECISIONS.md` — all four in the prose-about-
+      the-defect role; `docs/SDD.md` and `README-INSTALL.md` are present in
+      both runs, unchanged by this diff
 - [ ] AC5 `scripts/gate.sh specs/SPEC-0044-fix-dangling-prd-related-documents.md`
       passes
 
